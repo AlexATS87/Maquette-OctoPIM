@@ -295,10 +295,12 @@ function onCatFilterChange(){
 }
 
 function switchView(mode){
+  console.log('[switchView] mode demande =', mode);
   if(mode==='detail'){
     const catFilter=(document.getElementById('filter-cat')||{}).value||'';
+    console.log('[switchView] catFilter =', JSON.stringify(catFilter));
     if(!catFilter){
-      // Surlignage de la dropdown categorie
+      console.log('[switchView] pas de categorie selectionnee — blocage vue detail');
       const sel=document.getElementById('filter-cat');
       if(sel){
         sel.classList.add('filter-cat-required');
@@ -308,11 +310,22 @@ function switchView(mode){
           sel.removeEventListener('change',onceChange);
         });
       }
-      // Notification contextuelle
       showNotif('Selectionnez une categorie pour activer la vue detaillee');
       return;
     }
   }
+  console.log('[switchView] passage en mode =', mode);
+  currentView=mode;
+  const bs=document.getElementById('btn-view-synth'),bd=document.getElementById('btn-view-detail');
+  if(bs)bs.classList.toggle('active',mode==='synth');
+  if(bd)bd.classList.toggle('active',mode==='detail');
+  if(mode==='detail'){
+    activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));
+    console.log('[switchView] activeGroupFilters =', [...activeGroupFilters]);
+    renderGroupFilterBar();
+  }
+  renderProductsTable();
+}
   currentView=mode;
   const bs=document.getElementById('btn-view-synth'),bd=document.getElementById('btn-view-detail');
   if(bs)bs.classList.toggle('active',mode==='synth');
