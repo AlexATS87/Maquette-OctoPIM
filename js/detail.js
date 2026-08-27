@@ -2,6 +2,13 @@
 // FICHE PRODUIT — FLAG DIRTY
 // ============================================================
 
+// Normalise le type brandSettings vs nom de categorie
+function matchBrandType(brandType,catName){
+  if(!brandType)return true;
+  const norm=s=>s.toLowerCase().replace(/s$/,'').trim();
+  return norm(brandType)===norm(catName);
+}
+
 function openProductDetail(id){
   currentProductId=id;
   const p=products.find(x=>x.id===id);if(!p)return;
@@ -187,17 +194,14 @@ function renderTabHistory(p){
     <tbody>${rows}</tbody></table></div>`;
 }
 
-// Accumule dans pendingChanges (pas encore dans history)
 function addPendingChange(p,fieldName,oldVal,newVal){
   if(!p.pendingChanges)p.pendingChanges=[];
   if(String(oldVal||'')===String(newVal||''))return;
-  // Si le champ existe deja dans pending, on met a jour la valeur new uniquement
   const existing=p.pendingChanges.find(c=>c.field===fieldName);
   if(existing){existing.new=String(newVal||'');}
   else{p.pendingChanges.push({field:fieldName,old:String(oldVal||''),new:String(newVal||'')});}
 }
 
-// Transfert pending -> history au save
 function flushPendingChanges(p){
   if(!p.pendingChanges||!p.pendingChanges.length)return;
   const ts=nowStr();
@@ -252,11 +256,9 @@ function renderTabVisuels(p){
     {code:'visuel_ambiance',   name:'Visuel ambiance',    required:false},
     {code:'visuel_fournisseur',name:'Visuel fournisseur', required:false}
   ];
-  // Verifie si un attribut de type Image existe pour ce code, sinon utilise le rendu par defaut
   let slots='';
   visualAttrs.forEach(va=>{
     const attrDef=attributes.find(a=>a.code===va.code);
-    // Si l'attribut a ete change en autre chose qu'Image, on respecte son type
     if(attrDef&&attrDef.type!=='Image'){
       slots+=renderAttrFieldHtml(p,attrDef,va.name);
       return;
@@ -284,7 +286,6 @@ function renderTabVisuels(p){
   <div class="image-attrs-grid">${slots}</div>`;
 }
 
-// Rendu d'un champ selon son type (pour les attributs visuels modifies en autre type)
 function renderAttrFieldHtml(p,a,labelOverride){
   const val=p.fields[a.code]!==undefined?p.fields[a.code]:'';
   const label=labelOverride||a.name;
@@ -307,10 +308,9 @@ function renderAttrFieldHtml(p,a,labelOverride){
 // ============================================================
 function renderTabMarque(p,g){
   computeCalcFields(p);
-  // Prefiltrage fournisseurs sur la categorie du produit
   const catName=p.cat;
   const eligibleSupCodes=[...new Set(
-    brandSettings.filter(b=>!b.type||b.type===catName).map(b=>b.fournisseurCode)
+    brandSettings.filter(b=>!b.type||matchBrandType(b.type,catName)).map(b=>b.fournisseurCode)
   )];
   const eligibleSuppliers=suppliers.filter(s=>eligibleSupCodes.includes(s.code));
   const supOptions=eligibleSuppliers.map(s=>
@@ -318,7 +318,7 @@ function renderTabMarque(p,g){
   ).join('');
   const currentSup=p.fields.fournisseur_code||'';
   const availableMarques=[...new Set(
-    brandSettings.filter(b=>(!currentSup||b.fournisseurCode===currentSup)&&(!b.type||b.type===catName)).map(b=>b.marque)
+    brandSettings.filter(b=>(!currentSup||b.fournisseurCode===currentSup)&&(!b.type||matchBrandType(b.type,catName))).map(b=>b.marque)
   )].sort();
   const marqueOptions=availableMarques.map(m=>
     `<option${p.fields.marque===m?' selected':''}>${m}</option>`
@@ -379,7 +379,7 @@ function onFournisseurChange(productId,el){
   const marqueSelect=document.getElementById('detail-marque-'+productId);
   if(marqueSelect){
     const available=[...new Set(
-      brandSettings.filter(b=>(!el.value||b.fournisseurCode===el.value)&&(!b.type||b.type===catName)).map(b=>b.marque)
+      brandSettings.filter(b=>(!el.value||b.fournisseurCode===el.value)&&(!b.type||matchBrandType(b.type,catName))).map(b=>b.marque)
     )].sort();
     marqueSelect.innerHTML='<option value="">-- Choisir --</option>'+
       available.map(m=>`<option${p.fields.marque===m?' selected':''}>${m}</option>`).join('');
@@ -527,7 +527,6 @@ function saveProduct(){
   p.maj=nowStr();
   flushPendingChanges(p);
   productDirty=false;
-  // Rafraichit l'onglet historique si actif
   const histTab=document.getElementById('tab-group-hist');
   if(histTab)histTab.innerHTML=renderTabHistory(p);
   renderProductsTable();renderDashboard();
