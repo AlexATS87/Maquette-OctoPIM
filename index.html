@@ -629,6 +629,19 @@
     </div>
   </div>
 </div>
+
+<!-- Gestion des modifs non sauvegardées -->
+<div class="modal-overlay" id="modal-unsaved">
+  <div class="modal-confirm">
+    <div style="font-size:32px;margin-bottom:12px">&#9888;&#65039;</div>
+    <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:8px">Modifications non sauvegardees</div>
+    <div style="font-size:13px;color:#607080;margin-bottom:24px">Vous avez des modifications en cours. Voulez-vous quitter sans enregistrer ?</div>
+    <div style="display:flex;justify-content:center;gap:12px">
+      <button class="btn btn-secondary" onclick="cancelLeaveUnsaved()">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmLeaveUnsaved()">Quitter sans enregistrer</button>
+    </div>
+  </div>
+</div>
   
 <!-- Notification -->
 <div class="notif" id="notif"></div>
