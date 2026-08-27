@@ -36,7 +36,15 @@ function renderDashboard(){
 
   renderSupplierChart();
 }
-
+// ============================================================
+// Widget incomplets
+// ============================================================
+function showIncomplets(){
+  _filterIncomplets=true;
+  const navEl=document.querySelector('.nav-item[onclick*="products"]');
+  safeShowPage('products',navEl);
+  setTimeout(()=>renderProductsTable(),50);
+}
 // ============================================================
 // GRAPHIQUE FOURNISSEUR — histogramme empile par categorie
 // ============================================================
