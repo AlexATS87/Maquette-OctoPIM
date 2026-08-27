@@ -1,6 +1,7 @@
 // ============================================================
 // DASHBOARD.JS
 // ============================================================
+let _filterIncomplets=false;
 function renderDashboard(){
   const total=products.length;
   const kpiTotal=document.getElementById('kpi-total');if(kpiTotal)kpiTotal.textContent=total;
