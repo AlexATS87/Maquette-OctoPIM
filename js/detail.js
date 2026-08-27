@@ -13,36 +13,73 @@ function openProductDetail(id){
   showPage('product-detail',null);
 }
 
+// ============================================================
+// HEADER PRODUIT
+// ============================================================
 function renderProductHeader(p,cat){
   const headerLeft=document.getElementById('product-header-left');if(!headerLeft)return;
   const nom=p.fields.nom||'—';
   const activeGlobal=calcActiveGlobal(p);
   const etatVisuel=calcEtatVisuel(p);
+
+  // Recherche du couple fournisseur/marque associe au produit
+  const brandInfo=getBrandInfoForProduct(p);
+
   headerLeft.innerHTML=`<div style="display:flex;align-items:flex-start;gap:16px">
-    <div id="detail-main-visual" onclick="triggerVisualUpload(${p.id},'visuel_face')"
+    <div onclick="triggerVisualUpload(${p.id},'visuel_face')"
       style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;" title="Cliquer pour modifier le visuel face">
       ${p.fields.visuel_face
         ?`<img src="${p.fields.visuel_face}" style="width:100%;height:100%;object-fit:cover;">`
         :`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#c0d0e0"><span style="font-size:28px">&#128247;</span><span style="font-size:10px">Ajouter</span></div>`}
     </div>
-    <div>
+    <div style="flex:1">
       <div class="product-title">${nom}</div>
       <div class="product-meta">
         <span>SAP : ${p.fields.sap||'—'}</span>
         <span>EAN : ${p.fields.ean||'—'}</span>
-        <span><span class="badge ${getBadgeClass(p.cat)}">${p.cat}</span></span>
+        <span><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></span>
         <span><span class="${activeGlobal==='Activé'?'badge-active-on':'badge-active-off'}">${activeGlobal}</span></span>
         <span><span class="${etatVisuel==='Oui'?'badge-etat-ok':'badge-etat-ko'}">Visuels : ${etatVisuel}</span></span>
+        ${brandInfo?`<span style="font-size:12px;color:#607080">${brandInfo.sup} / ${brandInfo.marque} — Remise ATS : <strong style="color:#1565c0">${(brandInfo.remiseAts*100).toFixed(0)}%</strong></span>`:''}
         <span style="color:#a0b0c0">Cree le ${p.createdAt||'—'}</span>
       </div>
     </div>
   </div>`;
 }
 
+// Retourne les infos de la ligne brandSettings correspondant au produit
+function getBrandInfoForProduct(p){
+  if(!p.fields.fournisseur_code||!p.fields.marque)return null;
+  const b=brandSettings.find(x=>x.fournisseurCode===p.fields.fournisseur_code&&x.marque===p.fields.marque);
+  if(!b)return null;
+  const sup=suppliers.find(s=>s.code===b.fournisseurCode);
+  return{...b,sup:sup?sup.name:b.fournisseurCode};
+}
+
+// Helpers calcul header
+function calcActiveGlobal(p){
+  const f=p.fields;
+  const o=(f.active_o2||'').toLowerCase();
+  const l=(f.active_lissac||'').toLowerCase();
+  return(o==='oui'||l==='oui')?'Activé':'Désactivé';
+}
+function calcEtatVisuel(p){
+  return(p.fields.visuel_face&&p.fields.visuel_tq&&p.fields.visuel_profil)?'Oui':'Non';
+}
+
+// Badge categorie dynamique (couleur depuis cat.color)
+function getCatBadgeStyle(catName){
+  const cat=getCatByName(catName);
+  if(!cat)return'background:#f0f4f8;color:#607080;';
+  const hex=cat.color||'#4fc3f7';
+  // Genere une couleur de texte contrastee et un fond clair
+  return`background:${hex}22;color:${hex};border:1px solid ${hex}55;`;
+}
+
 // ============================================================
 // UPLOAD VISUEL PAR CODE ATTRIBUT
 // ============================================================
-function triggerVisualUpload(productId, attrCode){
+function triggerVisualUpload(productId,attrCode){
   const input=document.createElement('input');input.type='file';input.accept='image/*';
   input.onchange=function(e){
     const file=e.target.files[0];if(!file)return;
@@ -51,16 +88,12 @@ function triggerVisualUpload(productId, attrCode){
       const p=products.find(x=>x.id===productId);if(!p)return;
       const old=p.fields[attrCode]?'(visuel existant)':'(vide)';
       p.fields[attrCode]=ev.target.result;
-      // Retrocompat : visuel_face = visuel principal
-      if(attrCode==='visuel_face'){p.visualSrc=ev.target.result;p.visuals=1;}
-      // Recalcule le compteur de visuels
+      if(attrCode==='visuel_face'){p.visualSrc=ev.target.result;}
       const visualCodes=['visuel_face','visuel_tq','visuel_profil','visuel_ambiance','visuel_fournisseur'];
       p.visuals=visualCodes.filter(c=>p.fields[c]).length;
       const attr=attributes.find(a=>a.code===attrCode);
       addHistory(p,attr?attr.name:attrCode,old,'(visuel uploade)');
-      // Rafraichit le header
       renderProductHeader(p,getCatByName(p.cat));
-      // Rafraichit le slot dans l'onglet visuels
       refreshVisuelSlot(p,attrCode);
       updateDetailCompletion(p);
       renderProductsTable();
@@ -113,6 +146,7 @@ function renderProductTabs(p,cat){
     if(g._isHist)content.innerHTML=renderTabHistory(p);
     else if(g.id===1)content.innerHTML=renderTabGeneral(p);
     else if(g.id===2)content.innerHTML=renderTabVisuels(p);
+    else if(g.code==='marque')content.innerHTML=renderTabMarque(p,g);
     else content.innerHTML=renderTabAttrGroup(p,g);
     contentsEl.appendChild(content);
   });
@@ -122,7 +156,8 @@ function renderProductTabs(p,cat){
 // ONGLET HISTORIQUE
 // ============================================================
 function renderTabHistory(p){
-  if(!p.history||!p.history.length)return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucune modification enregistree.</div>';
+  if(!p.history||!p.history.length)
+    return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucune modification enregistree.</div>';
   let rows='';
   [...p.history].reverse().forEach(h=>{
     rows+=`<tr>
@@ -139,7 +174,7 @@ function renderTabHistory(p){
 
 function addHistory(p,fieldName,oldVal,newVal){
   if(!p.history)p.history=[];
-  if(oldVal===newVal)return;
+  if(String(oldVal||'')=== String(newVal||''))return;
   p.history.push({ts:nowStr(),user:'J. Doe',field:fieldName,old:String(oldVal||''),new:String(newVal||'')});
   const histTab=document.getElementById('tab-group-hist');
   if(histTab&&histTab.classList.contains('active'))histTab.innerHTML=renderTabHistory(p);
@@ -149,18 +184,27 @@ function addHistory(p,fieldName,oldVal,newVal){
 // ONGLET INFOS GENERALES
 // ============================================================
 function renderTabGeneral(p){
-  const nom=p.fields.nom||'';
   return`<div class="fields-grid">
   <div class="field-group"><div class="field-group-title">Identification</div>
-  <div class="field-row"><div class="field-label">Code SAP <span class="field-required">*</span></div><input class="field-input" value="${p.fields.sap||''}" oninput="onFieldChange(${p.id},this,'sap')"></div>
-  <div class="field-row"><div class="field-label">Code EAN <span class="field-required">*</span></div><input class="field-input" value="${p.fields.ean||''}" oninput="onFieldChange(${p.id},this,'ean')"></div>
-  <div class="field-row"><div class="field-label">Nom produit <span class="field-required">*</span></div><input class="field-input" value="${nom}" oninput="onFieldChange(${p.id},this,'nom')"></div>
-  <div class="field-row"><div class="field-label">Categorie</div><select class="field-input form-select" onchange="onCatChange(${p.id},this)">${categories.map(c=>`<option${c.name===p.cat?' selected':''}>${c.name}</option>`).join('')}</select></div>
+    <div class="field-row"><div class="field-label">Code SAP <span class="field-required">*</span></div>
+      <input class="field-input" value="${p.fields.sap||''}" oninput="onFieldChange(${p.id},this,'sap')"></div>
+    <div class="field-row"><div class="field-label">Code EAN <span class="field-required">*</span></div>
+      <input class="field-input" value="${p.fields.ean||''}" oninput="onFieldChange(${p.id},this,'ean')"></div>
+    <div class="field-row"><div class="field-label">Nom produit <span class="field-required">*</span></div>
+      <input class="field-input" value="${p.fields.nom||''}" oninput="onFieldChange(${p.id},this,'nom')"></div>
+    <div class="field-row"><div class="field-label">Categorie</div>
+      <select class="field-input form-select" onchange="onCatChange(${p.id},this)">
+        ${categories.map(c=>`<option${c.name===p.cat?' selected':''}>${c.name}</option>`).join('')}
+      </select></div>
   </div>
   <div class="field-group"><div class="field-group-title">Dates</div>
-  <div class="field-row"><div class="field-label">Date de creation</div><input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${p.createdAt||''}" readonly></div>
-  <div class="field-row"><div class="field-label">Date de mise en ligne</div><input class="field-input" style="font-family:monospace" value="${p.fields.miseEnLigne||''}" placeholder="jj/mm/aaaa" maxlength="10" oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'miseEnLigne')"></div>
-  <div class="field-row"><div class="field-label">Derniere MAJ</div><input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${p.maj||''}" readonly></div>
+    <div class="field-row"><div class="field-label">Date de creation</div>
+      <input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${p.createdAt||''}" readonly></div>
+    <div class="field-row"><div class="field-label">Date de mise en ligne</div>
+      <input class="field-input" style="font-family:monospace" value="${p.fields.miseEnLigne||''}" placeholder="jj/mm/aaaa" maxlength="10"
+        oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'miseEnLigne')"></div>
+    <div class="field-row"><div class="field-label">Derniere MAJ</div>
+      <input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${p.maj||''}" readonly></div>
   </div></div>`;
 }
 
@@ -172,39 +216,35 @@ function onDateMaskInput(el){
 }
 
 // ============================================================
-// ONGLET VISUELS — groupe d'attributs type image
+// ONGLET VISUELS
 // ============================================================
 function renderTabVisuels(p){
-  // Les 5 attributs image dans l'ordre : face, tq, profil, ambiance, fournisseur
   const visualAttrs=[
-    {code:'visuel_face',   name:'Vue de face',          required:true,  synthVisible:true},
-    {code:'visuel_tq',     name:'Vue 3/4',              required:true,  synthVisible:false},
-    {code:'visuel_profil', name:'Vue de profil',        required:true,  synthVisible:false},
-    {code:'visuel_ambiance',  name:'Visuel ambiance',   required:false, synthVisible:false},
-    {code:'visuel_fournisseur',name:'Visuel fournisseur',required:false,synthVisible:false}
+    {code:'visuel_face',   name:'Vue de face',           required:true},
+    {code:'visuel_tq',     name:'Vue 3/4',               required:true},
+    {code:'visuel_profil', name:'Vue de profil',         required:true},
+    {code:'visuel_ambiance',  name:'Visuel ambiance',    required:false},
+    {code:'visuel_fournisseur',name:'Visuel fournisseur',required:false}
   ];
-
   let slots='';
   visualAttrs.forEach(va=>{
     const hasImg=!!p.fields[va.code];
-    const badgeHtml=va.required
-      ?`<span class="visual-badge-required">Obligatoire</span>`
-      :`<span class="visual-badge-optional">Optionnel</span>`;
-    const synthBadge=va.synthVisible
-      ?`<span style="background:#e3f2fd;color:#1565c0;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600">Vue synth.</span>`
-      :'';
     slots+=`<div class="image-attr-slot" data-visuel-code="${va.code}">
       ${hasImg
-        ?`<img src="${p.fields[va.code]}" class="image-attr-preview" onclick="triggerVisualUpload(${p.id},'${va.code}')" title="Cliquer pour modifier">`
+        ?`<img src="${p.fields[va.code]}" class="image-attr-preview"
+            onclick="triggerVisualUpload(${p.id},'${va.code}')" title="Cliquer pour modifier">`
         :`<div class="image-attr-placeholder" onclick="triggerVisualUpload(${p.id},'${va.code}')">
             <span style="font-size:32px">&#128247;</span>
             <span style="font-size:12px">Cliquer pour ajouter</span>
           </div>`}
       <div class="image-attr-label">${va.name}</div>
-      <div class="image-attr-badges">${badgeHtml}${synthBadge}</div>
+      <div class="image-attr-badges">
+        ${va.required
+          ?'<span class="visual-badge-required">Obligatoire</span>'
+          :'<span class="visual-badge-optional">Optionnel</span>'}
+      </div>
     </div>`;
   });
-
   return`<div style="background:#fff3e0;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#e65100;border-left:4px solid #ffa726">
     3 visuels obligatoires (Face, 3/4, Profil). Formats : JPG, PNG — 2000x2000px minimum.
   </div>
@@ -212,11 +252,153 @@ function renderTabVisuels(p){
 }
 
 // ============================================================
+// ONGLET MARQUE / FOURNISSEUR
+// ============================================================
+function renderTabMarque(p,g){
+  // Champs attributs standards du groupe (ex : attribut "Marque" simple select)
+  const standardAttrs=g.attrIds.map(id=>getAttrById(id)).filter(Boolean);
+  computeCalcFields(p);
+
+  // Select fournisseur
+  const supOptions=suppliers.map(s=>
+    `<option value="${s.code}"${p.fields.fournisseur_code===s.code?' selected':''}>${s.name} (${s.code})</option>`
+  ).join('');
+
+  // Marques disponibles pour le fournisseur selectionne
+  const currentSup=p.fields.fournisseur_code||'';
+  const availableMarques=[...new Set(
+    brandSettings.filter(b=>!currentSup||b.fournisseurCode===currentSup).map(b=>b.marque)
+  )].sort();
+  const marqueOptions=availableMarques.map(m=>
+    `<option${p.fields.marque===m?' selected':''}>${m}</option>`
+  ).join('');
+
+  // Infos calculees depuis brandSettings
+  const brandInfo=getBrandInfoForProduct(p);
+
+  // Types disponibles = categories existantes
+  const typeOptions=categories.map(c=>
+    `<option${p.fields.brand_type===c.name?' selected':''}>${c.name}</option>`
+  ).join('');
+
+  let html=`<div class="fields-grid">
+  <div class="field-group"><div class="field-group-title">Couple Fournisseur / Marque</div>
+    <div class="field-row">
+      <div class="field-label">Fournisseur</div>
+      <select class="field-input form-select" id="detail-fournisseur-${p.id}"
+        onchange="onFournisseurChange(${p.id},this)">
+        <option value="">-- Choisir --</option>${supOptions}
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Marque <span class="field-required">*</span></div>
+      <select class="field-input form-select" id="detail-marque-${p.id}"
+        onchange="onMarqueChange(${p.id},this)">
+        <option value="">-- Choisir --</option>${marqueOptions}
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Type</div>
+      <select class="field-input form-select" onchange="onFieldChange(${p.id},this,'brand_type')">
+        <option value="">-- Choisir --</option>${typeOptions}
+      </select>
+    </div>
+  </div>
+  <div class="field-group" id="brand-info-panel-${p.id}">
+    ${renderBrandInfoPanel(brandInfo)}
+  </div></div>`;
+
+  // Attributs standards du groupe (hors fournisseur/marque geres ci-dessus)
+  const extraAttrs=standardAttrs.filter(a=>a.code!=='marque');
+  if(extraAttrs.length){
+    html+=`<div class="fields-grid" style="margin-top:16px"><div class="field-group">`;
+    extraAttrs.forEach(a=>{
+      const val=p.fields[a.code]!==undefined?p.fields[a.code]:'';
+      html+=`<div class="field-row"><div class="field-label">${a.name}${a.required?' <span class="field-required">*</span>':''}</div>
+        <input class="field-input" value="${val}" oninput="onFieldChange(${p.id},this,'${a.code}')">
+      </div>`;
+    });
+    html+=`</div></div>`;
+  }
+  return html;
+}
+
+function renderBrandInfoPanel(brandInfo){
+  if(!brandInfo){
+    return`<div class="field-group-title">Conditions commerciales</div>
+      <div style="color:#a0b0c0;font-size:13px;padding:8px">
+        Selectionnez un fournisseur et une marque pour afficher les conditions.
+      </div>`;
+  }
+  const rows=[
+    {label:'Fournisseur',val:brandInfo.sup},
+    {label:'Remise sur facture (RF)',val:brandInfo.rf>0?(brandInfo.rf*100).toFixed(2)+'%':'—'},
+    {label:'RFA',val:brandInfo.rfa>0?(brandInfo.rfa*100).toFixed(2)+'%':'—'},
+    {label:'Remise ATS',val:brandInfo.remiseAts>0?`<strong style="color:#1565c0;font-size:14px">${(brandInfo.remiseAts*100).toFixed(0)}%</strong>`:'—'},
+    {label:'Reprise echange',val:brandInfo.repriseEchange
+      ?'<span class="badge-active-on">Oui</span>'
+      :'<span class="badge-active-off">Non</span>'},
+    {label:'Conditions livraison',val:brandInfo.conditionsLivraison||'—'},
+    {label:'Commentaire',val:brandInfo.commentaire
+      ?`<span style="font-size:12px;color:#607080">${brandInfo.commentaire}</span>`:'—'}
+  ];
+  let html=`<div class="field-group-title">Conditions commerciales — ${brandInfo.marque}</div>`;
+  rows.forEach(r=>{
+    html+=`<div class="field-row" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f4f8">
+      <div class="field-label" style="margin:0;flex:1">${r.label}</div>
+      <div style="font-size:13px;color:#1a2332;text-align:right">${r.val}</div>
+    </div>`;
+  });
+  return html;
+}
+
+// Changement fournisseur : recharge la liste des marques disponibles
+function onFournisseurChange(productId,el){
+  const p=products.find(x=>x.id===productId);if(!p)return;
+  const oldVal=p.fields.fournisseur_code||'';
+  p.fields.fournisseur_code=el.value;
+  addHistory(p,'Fournisseur',oldVal,el.value);
+
+  // Recharge le select marque
+  const marqueSelect=document.getElementById('detail-marque-'+productId);
+  if(marqueSelect){
+    const available=[...new Set(
+      brandSettings.filter(b=>!el.value||b.fournisseurCode===el.value).map(b=>b.marque)
+    )].sort();
+    marqueSelect.innerHTML='<option value="">-- Choisir --</option>'+
+      available.map(m=>`<option${p.fields.marque===m?' selected':''}>${m}</option>`).join('');
+  }
+  // Si la marque actuelle n'est plus compatible, on la vide
+  const stillValid=brandSettings.some(b=>b.fournisseurCode===el.value&&b.marque===p.fields.marque);
+  if(!stillValid){p.fields.marque='';}
+
+  refreshBrandInfoPanel(p);
+  renderProductHeader(p,getCatByName(p.cat));
+}
+
+// Changement marque
+function onMarqueChange(productId,el){
+  const p=products.find(x=>x.id===productId);if(!p)return;
+  const oldVal=p.fields.marque||'';
+  p.fields.marque=el.value;
+  addHistory(p,'Marque',oldVal,el.value);
+  refreshBrandInfoPanel(p);
+  renderProductHeader(p,getCatByName(p.cat));
+}
+
+function refreshBrandInfoPanel(p){
+  const panel=document.getElementById('brand-info-panel-'+p.id);if(!panel)return;
+  const brandInfo=getBrandInfoForProduct(p);
+  panel.innerHTML=renderBrandInfoPanel(brandInfo);
+}
+
+// ============================================================
 // ONGLET GROUPE D'ATTRIBUTS GENERIQUE
 // ============================================================
 function renderTabAttrGroup(p,g){
   const attrs=g.attrIds.map(id=>getAttrById(id)).filter(Boolean);
-  if(!attrs.length)return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
+  if(!attrs.length)
+    return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
   computeCalcFields(p);
   let html='<div class="fields-grid"><div class="field-group">';
   attrs.forEach(a=>{
@@ -226,42 +408,71 @@ function renderTabAttrGroup(p,g){
       const hasImg=!!val;
       input=`<div class="image-attr-slot" data-visuel-code="${a.code}" style="max-width:200px">
         ${hasImg
-          ?`<img src="${val}" class="image-attr-preview" onclick="triggerVisualUpload(${p.id},'${a.code}')" title="Cliquer pour modifier">`
+          ?`<img src="${val}" class="image-attr-preview"
+              onclick="triggerVisualUpload(${p.id},'${a.code}')" title="Cliquer pour modifier">`
           :`<div class="image-attr-placeholder" onclick="triggerVisualUpload(${p.id},'${a.code}')">
               <span style="font-size:28px">&#128247;</span>
               <span style="font-size:11px">Cliquer pour ajouter</span>
             </div>`}
         <div class="image-attr-badges">
-          ${a.required?'<span class="visual-badge-required">Obligatoire</span>':'<span class="visual-badge-optional">Optionnel</span>'}
+          ${a.required
+            ?'<span class="visual-badge-required">Obligatoire</span>'
+            :'<span class="visual-badge-optional">Optionnel</span>'}
         </div>
       </div>`;
     } else if(a.calc){
-      input=`<div style="position:relative"><input class="field-input" style="background:#fffde7;color:#795548;padding-right:32px" value="${val}" readonly data-calc="${a.code}">
-        <div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:#ffd54f;color:#5d4037;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help" title="${a.formulaLabel||'Champ calcule'}">&#9654;</div></div>`;
+      input=`<div style="position:relative">
+        <input class="field-input" style="background:#fffde7;color:#795548;padding-right:32px"
+          value="${val}" readonly data-calc="${a.code}">
+        <div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;
+          border-radius:50%;background:#ffd54f;color:#5d4037;font-size:11px;font-weight:700;
+          display:flex;align-items:center;justify-content:center;cursor:help"
+          title="${a.formulaLabel||'Champ calcule'}">&#9654;</div>
+      </div>`;
     } else if(a.readonly){
       input=`<input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${val}" readonly>`;
     } else if(a.type==='Simple select'){
       const opts=(a.options||[]).map(o=>`<option${o===val?' selected':''}>${o}</option>`).join('');
-      input=`<select class="field-input form-select" onchange="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})"><option value="">-- Choisir --</option>${opts}</select>`;
+      input=`<select class="field-input form-select"
+        onchange="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">
+        <option value="">-- Choisir --</option>${opts}
+      </select>`;
     } else if(a.type==='Multi select'){
       const opts=(a.options||[]).map(o=>`<option${(val||'').includes(o)?' selected':''}>${o}</option>`).join('');
-      input=`<select class="field-input form-select" multiple onchange="onMultiSelectChange(${p.id},this,'${a.code}')">${opts}</select>`;
+      input=`<select class="field-input form-select" multiple
+        onchange="onMultiSelectChange(${p.id},this,'${a.code}')">${opts}</select>`;
     } else if(a.type==='Oui / Non'){
-      input=`<select class="field-input form-select" onchange="onFieldChange(${p.id},this,'${a.code}')"><option value="">-- Choisir --</option><option${val==='Oui'?' selected':''}>Oui</option><option${val==='Non'?' selected':''}>Non</option></select>`;
+      input=`<select class="field-input form-select"
+        onchange="onFieldChange(${p.id},this,'${a.code}')">
+        <option value="">-- Choisir --</option>
+        <option${val==='Oui'?' selected':''}>Oui</option>
+        <option${val==='Non'?' selected':''}>Non</option>
+      </select>`;
     } else if(a.type==='Texte long'){
-      input=`<textarea class="field-input" rows="3" oninput="onFieldChange(${p.id},this,'${a.code}')">${val}</textarea>`;
+      input=`<textarea class="field-input" rows="3"
+        oninput="onFieldChange(${p.id},this,'${a.code}')">${val}</textarea>`;
     } else if(a.type==='Nombre'||a.type==='Nombre decimal'){
-      input=`<input class="field-input" type="number" value="${val}" oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
+      input=`<input class="field-input" type="number" value="${val}"
+        oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
     } else if(a.type==='Date'){
-      input=`<input class="field-input" style="font-family:monospace" value="${val}" placeholder="jj/mm/aaaa" maxlength="10" oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'${a.code}')">`;
+      input=`<input class="field-input" style="font-family:monospace" value="${val}"
+        placeholder="jj/mm/aaaa" maxlength="10"
+        oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'${a.code}')">`;
     } else {
-      input=`<input class="field-input" value="${val}" oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
+      input=`<input class="field-input" value="${val}"
+        oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
     }
-    html+=`<div class="field-row"><div class="field-label">${a.name}${a.required?' <span class="field-required">*</span>':''}</div>${input}</div>`;
+    html+=`<div class="field-row">
+      <div class="field-label">${a.name}${a.required?' <span class="field-required">*</span>':''}</div>
+      ${input}
+    </div>`;
   });
   return html+'</div></div>';
 }
 
+// ============================================================
+// CHAMPS CALCULES — REFRESH
+// ============================================================
 function refreshCalcFields(productId){
   const p=products.find(x=>x.id===productId);if(!p)return;
   computeCalcFields(p);
@@ -272,16 +483,21 @@ function refreshCalcFields(productId){
   updateDetailCompletion(p);
 }
 
+// ============================================================
+// EVENEMENTS CHAMPS
+// ============================================================
 function onFieldChange(productId,el,fieldKey){
   const p=products.find(x=>x.id===productId);if(!p)return;
   const oldVal=p.fields[fieldKey]||'';
   const newVal=el.value;
   p.fields[fieldKey]=newVal;
   const attr=attributes.find(a=>a.code===fieldKey);
-  const fieldName=attr?attr.name:fieldKey;
-  addHistory(p,fieldName,oldVal,newVal);
-  if(fieldKey==='nom'){const t=document.querySelector('.product-title');if(t)t.textContent=newVal;}
-  computeCalcFields(p);updateDetailCompletion(p);
+  addHistory(p,attr?attr.name:fieldKey,oldVal,newVal);
+  if(fieldKey==='nom'){
+    const t=document.querySelector('.product-title');if(t)t.textContent=newVal;
+  }
+  computeCalcFields(p);
+  updateDetailCompletion(p);
   renderProductHeader(p,getCatByName(p.cat));
 }
 
@@ -299,9 +515,14 @@ function onCatChange(productId,el){
   const p=products.find(x=>x.id===productId);if(!p)return;
   const oldCat=p.cat;p.cat=el.value;
   addHistory(p,'Categorie',oldCat,el.value);
-  renderProductTabs(p,getCatByName(p.cat));renderProductHeader(p,getCatByName(p.cat));updateDetailCompletion(p);
+  renderProductTabs(p,getCatByName(p.cat));
+  renderProductHeader(p,getCatByName(p.cat));
+  updateDetailCompletion(p);
 }
 
+// ============================================================
+// COMPLETUDE
+// ============================================================
 function updateDetailCompletion(p){
   const comp=calcCompletion(p);const color=getCompletionColor(comp);
   const pctEl=document.getElementById('detail-completion-pct');
@@ -314,11 +535,12 @@ function updateDetailCompletion(p){
   if(subEl)subEl.textContent=`${filled} / ${total} champs renseignes`;
 }
 
+// ============================================================
+// SAUVEGARDE
+// ============================================================
 function saveProduct(){
   const p=products.find(x=>x.id===currentProductId);if(!p)return;
   p.maj=nowStr();
-  if(p.fields.nom)p.name=p.fields.nom;
-  if(p.fields.sap)p.sap=p.fields.sap;
-  if(p.fields.ean)p.ean=p.fields.ean;
-  renderProductsTable();renderDashboard();showNotif('Produit enregistre — '+p.maj);
+  renderProductsTable();renderDashboard();
+  showNotif('Produit enregistre — '+p.maj);
 }
