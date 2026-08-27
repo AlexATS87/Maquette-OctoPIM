@@ -104,6 +104,7 @@ function renderProductsTable(){
     const allText=Object.values(p.fields).join(' ').toLowerCase()+' '+(p.cat||'').toLowerCase();
     if(searchVal&&!allText.includes(searchVal.toLowerCase()))return false;
     if(!passesColFilters(p))return false;
+    if(_filterIncomplets&&calcCompletion(p)>=seuilCompletion)return false;
     return true;
   });
   if(compareMode&&selectedProductIds.length>0)filtered=filtered.filter(p=>selectedProductIds.includes(p.id));
@@ -333,7 +334,7 @@ function switchView(mode){
   if(mode==='detail'){activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));renderGroupFilterBar();}
   renderProductsTable();
 }
-function filterTable(){renderProductsTable();}
+function filterTable(){_filterIncomplets=false;renderProductsTable();}
 
 // ============================================================
 // TRI — AVEC SUPPORT COMPLETION
