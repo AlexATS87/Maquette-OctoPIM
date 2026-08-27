@@ -12,11 +12,11 @@
 <div class="sidebar">
   <div class="sidebar-logo" id="sidebar-logo-wrap">OctoPIM</div>
   <nav class="sidebar-nav">
-    <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">&#127968;</span>Dashboard</div>
-    <div class="nav-item" onclick="showPage('products',this)"><span class="nav-icon">&#128230;</span>Produits</div>
-    <div class="nav-item" onclick="showPage('imports',this)"><span class="nav-icon">&#128229;</span>Imports</div>
-    <div class="nav-item" onclick="showPage('exports',this)"><span class="nav-icon">&#128228;</span>Exports</div>
-    <div class="nav-item" onclick="showPage('admin',this)"><span class="nav-icon">&#9881;&#65039;</span>Administration</div>
+    <div class="nav-item active" onclick="safeshowPage('dashboard',this)"><span class="nav-icon">&#127968;</span>Dashboard</div>
+    <div class="nav-item" onclick="safeshowPage('products',this)"><span class="nav-icon">&#128230;</span>Produits</div>
+    <div class="nav-item" onclick="safeshowPage('imports',this)"><span class="nav-icon">&#128229;</span>Imports</div>
+    <div class="nav-item" onclick="safeshowPage('exports',this)"><span class="nav-icon">&#128228;</span>Exports</div>
+    <div class="nav-item" onclick="safeshowPage('admin',this)"><span class="nav-icon">&#9881;&#65039;</span>Administration</div>
   </nav>
   <div class="sidebar-footer">
     <div class="user-info">
@@ -39,13 +39,13 @@
     ====================================================== -->
     <div class="page active" id="page-dashboard">
       <div class="kpi-grid">
-        <div class="kpi-card" onclick="showPage('products',document.querySelector('.nav-item[onclick*=products]'))">
+        <div class="kpi-card" ="showPage('products',document.querySelector('.nav-item[*=products]'))">
           <div class="kpi-card-header">
             <div><div class="kpi-label">Total produits</div><div class="kpi-value" id="kpi-total">0</div><div class="kpi-sub">Voir evolution</div></div>
             <div class="kpi-picto">&#128230;</div>
           </div>
         </div>
-        <div class="kpi-card" onclick="openModal('modal-seuil')">
+        <div class="kpi-card" ="openModal('modal-seuil')">
           <div class="kpi-card-header">
             <div><div class="kpi-label">Produits incomplets</div><div class="kpi-value" id="kpi-incomplets">0</div><div class="kpi-sub">Seuil : &lt; <span id="kpi-seuil-val">80</span>%</div><div class="kpi-sub-link">Configurer</div></div>
             <div class="kpi-picto">&#128308;</div>
