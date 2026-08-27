@@ -1,7 +1,6 @@
 // ============================================================
 // FICHE PRODUIT — FLAG DIRTY
 // ============================================================
-let productDirty=false;
 
 function openProductDetail(id){
   currentProductId=id;
@@ -39,7 +38,6 @@ function confirmLeaveUnsaved(){
 function cancelLeaveUnsaved(){
   closeModal('modal-unsaved');pendingNavTarget=null;
 }
-let pendingNavTarget=null;
 
 // ============================================================
 // HEADER PRODUIT
