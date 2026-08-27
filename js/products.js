@@ -36,7 +36,6 @@ function filterColFilterList(input){
     const val=(item.getAttribute('data-val')||'').toLowerCase();
     item.style.display=(!q||val.includes(q))?'':'none';
   });
-  // Sync "Tout selectionner" selon visibles
   const allVisible=[...dd.querySelectorAll('.col-filter-val-item')].filter(i=>i.style.display!=='none');
   const allChecked=allVisible.every(i=>i.querySelector('input').checked);
   const cbAll=dd.querySelector('input[id^="cfa-"]');
@@ -53,7 +52,6 @@ function toggleColFilterVal(code,val,cb){
   if(!colFilters[code])colFilters[code]=new Set(vals);
   if(cb.checked)colFilters[code].add(val);else colFilters[code].delete(val);
   if(colFilters[code].size===vals.length)delete colFilters[code];
-  // Sync checkbox "Tout selectionner"
   if(activeColFilterDropdown){
     const cbAll=activeColFilterDropdown.querySelector('input[id^="cfa-"]');
     if(cbAll)cbAll.checked=!colFilters[code];
@@ -61,10 +59,8 @@ function toggleColFilterVal(code,val,cb){
   renderProductsTable();
 }
 function toggleColFilterAll(code,cb){
-  const vals=getColUniqueValues(code);
   if(cb.checked){
     delete colFilters[code];
-    // Recoche toutes les valeurs visibles
     if(activeColFilterDropdown){
       activeColFilterDropdown.querySelectorAll('.col-filter-val-item input').forEach(c=>c.checked=true);
     }
@@ -131,7 +127,6 @@ function makeSortFilterTh(label,code){
 function renderSynthHeader(thead){
   thead.innerHTML='';
   const tr=document.createElement('tr');
-  const clickAttr=attributes.find(a=>a.clickToOpen);
   const staticCols=[
     {label:'',cb:true},{label:'Visuel',noSort:true},
     {label:'Code SAP',code:'sap'},{label:'Code EAN',code:'ean'},
@@ -156,13 +151,11 @@ function renderSynthRows(tbody,filtered){
     const isSelected=selectedProductIds.includes(p.id);
     const nom=p.fields.nom||'—';
     const sap=p.fields.sap||'—';
-    // Cellule cliquable selon l'attribut designe
     let nomCell,sapCell;
     if(clickAttr&&clickAttr.code==='sap'){
       sapCell=`<td style="white-space:nowrap"><span class="product-link" onclick="openProductDetail(${p.id})">${sap}</span></td>`;
       nomCell=`<td class="td-name">${nom}</td>`;
-    } else {
-      // Par defaut ou si clickAttr.code==='nom'
+    }else{
       sapCell=`<td style="white-space:nowrap">${sap}</td>`;
       nomCell=`<td class="td-name"><span class="product-link" onclick="openProductDetail(${p.id})">${nom}</span></td>`;
     }
@@ -183,7 +176,6 @@ function renderSynthRows(tbody,filtered){
   });
 }
 
-// Badge categorie dynamique (utilise cat.color)
 function getCatBadgeStyle(catName){
   const cat=getCatByName(catName);
   if(!cat)return'background:#f0f4f8;color:#607080;border:1px solid #e0e8f0;';
@@ -283,25 +275,23 @@ function exitCompare(){compareMode=false;renderProductsTable();}
 function clearSelection(){selectedProductIds=[];compareMode=false;document.querySelectorAll('#products-tbody input[type=checkbox]').forEach(c=>c.checked=false);document.querySelectorAll('#products-tbody tr').forEach(tr=>tr.classList.remove('row-selected'));renderCompareBar();}
 
 // ============================================================
-// VUE DETAILLEE — SURLIGNAGE DROPDOWN SI PAS DE CATEGORIE
+// VUE DETAILLEE
 // ============================================================
 function onCatFilterChange(){
   const v=(document.getElementById('filter-cat')||{}).value||'';
   activeGroupFilters=null;
+  _filterIncomplets=false;
   filterTable();
-  // Si on est en vue detaillee et qu'on vide la categorie, on repasse en synth
-  if(!v&&currentView==='detail'){
-    switchView('synth');
-  }
+  if(!v&&currentView==='detail'){switchView('synth');}
 }
 
 function switchView(mode){
-  console.log('[switchView] mode demande =', mode);
+  console.log('[switchView] mode demande =',mode);
   if(mode==='detail'){
     const catFilter=(document.getElementById('filter-cat')||{}).value||'';
-    console.log('[switchView] catFilter =', JSON.stringify(catFilter));
+    console.log('[switchView] catFilter =',JSON.stringify(catFilter));
     if(!catFilter){
-      console.log('[switchView] pas de categorie selectionnee — blocage vue detail');
+      console.log('[switchView] blocage — pas de categorie');
       const sel=document.getElementById('filter-cat');
       if(sel){
         sel.classList.add('filter-cat-required');
@@ -315,29 +305,23 @@ function switchView(mode){
       return;
     }
   }
-  console.log('[switchView] passage en mode =', mode);
+  console.log('[switchView] passage effectif en mode =',mode);
   currentView=mode;
   const bs=document.getElementById('btn-view-synth'),bd=document.getElementById('btn-view-detail');
   if(bs)bs.classList.toggle('active',mode==='synth');
   if(bd)bd.classList.toggle('active',mode==='detail');
   if(mode==='detail'){
     activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));
-    console.log('[switchView] activeGroupFilters =', [...activeGroupFilters]);
+    console.log('[switchView] activeGroupFilters =',[...activeGroupFilters]);
     renderGroupFilterBar();
   }
   renderProductsTable();
 }
-  currentView=mode;
-  const bs=document.getElementById('btn-view-synth'),bd=document.getElementById('btn-view-detail');
-  if(bs)bs.classList.toggle('active',mode==='synth');
-  if(bd)bd.classList.toggle('active',mode==='detail');
-  if(mode==='detail'){activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));renderGroupFilterBar();}
-  renderProductsTable();
-}
+
 function filterTable(){_filterIncomplets=false;renderProductsTable();}
 
 // ============================================================
-// TRI — AVEC SUPPORT COMPLETION
+// TRI
 // ============================================================
 let sortState={};
 function sortTableByCode(code){
