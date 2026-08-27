@@ -137,6 +137,15 @@ function showPage(id,navEl){
   if(id==='admin-suppliers')renderSuppliersPage();
   updateCounts();
 }
+function safeShowPage(id,navEl){
+  if(productDirty&&currentProductId){
+    pendingNavTarget={id,navEl};
+    openModal('modal-unsaved');
+  }else{
+    productDirty=false;currentProductId=null;
+    showPage(id,navEl);
+  }
+}
 function updateCounts(){
   const bc=document.getElementById('admin-brand-count');if(bc)bc.textContent=brandSettings.length;
   const gc=document.getElementById('admin-group-count');if(gc)gc.textContent=attrGroups.length;
