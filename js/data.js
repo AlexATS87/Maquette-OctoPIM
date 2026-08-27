@@ -388,5 +388,7 @@ let editingCatId = null, editingGroupId = null, pendingDelete = null;
 let currentProductId = null, currentView = 'synth';
 let selectedProductIds = [], compareMode = false;
 let activeGroupFilters = null;
+let productDirty=false;
+let pendingNavTarget=null;
 let colFilters = {};
 let activeColFilterDropdown = null;
