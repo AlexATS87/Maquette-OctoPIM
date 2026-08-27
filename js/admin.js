@@ -10,7 +10,10 @@ function renderCatsTable(){
       <td style="font-family:monospace;font-size:12px;color:#607080">${cat.code}</td>
       <td><span class="color-swatch" style="background:${cat.color}"></span>${cat.color}</td>
       <td>${nb} groupe${nb>1?'s':''}</td>
-      <td><div class="td-actions"><button class="action-btn" onclick="editCategory(${cat.id})">Editer</button><button class="action-btn-danger" onclick="confirmDelete('cat',${cat.id},'${cat.name}')">Supprimer</button></div></td>
+      <td><div class="td-actions">
+        <button class="action-btn" onclick="editCategory(${cat.id})">Editer</button>
+        <button class="action-btn-danger" onclick="confirmDelete('cat',${cat.id},'${cat.name}')">Supprimer</button>
+      </div></td>
     </tr>`;
   });
 }
@@ -89,46 +92,175 @@ function createCategory(){
 }
 
 // ============================================================
-// ADMIN — ATTRIBUTS
+// ADMIN — ATTRIBUTS — TRI
 // ============================================================
+let attrSortState={code:null,dir:'asc'};
+
 function renderAttrsTable(){
-  const tb=document.getElementById('attrs-tbody');if(!tb)return;tb.innerHTML='';
-  attributes.forEach(a=>{
+  const tb=document.getElementById('attrs-tbody');if(!tb)return;
+  const thead=document.getElementById('attrs-thead');
+
+  // Header avec tri
+  if(thead){
+    const cols=[
+      {label:'Nom',code:'name'},{label:'Code',code:'code'},
+      {label:'Type',code:'type'},{label:'Groupe',code:'group'},
+      {label:'Obligatoire',code:'required',noSort:true},
+      {label:'Options',noSort:true},{label:'Actions',noSort:true}
+    ];
+    thead.innerHTML='';
+    const tr=document.createElement('tr');
+    cols.forEach(col=>{
+      const th=document.createElement('th');
+      if(col.noSort){th.textContent=col.label;th.className='no-sort';}
+      else{
+        const dir=(attrSortState.code===col.code)?attrSortState.dir:null;
+        th.innerHTML=`<div style="display:flex;align-items:center;gap:4px;cursor:pointer" onclick="sortAttrsBy('${col.code}')">
+          <span>${col.label}</span>
+          <span style="font-size:11px;color:${dir?'#1a2332':'#c0d0e0'}">${dir==='asc'?'▲':dir==='desc'?'▼':'⇅'}</span>
+        </div>`;
+      }
+      tr.appendChild(th);
+    });
+    thead.appendChild(tr);
+  }
+
+  // Tri des attributs
+  let sorted=[...attributes];
+  if(attrSortState.code){
+    sorted.sort((a,b)=>{
+      let va='',vb='';
+      if(attrSortState.code==='name'){va=a.name;vb=b.name;}
+      else if(attrSortState.code==='code'){va=a.code;vb=b.code;}
+      else if(attrSortState.code==='type'){va=a.type;vb=b.type;}
+      else if(attrSortState.code==='group'){
+        const ga=getGroupById(a.groupId);const gb=getGroupById(b.groupId);
+        va=ga?ga.name:'';vb=gb?gb.name:'';
+      }
+      const cmp=va.localeCompare(vb,'fr');
+      return attrSortState.dir==='asc'?cmp:-cmp;
+    });
+  }
+
+  tb.innerHTML='';
+  sorted.forEach(a=>{
     const g=getGroupById(a.groupId);
-    const synthCheck=`<input type="checkbox" ${a.showInSynth?'checked':''} onchange="toggleAttrSynth(${a.id},this)" title="Afficher en vue synthetique">`;
-    const clickCheck=a.type==='Texte'?`<input type="checkbox" ${a.clickToOpen!==false?'checked':''} onchange="toggleAttrClickToOpen(${a.id},this)" title="Clic sur valeur = ouvrir produit">`:'';
+    // Option "clic" : un seul attribut peut l'avoir
+    const clickCheck=a.type==='Texte'
+      ?`<label class="attr-option-row" title="Clic sur valeur = ouvrir produit">
+          <input type="checkbox" ${a.clickToOpen?'checked':''} onchange="setAttrClickToOpen(${a.id},this)"> Clic
+        </label>`
+      :'';
     tb.innerHTML+=`<tr>
-      <td>${a.name}${a.calc?' <span style="font-size:10px;color:#ffa726">&#9654;</span>':''}</td>
+      <td>
+        <span class="product-link" onclick="editAttribute(${a.id})" title="Cliquer pour modifier">
+          ${a.name}${a.calc?' <span style="font-size:10px;color:#ffa726">&#9654;</span>':''}
+        </span>
+      </td>
       <td style="font-family:monospace;font-size:12px;color:#607080">${a.code}</td>
       <td>${a.type}</td>
       <td>${g?g.name:'—'}</td>
       <td><span class="badge ${a.required?'badge-green':'badge-grey'}">${a.required?'Oui':'Non'}</span></td>
-      <td class="attr-option-row" style="gap:12px">
-        <label class="attr-option-row" title="Vue synthetique">${synthCheck} Synth.</label>
-        ${clickCheck?`<label class="attr-option-row" title="Clic ouvre le produit">${clickCheck} Clic</label>`:''}
-      </td>
-      <td>
-        <div class="td-actions">
-          ${a.calc?`<button class="action-btn" onclick="openFormulaEditor(${a.id})">Formule</button>`:''}
-          <button class="action-btn-danger" onclick="confirmDelete('attr',${a.id},'${a.name}')">Supprimer</button>
-        </div>
-      </td>
+      <td>${clickCheck}</td>
+      <td><div class="td-actions">
+        <button class="action-btn" onclick="editAttribute(${a.id})">Editer</button>
+        <button class="action-btn-danger" onclick="confirmDelete('attr',${a.id},'${a.name}')">Supprimer</button>
+      </div></td>
     </tr>`;
   });
 }
 
-function toggleAttrSynth(attrId,cb){
-  const a=attributes.find(x=>x.id===attrId);if(!a)return;
-  a.showInSynth=cb.checked;
-  showNotif((cb.checked?'Attribut affiché':'Attribut masqué')+' en vue synthetique');
-  renderProductsTable();
+function sortAttrsBy(code){
+  if(attrSortState.code===code){
+    attrSortState.dir=attrSortState.dir==='asc'?'desc':'asc';
+  }else{
+    attrSortState={code,dir:'asc'};
+  }
+  renderAttrsTable();
 }
 
-function toggleAttrClickToOpen(attrId,cb){
-  const a=attributes.find(x=>x.id===attrId);if(!a)return;
-  a.clickToOpen=cb.checked;
-  showNotif('Option "clic = ouvrir produit" '+(cb.checked?'activée':'désactivée')+' pour "'+a.name+'"');
+// Option "clic" exclusive : un seul attribut a la fois
+function setAttrClickToOpen(attrId,cb){
+  if(cb.checked){
+    // Desactive tous les autres
+    attributes.forEach(a=>{a.clickToOpen=a.id===attrId;});
+  }else{
+    const a=attributes.find(x=>x.id===attrId);if(a)a.clickToOpen=false;
+  }
+  renderAttrsTable();
   renderProductsTable();
+  showNotif(cb.checked?'Clic actif sur : '+( attributes.find(x=>x.id===attrId)||{}).name:'Option clic desactivee');
+}
+
+// ============================================================
+// ADMIN — ATTRIBUTS — EDITION
+// ============================================================
+let editingAttrId=null;
+
+function editAttribute(id){
+  editingAttrId=id;
+  const a=attributes.find(x=>x.id===id);if(!a)return;
+  document.getElementById('ea-name').value=a.name;
+  document.getElementById('ea-code').value=a.code;
+  document.getElementById('ea-type').value=a.type;
+  document.getElementById('ea-required').value=a.required?'1':'0';
+  document.getElementById('ea-formula').value=a.formula||'';
+  // Groupe
+  const gSel=document.getElementById('ea-group');
+  if(gSel){
+    gSel.innerHTML='<option value="">-- Choisir --</option>';
+    attrGroups.forEach(g=>{gSel.innerHTML+=`<option value="${g.id}"${g.id===a.groupId?' selected':''}>${g.name}</option>`;});
+  }
+  // Options (simple/multi select)
+  const optWrap=document.getElementById('ea-options-wrap');
+  if(optWrap){
+    const showOpts=a.type==='Simple select'||a.type==='Multi select';
+    optWrap.style.display=showOpts?'':'none';
+    document.getElementById('ea-options').value=(a.options||[]).join('\n');
+  }
+  // Formule
+  const formulaWrap=document.getElementById('ea-formula-wrap');
+  if(formulaWrap)formulaWrap.style.display=(a.calc)?'':'none';
+  showPage('admin-attribute-edit',null);
+}
+
+function onEditAttrTypeChange(){
+  const type=document.getElementById('ea-type').value;
+  const optWrap=document.getElementById('ea-options-wrap');
+  const formulaWrap=document.getElementById('ea-formula-wrap');
+  if(optWrap)optWrap.style.display=(type==='Simple select'||type==='Multi select')?'':'none';
+  if(formulaWrap)formulaWrap.style.display=(type==='Texte calcule'||type==='Nombre calcule')?'':'none';
+}
+
+function saveAttributeEdit(){
+  const a=attributes.find(x=>x.id===editingAttrId);if(!a)return;
+  const newName=document.getElementById('ea-name').value.trim();
+  const newCode=document.getElementById('ea-code').value.trim();
+  if(!newName||!newCode){showNotif('Nom et code obligatoires');return;}
+  // Verifie unicite du code (sauf si inchange)
+  if(newCode!==a.code&&attributes.find(x=>x.code===newCode)){showNotif('Code deja utilise par un autre attribut');return;}
+  const oldGroupId=a.groupId;
+  const newGroupId=parseInt(document.getElementById('ea-group').value)||null;
+  const newType=document.getElementById('ea-type').value;
+  const isCalc=newType==='Texte calcule'||newType==='Nombre calcule';
+  // Mise a jour de l'attribut
+  a.name=newName;
+  a.code=newCode;
+  a.type=newType;
+  a.required=document.getElementById('ea-required').value==='1';
+  a.calc=isCalc;
+  a.formula=isCalc?document.getElementById('ea-formula').value.trim():'';
+  // Options
+  if(newType==='Simple select'||newType==='Multi select'){
+    a.options=document.getElementById('ea-options').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  }else{a.options=[];}
+  // Changement de groupe
+  if(oldGroupId!==newGroupId){
+    if(oldGroupId){const og=getGroupById(oldGroupId);if(og)og.attrIds=og.attrIds.filter(id=>id!==a.id);}
+    if(newGroupId){const ng=getGroupById(newGroupId);if(ng&&!ng.attrIds.includes(a.id))ng.attrIds.push(a.id);}
+    a.groupId=newGroupId;
+  }
+  renderAll();showPage('admin-attributes',null);showNotif('Attribut "'+newName+'" mis a jour');
 }
 
 function createAttribute(){
@@ -150,12 +282,7 @@ function createAttribute(){
   const required=document.getElementById('new-attr-required').value==='1';
   const formula=document.getElementById('new-attr-formula').value.trim();
   const isCalc=type==='Texte calcule'||type==='Nombre calcule';
-  const newAttr={
-    id:nextAttrId++,name,code,type,groupId,required,
-    calc:isCalc,formula:isCalc?formula:'',options:[],
-    showInSynth:false,
-    clickToOpen:type==='Texte'?false:undefined
-  };
+  const newAttr={id:nextAttrId++,name,code,type,groupId,required,calc:isCalc,formula:isCalc?formula:'',options:[],clickToOpen:false};
   attributes.push(newAttr);
   if(groupId){const g=getGroupById(groupId);if(g)g.attrIds.push(newAttr.id);}
   nEl.value='';cEl.value='';
@@ -163,16 +290,42 @@ function createAttribute(){
 }
 
 // ============================================================
-// ADMIN — GROUPES D'ATTRIBUTS
+// ADMIN — GROUPES D'ATTRIBUTS — DRAG & DROP VERTICAL
 // ============================================================
 function renderAttrGroupsList(){
   const list=document.getElementById('attr-groups-list');if(!list)return;list.innerHTML='';
-  attrGroups.forEach(g=>{
+  attrGroups.forEach((g,idx)=>{
     const attrs=g.attrIds.map(id=>getAttrById(id)).filter(Boolean);
     const color=getGroupColor(g);
-    const card=document.createElement('div');card.className='attr-group-card';
+    const card=document.createElement('div');
+    card.className='attr-group-card';
+    card.dataset.groupId=g.id;
+    if(!g.system){
+      card.draggable=true;
+      card.addEventListener('dragstart',e=>{
+        e.dataTransfer.setData('text/plain',String(g.id));
+        card.classList.add('dragging');
+      });
+      card.addEventListener('dragend',()=>card.classList.remove('dragging'));
+      card.addEventListener('dragover',e=>{e.preventDefault();card.classList.add('drag-over-card');});
+      card.addEventListener('dragleave',()=>card.classList.remove('drag-over-card'));
+      card.addEventListener('drop',e=>{
+        e.preventDefault();card.classList.remove('drag-over-card');
+        const fromId=parseInt(e.dataTransfer.getData('text/plain'));
+        const toId=g.id;
+        if(fromId===toId)return;
+        const fi=attrGroups.findIndex(x=>x.id===fromId);
+        const ti=attrGroups.findIndex(x=>x.id===toId);
+        const [moved]=attrGroups.splice(fi,1);
+        attrGroups.splice(ti,0,moved);
+        renderAttrGroupsList();
+        // Propage l'ordre aux categories qui referent ces groupes
+        renderProductsTable();
+      });
+    }
     card.innerHTML=`<div class="attr-group-card-header">
       <div style="display:flex;align-items:center;gap:10px">
+        ${!g.system?'<span class="drag-handle" style="cursor:grab;font-size:18px;color:#c0d0e0">&#9776;</span>':''}
         <div class="attr-group-card-title">${g.name}</div>
         ${g.system?'<span class="attr-group-badge-system">Systeme</span>':''}
       </div>
@@ -187,6 +340,7 @@ function renderAttrGroupsList(){
     list.appendChild(card);
   });
 }
+
 function editAttrGroup(id){
   editingGroupId=id;const g=attrGroups.find(x=>x.id===id);if(!g)return;
   document.getElementById('edit-group-name').value=g.name;
@@ -348,11 +502,13 @@ function renderSuppliersTable(filter){
       ?`<span class="badge badge-green" style="font-size:11px">Oui</span>`
       :`<span class="badge badge-grey" style="font-size:11px">Non</span>`;
     const commentTrunc=b.commentaire&&b.commentaire.length>40?b.commentaire.slice(0,40)+'…':b.commentaire||'';
+    // Type badge dynamique base sur categories
+    const typeBadge=catBadgeHtml(b.type);
     tb.innerHTML+=`<tr>
       <td style="font-weight:600;white-space:nowrap">${supName}</td>
       <td style="font-family:monospace;font-size:11px;color:#607080">${b.fournisseurCode}</td>
       <td style="white-space:nowrap">${b.marque}</td>
-      <td><span class="badge ${b.type==='Optique'?'badge-blue':b.type==='Solaire'?'badge-purple':'badge-orange'}" style="font-size:11px">${b.type}</span></td>
+      <td>${typeBadge}</td>
       <td style="text-align:right">${b.rf>0?(b.rf*100).toFixed(2)+'%':'—'}</td>
       <td style="text-align:right">${b.rfa>0?(b.rfa*100).toFixed(2)+'%':'—'}</td>
       <td style="text-align:right;font-weight:600;color:#1565c0">${b.remiseAts>0?(b.remiseAts*100).toFixed(0)+'%':'—'}</td>
@@ -361,7 +517,7 @@ function renderSuppliersTable(filter){
       <td style="font-size:11px;color:#8090a0;max-width:180px" title="${b.commentaire||''}">${commentTrunc||'—'}</td>
       <td><div class="td-actions">
         <button class="action-btn" onclick="openBrandEditor(${idx})">Editer</button>
-        <button class="action-btn-danger" onclick="confirmDelete('brand',${idx},'${b.marque} ${b.type}')">Supprimer</button>
+        <button class="action-btn-danger" onclick="confirmDelete('brand',${idx},'${b.marque}')">Supprimer</button>
       </div></td>
     </tr>`;
   });
@@ -373,18 +529,20 @@ function filterSuppliersTable(){
 function openBrandEditor(idx){
   editingBrandIdx=idx;
   const isNew=idx===-1;
-  const b=isNew?{fournisseurCode:'',marque:'',type:'Optique',rf:0,rfa:0,remiseAts:0,repriseEchange:false,conditionsLivraison:'Franco',commentaire:''}:brandSettings[idx];
+  const b=isNew?{fournisseurCode:'',marque:'',type:'',rf:0,rfa:0,remiseAts:0,repriseEchange:false,conditionsLivraison:'Franco',commentaire:''}:brandSettings[idx];
   const existing=document.getElementById('brand-editor-overlay');if(existing)existing.remove();
   const supOptions=suppliers.map(s=>`<option value="${s.code}"${s.code===b.fournisseurCode?' selected':''}>${s.name} (${s.code})</option>`).join('');
+  // Type = categories existantes (valeur unique)
+  const typeOptions=categories.map(c=>`<option value="${c.name}"${c.name===b.type?' selected':''}>${c.name}</option>`).join('');
   const overlay=document.createElement('div');
   overlay.id='brand-editor-overlay';
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:2000;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML=`<div style="background:#fff;border-radius:14px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.18)">
-    <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:20px">${isNew?'Nouvelle entree fournisseur / marque':'Modifier : '+b.marque+' '+b.type}</div>
+    <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:20px">${isNew?'Nouvelle entree fournisseur / marque':'Modifier : '+b.marque+(b.type?' — '+b.type:'')}</div>
     <div class="form-grid" style="margin-bottom:16px">
       <div class="form-field"><div class="form-label">Fournisseur *</div><select class="form-select" id="be-supplier">${supOptions}</select></div>
       <div class="form-field"><div class="form-label">Marque *</div><input class="field-input" id="be-marque" value="${b.marque}" placeholder="ex : Ray-Ban"></div>
-      <div class="form-field"><div class="form-label">Type</div><select class="form-select" id="be-type"><option${b.type==='Optique'?' selected':''}>Optique</option><option${b.type==='Solaire'?' selected':''}>Solaire</option><option${b.type==='Les deux'?' selected':''}>Les deux</option></select></div>
+      <div class="form-field"><div class="form-label">Type (categorie)</div><select class="form-select" id="be-type"><option value="">-- Choisir --</option>${typeOptions}</select></div>
       <div class="form-field"><div class="form-label">RF %</div><input class="field-input" type="number" step="0.01" id="be-rf" value="${(b.rf*100).toFixed(2)}"></div>
       <div class="form-field"><div class="form-label">RFA %</div><input class="field-input" type="number" step="0.01" id="be-rfa" value="${(b.rfa*100).toFixed(2)}"></div>
       <div class="form-field"><div class="form-label">Remise ATS %</div><input class="field-input" type="number" step="0.01" id="be-remise-ats" value="${(b.remiseAts*100).toFixed(2)}"></div>
