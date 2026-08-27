@@ -3,11 +3,11 @@
 // ============================================================
 function getColUniqueValues(code){
   const vals=new Set();
-  products.forEach(p=>{computeCalcFields(p);const v=p.fields[code];if(v!==undefined&&v!==null&&v.toString().trim()!=='')vals.add(v.toString().trim());});
+  products.forEach(p=>{computeCalcFields(p);const v=p.fields[code]||p[code];if(v!==undefined&&v!==null&&v.toString().trim()!=='')vals.add(v.toString().trim());});
   return[...vals].sort((a,b)=>a.localeCompare(b,'fr'));
 }
 function openColFilter(code,label,iconEl){
-  if(activeColFilterDropdown){activeColFilterDropdown.remove();activeColFilterDropdown=null;document.removeEventListener('click',colFilterOutsideClick);}
+  if(activeColFilterDropdown){activeColFilterDropdown.remove();activeColFilterDropdown=null;}
   const vals=getColUniqueValues(code);
   const active=colFilters[code]||null;
   const rect=iconEl.getBoundingClientRect();
@@ -17,27 +17,30 @@ function openColFilter(code,label,iconEl){
   if(!vals.length){itemsHtml='<div class="col-filter-empty">Aucune valeur disponible</div>';}
   else{
     const allChecked=!active||active.size===0;
-    itemsHtml+=`<div class="col-filter-item" onclick="toggleColFilterAll('${code}',this)"><input type="checkbox" ${allChecked?'checked':''} id="cfa-${code}"><label for="cfa-${code}" style="font-weight:600">Tout selectionner</label></div>`;
+    itemsHtml+=`<div class="col-filter-item" id="cfa-row-${code}"><input type="checkbox" id="cfa-${code}" ${allChecked?'checked':''} onchange="toggleColFilterAll('${code}',this)"><label for="cfa-${code}" style="font-weight:600">Tout selectionner</label></div>`;
     vals.forEach((v,i)=>{
       const checked=!active||active.has(v);
       itemsHtml+=`<div class="col-filter-item col-filter-val-item" data-val="${v.replace(/"/g,'&quot;')}"><input type="checkbox" id="cfv-${code}-${i}" ${checked?'checked':''} onchange="toggleColFilterVal('${code}','${v.replace(/'/g,"\\'")}',this)"><label for="cfv-${code}-${i}">${v}</label></div>`;
     });
   }
   dd.innerHTML=`<div class="col-filter-dropdown-header"><span>${label}</span><button onclick="clearColFilter('${code}')">Effacer</button></div>
-    <div class="col-filter-search-wrap"><input type="text" class="col-filter-search" placeholder="Rechercher une valeur..." oninput="filterColFilterList(this)"></div>
+    <div class="col-filter-search-wrap"><input type="text" class="col-filter-search" placeholder="Rechercher..." oninput="filterColFilterList(this)"></div>
     <div class="col-filter-list">${itemsHtml}</div>`;
-  document.body.appendChild(dd);
-  activeColFilterDropdown=dd;
-  dd.addEventListener('click',e=>e.stopPropagation());
+  document.body.appendChild(dd);activeColFilterDropdown=dd;
   setTimeout(()=>document.addEventListener('click',colFilterOutsideClick),0);
 }
 function filterColFilterList(input){
   const q=input.value.toLowerCase().trim();
   const dd=input.closest('.col-filter-dropdown');if(!dd)return;
   dd.querySelectorAll('.col-filter-val-item').forEach(item=>{
-    const val=item.getAttribute('data-val')||'';
-    item.style.display=(!q||val.toLowerCase().includes(q))?'':'none';
+    const val=(item.getAttribute('data-val')||'').toLowerCase();
+    item.style.display=(!q||val.includes(q))?'':'none';
   });
+  // Sync "Tout selectionner" selon visibles
+  const allVisible=[...dd.querySelectorAll('.col-filter-val-item')].filter(i=>i.style.display!=='none');
+  const allChecked=allVisible.every(i=>i.querySelector('input').checked);
+  const cbAll=dd.querySelector('input[id^="cfa-"]');
+  if(cbAll)cbAll.checked=allChecked;
 }
 function colFilterOutsideClick(e){
   if(activeColFilterDropdown&&!activeColFilterDropdown.contains(e.target)){
@@ -50,17 +53,32 @@ function toggleColFilterVal(code,val,cb){
   if(!colFilters[code])colFilters[code]=new Set(vals);
   if(cb.checked)colFilters[code].add(val);else colFilters[code].delete(val);
   if(colFilters[code].size===vals.length)delete colFilters[code];
+  // Sync checkbox "Tout selectionner"
+  if(activeColFilterDropdown){
+    const cbAll=activeColFilterDropdown.querySelector('input[id^="cfa-"]');
+    if(cbAll)cbAll.checked=!colFilters[code];
+  }
   renderProductsTable();
 }
-function toggleColFilterAll(code,rowEl){
-  const cb=rowEl.querySelector('input');
-  if(cb.checked){delete colFilters[code];}else{colFilters[code]=new Set();}
-  if(activeColFilterDropdown){activeColFilterDropdown.remove();activeColFilterDropdown=null;document.removeEventListener('click',colFilterOutsideClick);}
+function toggleColFilterAll(code,cb){
+  const vals=getColUniqueValues(code);
+  if(cb.checked){
+    delete colFilters[code];
+    // Recoche toutes les valeurs visibles
+    if(activeColFilterDropdown){
+      activeColFilterDropdown.querySelectorAll('.col-filter-val-item input').forEach(c=>c.checked=true);
+    }
+  }else{
+    colFilters[code]=new Set();
+    if(activeColFilterDropdown){
+      activeColFilterDropdown.querySelectorAll('.col-filter-val-item input').forEach(c=>c.checked=false);
+    }
+  }
   renderProductsTable();
 }
 function clearColFilter(code){
   delete colFilters[code];
-  if(activeColFilterDropdown){activeColFilterDropdown.remove();activeColFilterDropdown=null;document.removeEventListener('click',colFilterOutsideClick);}
+  if(activeColFilterDropdown){activeColFilterDropdown.remove();activeColFilterDropdown=null;}
   renderProductsTable();
 }
 function isColFilterActive(code){return colFilters[code]!==undefined;}
@@ -68,7 +86,7 @@ function passesColFilters(product){
   computeCalcFields(product);
   for(const code in colFilters){
     const allowed=colFilters[code];
-    const val=(product.fields[code]||'').toString().trim();
+    const val=(product.fields[code]||product[code]||'').toString().trim();
     if(!allowed.has(val))return false;
   }
   return true;
@@ -83,7 +101,7 @@ function renderProductsTable(){
   let filtered=products.filter(p=>{
     if(!(!catFilter||p.cat===catFilter))return false;
     computeCalcFields(p);
-    const allText=Object.values(p.fields).join(' ').toLowerCase();
+    const allText=Object.values(p.fields).join(' ').toLowerCase()+' '+(p.cat||'').toLowerCase();
     if(searchVal&&!allText.includes(searchVal.toLowerCase()))return false;
     if(!passesColFilters(p))return false;
     return true;
@@ -105,23 +123,20 @@ function makeSortFilterTh(label,code){
   th.innerHTML=`<div style="display:flex;align-items:center;gap:4px;white-space:nowrap">
     <span class="sort-btn" onclick="sortTableByCode('${code}')" title="Trier" style="cursor:pointer;font-size:13px;color:#8a9bb0">&#8645;</span>
     <span onclick="sortTableByCode('${code}')" style="cursor:pointer;flex:1">${label}</span>
-    <span class="th-filter-icon${isFiltered?' filter-active':''}" title="Filtrer" onclick="event.stopPropagation();openColFilter('${code}','${label}',this)">&#9663;</span>
+    <span class="th-filter-icon${isFiltered?' filter-active':''}" title="Filtrer" onclick="openColFilter('${code}','${label}',this)">&#9663;</span>
   </div>`;
   return th;
 }
-
-// ============================================================
-// VUE SYNTHETIQUE
-// ============================================================
 function renderSynthHeader(thead){
   thead.innerHTML='';
   const tr=document.createElement('tr');
+  const clickAttr=attributes.find(a=>a.clickToOpen);
   const staticCols=[
     {label:'',cb:true},{label:'Visuel',noSort:true},
     {label:'Code SAP',code:'sap'},{label:'Code EAN',code:'ean'},
     {label:'Nom produit',code:'nom'},{label:'Categorie',code:'cat'},
     {label:'Date creation',code:'createdAt'},{label:'Mise en ligne',code:'miseEnLigne'},
-    {label:'Completion',noSort:true},{label:'Derniere MAJ',code:'maj'},
+    {label:'Completion',code:'completion'},{label:'Derniere MAJ',code:'maj'},
     {label:'Actions',noSort:true}
   ];
   staticCols.forEach(col=>{
@@ -131,60 +146,55 @@ function renderSynthHeader(thead){
   });
   thead.appendChild(tr);
 }
-
 function renderSynthRows(tbody,filtered){
   tbody.innerHTML='';
+  const clickAttr=attributes.find(a=>a.clickToOpen);
   filtered.forEach(p=>{
     computeCalcFields(p);
     const comp=calcCompletion(p);
     const isSelected=selectedProductIds.includes(p.id);
     const nom=p.fields.nom||'—';
+    const sap=p.fields.sap||'—';
+    // Cellule cliquable selon l'attribut designe
+    let nomCell,sapCell;
+    if(clickAttr&&clickAttr.code==='sap'){
+      sapCell=`<td style="white-space:nowrap"><span class="product-link" onclick="openProductDetail(${p.id})">${sap}</span></td>`;
+      nomCell=`<td class="td-name">${nom}</td>`;
+    } else {
+      // Par defaut ou si clickAttr.code==='nom'
+      sapCell=`<td style="white-space:nowrap">${sap}</td>`;
+      nomCell=`<td class="td-name"><span class="product-link" onclick="openProductDetail(${p.id})">${nom}</span></td>`;
+    }
     const tr=document.createElement('tr');if(isSelected)tr.className='row-selected';
-
-    // Attribut portant clickToOpen
-    const clickAttr=attributes.find(a=>a.clickToOpen===true);
-    const clickCode=clickAttr?clickAttr.code:'nom';
-    const clickVal=p.fields[clickCode]||'—';
-    const nomCell=`<span class="product-link" onclick="openProductDetail(${p.id})">${clickCode==='nom'?nom:clickVal}</span>`;
-    // Nom toujours affiche, mais le lien peut etre sur un autre champ
-    const nomDisplay=clickCode==='nom'
-      ?nomCell
-      :`<span>${nom}</span>`;
-
     tr.innerHTML=`
       <td style="width:36px;text-align:center"><input type="checkbox" ${isSelected?'checked':''} onchange="toggleSelectProduct(${p.id},this)"></td>
       <td style="padding:6px 10px">${visualThumb(p,40)}</td>
-      <td style="white-space:nowrap">${p.fields.sap||'—'}</td>
+      ${sapCell}
       <td style="white-space:nowrap">${p.fields.ean||'—'}</td>
-      <td class="td-name">${nomDisplay}</td>
-      <td>${catBadgeHtml(p.cat)}</td>
+      ${nomCell}
+      <td><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></td>
       <td style="white-space:nowrap">${p.createdAt||'—'}</td>
       <td style="white-space:nowrap">${p.fields.miseEnLigne||'—'}</td>
       <td><div class="inline-bar"><div class="inline-bar-bg"><div class="inline-bar-fill" style="width:${comp}%;background:${getCompletionColor(comp)}"></div></div><span style="font-size:12px;color:#607080">${comp}%</span></div></td>
       <td style="white-space:nowrap">${p.maj||'—'}</td>
-      <td><div class="td-actions"><button class="action-btn" onclick="openProductDetail(${p.id})">Voir</button><button class="action-btn-danger" onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g,"\\'")}')">Suppr.</button></div></td>`;
+      <td><div class="td-actions"><button class="action-btn-danger" onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g,"\\'")}')">Suppr.</button></div></td>`;
     tbody.appendChild(tr);
   });
 }
 
-// ============================================================
-// VUE DETAILLEE
-// ============================================================
+// Badge categorie dynamique (utilise cat.color)
+function getCatBadgeStyle(catName){
+  const cat=getCatByName(catName);
+  if(!cat)return'background:#f0f4f8;color:#607080;border:1px solid #e0e8f0;';
+  const hex=cat.color||'#4fc3f7';
+  return`background:${hex}22;color:${hex};border:1px solid ${hex}55;`;
+}
+
 function renderDetailHeader(thead){
   thead.innerHTML='';initGroupFilters();
-  const catFilter=(document.getElementById('filter-cat')||{}).value||'';
-  const cat=getCatByName(catFilter);
-  // Groupes visibles : respecte l'ordre de attrGroups, filtre par categorie si selectionnee
-  let visibleGroups;
-  if(cat){
-    visibleGroups=cat.groupIds
-      .map(id=>getGroupById(id))
-      .filter(g=>g&&activeGroupFilters.has(g.id)&&g.id!==2);
-  }else{
-    visibleGroups=getVisibleGroupsForUser().filter(g=>activeGroupFilters.has(g.id)&&g.id!==2);
-  }
+  const visibleGroups=getVisibleGroupsForUser().filter(g=>activeGroupFilters.has(g.id)&&g.code!=='visuels');
   const row1=document.createElement('tr'),row2=document.createElement('tr');
-  [{label:'',cb:true,noSort:true},{label:'Visuel',noSort:true},{label:'Code SAP',code:'sap'},{label:'Nom produit',code:'nom'},{label:'Categorie',noSort:true},{label:'Completion',noSort:true},{label:'Actions',noSort:true}].forEach(col=>{
+  [{label:'',cb:true,noSort:true},{label:'Visuel',noSort:true},{label:'Code SAP',code:'sap'},{label:'Nom produit',code:'nom'},{label:'Categorie',noSort:true},{label:'Completion',code:'completion'},{label:'Actions',noSort:true}].forEach(col=>{
     const th=document.createElement('th');th.rowSpan=2;
     if(col.cb){th.style.width='36px';th.innerHTML='<input type="checkbox" onchange="toggleSelectAll(this)">';}
     else if(col.noSort||!col.code){th.textContent=col.label;}
@@ -202,26 +212,16 @@ function renderDetailHeader(thead){
       th2.innerHTML=`<div style="display:flex;align-items:center;gap:4px;white-space:nowrap">
         <span class="sort-btn" onclick="sortTableByCode('${attr.code}')" title="Trier" style="cursor:pointer;font-size:13px;color:#8a9bb0">&#8645;</span>
         <span onclick="sortTableByCode('${attr.code}')" style="cursor:pointer;flex:1">${attr.name}${attr.calc?`<span style="font-size:10px;color:#ffa726" title="${attr.formulaLabel||''}">&#9654;</span>`:''}</span>
-        <span class="th-filter-icon${isFiltered?' filter-active':''}" title="Filtrer" onclick="event.stopPropagation();openColFilter('${attr.code}','${attr.name}',this)">&#9663;</span>
+        <span class="th-filter-icon${isFiltered?' filter-active':''}" title="Filtrer" onclick="openColFilter('${attr.code}','${attr.name}',this)">&#9663;</span>
       </div>`;
       row2.appendChild(th2);
     });
   });
   thead.appendChild(row1);thead.appendChild(row2);
 }
-
 function renderDetailRows(tbody,filtered){
   tbody.innerHTML='';initGroupFilters();
-  const catFilter=(document.getElementById('filter-cat')||{}).value||'';
-  const cat=getCatByName(catFilter);
-  let visibleGroups;
-  if(cat){
-    visibleGroups=cat.groupIds
-      .map(id=>getGroupById(id))
-      .filter(g=>g&&activeGroupFilters.has(g.id)&&g.id!==2);
-  }else{
-    visibleGroups=getVisibleGroupsForUser().filter(g=>activeGroupFilters.has(g.id)&&g.id!==2);
-  }
+  const visibleGroups=getVisibleGroupsForUser().filter(g=>activeGroupFilters.has(g.id)&&g.code!=='visuels');
   const allValues={};
   if(compareMode&&filtered.length>1){
     visibleGroups.forEach(g=>g.attrIds.forEach(aid=>{
@@ -238,9 +238,9 @@ function renderDetailRows(tbody,filtered){
       <td style="padding:6px 10px">${visualThumb(p,36)}</td>
       <td style="white-space:nowrap;font-size:12px">${p.fields.sap||'—'}</td>
       <td class="td-name"><span class="product-link" onclick="openProductDetail(${p.id})">${nom}</span></td>
-      <td>${catBadgeHtml(p.cat)}</td>
+      <td><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></td>
       <td><div class="inline-bar"><div class="inline-bar-bg"><div class="inline-bar-fill" style="width:${comp}%;background:${getCompletionColor(comp)}"></div></div><span style="font-size:12px;color:#607080">${comp}%</span></div></td>
-      <td><div class="td-actions"><button class="action-btn" onclick="openProductDetail(${p.id})">Voir</button></div></td>`;
+      <td><div class="td-actions"><button class="action-btn-danger" onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g,"\\'")}')">Suppr.</button></div></td>`;
     visibleGroups.forEach(g=>{
       const color=getGroupColor(g);
       g.attrIds.map(id=>getAttrById(id)).filter(Boolean).forEach(attr=>{
@@ -253,10 +253,6 @@ function renderDetailRows(tbody,filtered){
     tr.innerHTML=cells;tbody.appendChild(tr);
   });
 }
-
-// ============================================================
-// SELECTION / COMPARAISON
-// ============================================================
 function toggleSelectAll(cb){
   document.querySelectorAll('#products-tbody input[type=checkbox]').forEach(c=>{
     const m=c.getAttribute('onchange')&&c.getAttribute('onchange').match(/toggleSelectProduct\((\d+)/);
@@ -283,37 +279,51 @@ function renderCompareBar(){
 }
 function enterCompare(){compareMode=true;if(currentView==='synth')switchView('detail');else renderProductsTable();}
 function exitCompare(){compareMode=false;renderProductsTable();}
-function clearSelection(){
-  selectedProductIds=[];compareMode=false;
-  document.querySelectorAll('#products-tbody input[type=checkbox]').forEach(c=>c.checked=false);
-  document.querySelectorAll('#products-tbody tr').forEach(tr=>tr.classList.remove('row-selected'));
-  renderCompareBar();
-}
+function clearSelection(){selectedProductIds=[];compareMode=false;document.querySelectorAll('#products-tbody input[type=checkbox]').forEach(c=>c.checked=false);document.querySelectorAll('#products-tbody tr').forEach(tr=>tr.classList.remove('row-selected'));renderCompareBar();}
 
 // ============================================================
-// FILTRES / VUE
+// VUE DETAILLEE — SURLIGNAGE DROPDOWN SI PAS DE CATEGORIE
 // ============================================================
 function onCatFilterChange(){
   const v=(document.getElementById('filter-cat')||{}).value||'';
-  const btn=document.getElementById('btn-view-detail');
-  if(btn){btn.disabled=!v;if(!v)switchView('synth');}
   activeGroupFilters=null;
-  colFilters={};
   filterTable();
+  // Si on est en vue detaillee et qu'on vide la categorie, on repasse en synth
+  if(!v&&currentView==='detail'){
+    switchView('synth');
+  }
 }
+
 function switchView(mode){
+  if(mode==='detail'){
+    const catFilter=(document.getElementById('filter-cat')||{}).value||'';
+    if(!catFilter){
+      // Surlignage de la dropdown categorie
+      const sel=document.getElementById('filter-cat');
+      if(sel){
+        sel.classList.add('filter-cat-required');
+        sel.focus();
+        sel.addEventListener('change',function onceChange(){
+          sel.classList.remove('filter-cat-required');
+          sel.removeEventListener('change',onceChange);
+        });
+      }
+      // Notification contextuelle
+      showNotif('Selectionnez une categorie pour activer la vue detaillee');
+      return;
+    }
+  }
   currentView=mode;
   const bs=document.getElementById('btn-view-synth'),bd=document.getElementById('btn-view-detail');
   if(bs)bs.classList.toggle('active',mode==='synth');
   if(bd)bd.classList.toggle('active',mode==='detail');
   if(mode==='detail'){activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));renderGroupFilterBar();}
-  colFilters={};
   renderProductsTable();
 }
 function filterTable(){renderProductsTable();}
 
 // ============================================================
-// TRI
+// TRI — AVEC SUPPORT COMPLETION
 // ============================================================
 let sortState={};
 function sortTableByCode(code){
@@ -327,8 +337,16 @@ function sortTableByCode(code){
     const mb=getCb(b)&&getCb(b).getAttribute('onchange')&&getCb(b).getAttribute('onchange').match(/\d+/);
     const pa=ma?products.find(p=>p.id===parseInt(ma[0])):null;
     const pb=mb?products.find(p=>p.id===parseInt(mb[0])):null;
-    const va=pa?(pa.fields[code]||pa[code]||''):'';
-    const vb=pb?(pb.fields[code]||pb[code]||''):'';
+    if(!pa||!pb)return 0;
+    let va,vb;
+    if(code==='completion'){
+      va=calcCompletion(pa);vb=calcCompletion(pb);
+      return dir==='asc'?va-vb:vb-va;
+    }
+    va=pa.fields[code]!==undefined?pa.fields[code]:(pa[code]||'');
+    vb=pb.fields[code]!==undefined?pb.fields[code]:(pb[code]||'');
+    const na=parseFloat(va),nb=parseFloat(vb);
+    if(!isNaN(na)&&!isNaN(nb))return dir==='asc'?na-nb:nb-na;
     return dir==='asc'?va.toString().localeCompare(vb.toString(),'fr'):vb.toString().localeCompare(va.toString(),'fr');
   });
   rows.forEach(r=>tb.appendChild(r));
