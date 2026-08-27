@@ -70,7 +70,7 @@ let attributes = [
   { id: 19, name: 'PA ATS',           code: 'pa_ats',         type: 'Nombre',          groupId: 5, required: true,  calc: false, formula: '', showInSynth: false },
   { id: 20, name: 'Remise sur facture',code: 'remise',        type: 'Nombre',          groupId: 5, required: true,  calc: false, formula: '', showInSynth: false },
   { id: 21, name: 'RFA',              code: 'rfa',            type: 'Nombre',          groupId: 5, required: true,  calc: false, formula: '', showInSynth: false },
-  { id: 22, name: 'Marge ATS',        code: 'marge_ats',      type: 'Nombre calcule',  groupId: 5, required: false, calc: true,
+  { id: 22, name: 'Marge interne',        code: 'marge_interne',      type: 'Nombre calcule',  groupId: 5, required: false, calc: true,
     formula: '=[pa_ats]*(1-[remise]/100)*(1+[rfa]/100)', formulaLabel: 'PA ATS x (1 - Remise/100) x (1 + RFA/100)', showInSynth: false },
   { id: 23, name: 'PA opticien',      code: 'pa_opticien',    type: 'Nombre calcule',  groupId: 5, required: false, calc: true,
     formula: '=[pa_ats]*(1-[remise]/100)', formulaLabel: 'PA ATS x (1 - Remise/100)', showInSynth: false },
