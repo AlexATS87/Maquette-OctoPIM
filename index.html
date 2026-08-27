@@ -371,7 +371,65 @@
         </div>
       </div>
     </div>
-
+<!-- PAGE EDITION ATTRIBUT -->
+<div class="page" id="page-admin-attribute-edit">
+  <div style="margin-bottom:16px">
+    <button class="btn btn-secondary" onclick="showPage('admin-attributes',null)">&larr; Liste des attributs</button>
+  </div>
+  <div class="attr-form">
+    <div class="modal-title">Modifier un attribut</div>
+    <div class="form-grid" style="margin-bottom:16px">
+      <div class="form-field">
+        <div class="form-label">Nom *</div>
+        <input class="field-input" id="ea-name">
+        <div class="error-msg" id="err-ea-name">Champ obligatoire.</div>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Code technique</div>
+        <input class="field-input" id="ea-code" style="background:#f0f4f8;color:#a0b0c0" readonly>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Type *</div>
+        <select class="form-select" id="ea-type" onchange="onEditAttrTypeChange()">
+          <option>Texte</option>
+          <option>Texte long</option>
+          <option>Texte calcule</option>
+          <option>Oui / Non</option>
+          <option>Simple select</option>
+          <option>Multi select</option>
+          <option>Date</option>
+          <option>Nombre</option>
+          <option>Nombre decimal</option>
+          <option>Nombre calcule</option>
+          <option>Image</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Groupe d attributs</div>
+        <select class="form-select" id="ea-group"></select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Obligatoire</div>
+        <select class="form-select" id="ea-required">
+          <option value="0">Non</option>
+          <option value="1">Oui</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field" id="ea-options-wrap" style="display:none;margin-bottom:16px">
+      <div class="form-label">Options (une par ligne)</div>
+      <textarea class="field-input" id="ea-options" rows="6" style="resize:vertical"></textarea>
+    </div>
+    <div class="form-field" id="ea-formula-wrap" style="display:none;margin-bottom:16px">
+      <div class="form-label">Formule</div>
+      <input class="field-input" id="ea-formula" placeholder="ex : =[pa_ats]*(1-[remise]/100)">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="showPage('admin-attributes',null)">Annuler</button>
+      <button class="btn btn-primary" onclick="saveAttributeEdit()">Enregistrer</button>
+    </div>
+  </div>
+</div>
     <!-- ADMIN — CATEGORIES -->
     <div class="page" id="page-admin-categories">
       <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
@@ -571,7 +629,7 @@
     </div>
   </div>
 </div>
-
+  
 <!-- Notification -->
 <div class="notif" id="notif"></div>
 
