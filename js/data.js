@@ -7,9 +7,9 @@ let seuilCompletion = 80;
 // GROUPES D'ATTRIBUTS
 // ============================================================
 let attrGroups = [
-  { id: 1,  name: 'Informations generales',      code: 'infos_generales',      system: true,  attrIds: [1, 2, 3, 4, 5, 54, 55, 56, 57] },
-  { id: 2,  name: 'Visuels',                      code: 'visuels',              system: true,  attrIds: [58, 59, 60, 61, 62] },
-  { id: 3,  name: 'Marque',                        code: 'marque',               system: false, attrIds: [6] },
+  {id:1,name:'Informations generales',code:'infos_generales',system:false,attrIds:[1,2,3,4,5,53]},
+  {id:2,name:'Visuels',code:'visuels',system:false,attrIds:[]},
+  {id:3,name:'Marque',code:'marque',system:false,isBrandGroup:true,attrIds:[6]},
   { id: 4,  name: 'Caracteristiques monture',      code: 'caract_monture',       system: false, attrIds: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] },
   { id: 5,  name: 'Tarification monture',          code: 'tarif_monture',        system: false, attrIds: [18, 19, 20, 21, 22, 23, 24, 25] },
   { id: 6,  name: 'SEO',                           code: 'seo',                  system: false, attrIds: [26, 27, 28, 29] },
