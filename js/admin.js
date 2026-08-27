@@ -29,36 +29,33 @@ function renderCatGroupOrder(cat){
   cat.groupIds.forEach(gid=>{
     const g=getGroupById(gid);if(!g)return;
     const item=document.createElement('div');
-    item.className='cat-group-order-item'+(g.system?' system-group':'');item.dataset.groupId=gid;
-    if(!g.system){
-      item.draggable=true;
-      item.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',String(gid));item.classList.add('dragging');});
-      item.addEventListener('dragend',()=>item.classList.remove('dragging'));
-      item.addEventListener('dragover',e=>{e.preventDefault();item.classList.add('drag-over');});
-      item.addEventListener('dragleave',()=>item.classList.remove('drag-over'));
-      item.addEventListener('drop',e=>{
-        e.preventDefault();item.classList.remove('drag-over');
-        const fromId=parseInt(e.dataTransfer.getData('text/plain'));const toId=parseInt(item.dataset.groupId);
-        if(fromId===toId)return;
-        const fi=cat.groupIds.indexOf(fromId);const ti=cat.groupIds.indexOf(toId);
-        cat.groupIds.splice(fi,1);cat.groupIds.splice(ti,0,fromId);renderCatGroupOrder(cat);
-      });
-    }
-    item.innerHTML=`${!g.system?'<span class="drag-handle">&#9776;</span>':'<span style="width:22px;display:inline-block"></span>'}
-      <span style="font-size:13px;font-weight:${g.system?'600':'400'}">${g.name}</span>
-      ${g.system?'<span class="attr-group-badge-system" style="margin-left:8px">Systeme</span>':''}
-      ${!g.system?`<button class="action-btn-danger" style="margin-left:auto;font-size:11px;padding:3px 8px" onclick="removeCatGroup(${cat.id},${gid})">Retirer</button>`:''}`;
+    item.className='cat-group-order-item';item.dataset.groupId=gid;
+    item.draggable=true;
+    item.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',String(gid));item.classList.add('dragging');});
+    item.addEventListener('dragend',()=>item.classList.remove('dragging'));
+    item.addEventListener('dragover',e=>{e.preventDefault();item.classList.add('drag-over');});
+    item.addEventListener('dragleave',()=>item.classList.remove('drag-over'));
+    item.addEventListener('drop',e=>{
+      e.preventDefault();item.classList.remove('drag-over');
+      const fromId=parseInt(e.dataTransfer.getData('text/plain'));const toId=parseInt(item.dataset.groupId);
+      if(fromId===toId)return;
+      const fi=cat.groupIds.indexOf(fromId);const ti=cat.groupIds.indexOf(toId);
+      cat.groupIds.splice(fi,1);cat.groupIds.splice(ti,0,fromId);renderCatGroupOrder(cat);
+    });
+    item.innerHTML=`<span class="drag-handle">&#9776;</span>
+      <span style="font-size:13px">${g.name}</span>
+      ${g.isBrandGroup?'<span class="attr-group-badge-system" style="margin-left:8px;background:#fce4ec;color:#880e4f">Marque/Fourn.</span>':''}
+      <button class="action-btn-danger" style="margin-left:auto;font-size:11px;padding:3px 8px" onclick="removeCatGroup(${cat.id},${gid})">Retirer</button>`;
     list.appendChild(item);
   });
 }
 function removeCatGroup(catId,groupId){
   const cat=categories.find(c=>c.id===catId);if(!cat)return;
-  const g=getGroupById(groupId);if(g&&g.system)return;
   cat.groupIds=cat.groupIds.filter(id=>id!==groupId);renderCatGroupOrder(cat);renderCatGroupAvailable(cat);
 }
 function renderCatGroupAvailable(cat){
   const list=document.getElementById('cat-group-available-list');if(!list)return;list.innerHTML='';
-  const available=attrGroups.filter(g=>!g.system&&!cat.groupIds.includes(g.id));
+  const available=attrGroups.filter(g=>!cat.groupIds.includes(g.id));
   if(!available.length){list.innerHTML='<div style="font-size:12px;color:#a0b0c0;padding:8px">Tous les groupes sont deja associes.</div>';return;}
   available.forEach(g=>{
     const row=document.createElement('div');row.className='attr-toggle-row';row.dataset.groupName=g.name.toLowerCase();
@@ -103,8 +100,7 @@ function renderAttrsTable(){
     const cols=[
       {label:'Nom',code:'name'},{label:'Code',code:'code'},
       {label:'Type',code:'type'},{label:'Groupe',code:'group'},
-      {label:'Obligatoire',noSort:true},
-      {label:'Options',noSort:true},{label:'Actions',noSort:true}
+      {label:'Obligatoire',noSort:true},{label:'Options',noSort:true},{label:'Actions',noSort:true}
     ];
     thead.innerHTML='';
     const tr=document.createElement('tr');
@@ -140,7 +136,7 @@ function renderAttrsTable(){
   tb.innerHTML='';
   sorted.forEach(a=>{
     const g=getGroupById(a.groupId);
-    const clickCheck=a.type==='Texte'
+    const clickCheck=a.type==='Texte'&&a.showInSynth
       ?`<label class="attr-option-row" title="Clic sur valeur = ouvrir produit">
           <input type="checkbox" ${a.clickToOpen?'checked':''} onchange="setAttrClickToOpen(${a.id},this)"> Clic
         </label>`
@@ -163,24 +159,15 @@ function renderAttrsTable(){
     </tr>`;
   });
 }
-
 function sortAttrsBy(code){
-  if(attrSortState.code===code){
-    attrSortState.dir=attrSortState.dir==='asc'?'desc':'asc';
-  }else{
-    attrSortState={code,dir:'asc'};
-  }
+  if(attrSortState.code===code){attrSortState.dir=attrSortState.dir==='asc'?'desc':'asc';}
+  else{attrSortState={code,dir:'asc'};}
   renderAttrsTable();
 }
-
 function setAttrClickToOpen(attrId,cb){
-  if(cb.checked){
-    attributes.forEach(a=>{a.clickToOpen=a.id===attrId;});
-  }else{
-    const a=attributes.find(x=>x.id===attrId);if(a)a.clickToOpen=false;
-  }
-  renderAttrsTable();
-  renderProductsTable();
+  if(cb.checked){attributes.forEach(a=>{a.clickToOpen=a.id===attrId;});}
+  else{const a=attributes.find(x=>x.id===attrId);if(a)a.clickToOpen=false;}
+  renderAttrsTable();renderProductsTable();
   showNotif(cb.checked?'Clic actif sur : '+(attributes.find(x=>x.id===attrId)||{}).name:'Option clic desactivee');
 }
 
@@ -196,6 +183,7 @@ function editAttribute(id){
   document.getElementById('ea-code').value=a.code;
   document.getElementById('ea-type').value=a.type;
   document.getElementById('ea-required').value=a.required?'1':'0';
+  // Formule toujours visible
   document.getElementById('ea-formula').value=a.formula||'';
   const gSel=document.getElementById('ea-group');
   if(gSel){
@@ -204,21 +192,17 @@ function editAttribute(id){
   }
   const optWrap=document.getElementById('ea-options-wrap');
   if(optWrap){
-    const showOpts=a.type==='Simple select'||a.type==='Multi select';
-    optWrap.style.display=showOpts?'':'none';
+    optWrap.style.display=(a.type==='Simple select'||a.type==='Multi select')?'':'none';
     document.getElementById('ea-options').value=(a.options||[]).join('\n');
   }
-  const formulaWrap=document.getElementById('ea-formula-wrap');
-  if(formulaWrap)formulaWrap.style.display=a.calc?'':'none';
   showPage('admin-attribute-edit',null);
 }
 
 function onEditAttrTypeChange(){
   const type=document.getElementById('ea-type').value;
   const optWrap=document.getElementById('ea-options-wrap');
-  const formulaWrap=document.getElementById('ea-formula-wrap');
+  // Formule toujours visible, options uniquement pour select
   if(optWrap)optWrap.style.display=(type==='Simple select'||type==='Multi select')?'':'none';
-  if(formulaWrap)formulaWrap.style.display=(type==='Texte calcule'||type==='Nombre calcule')?'':'none';
 }
 
 function saveAttributeEdit(){
@@ -236,7 +220,8 @@ function saveAttributeEdit(){
   a.type=newType;
   a.required=document.getElementById('ea-required').value==='1';
   a.calc=isCalc;
-  a.formula=isCalc?document.getElementById('ea-formula').value.trim():'';
+  // Formule conservee quel que soit le type
+  a.formula=document.getElementById('ea-formula').value.trim();
   if(newType==='Simple select'||newType==='Multi select'){
     a.options=document.getElementById('ea-options').value.split('\n').map(s=>s.trim()).filter(Boolean);
   }else{a.options=[];}
@@ -267,7 +252,7 @@ function createAttribute(){
   const required=document.getElementById('new-attr-required').value==='1';
   const formula=document.getElementById('new-attr-formula').value.trim();
   const isCalc=type==='Texte calcule'||type==='Nombre calcule';
-  const newAttr={id:nextAttrId++,name,code,type,groupId,required,calc:isCalc,formula:isCalc?formula:'',options:[],clickToOpen:false};
+  const newAttr={id:nextAttrId++,name,code,type,groupId,required,calc:isCalc,formula:formula,options:[],clickToOpen:false,showInSynth:false};
   attributes.push(newAttr);
   if(groupId){const g=getGroupById(groupId);if(g)g.attrIds.push(newAttr.id);}
   nEl.value='';cEl.value='';
@@ -283,43 +268,36 @@ function renderAttrGroupsList(){
     const attrs=g.attrIds.map(id=>getAttrById(id)).filter(Boolean);
     const color=getGroupColor(g);
     const card=document.createElement('div');
-    card.className='attr-group-card';
-    card.dataset.groupId=g.id;
-    if(!g.system){
-      card.draggable=true;
-      card.addEventListener('dragstart',e=>{
-        e.dataTransfer.setData('text/plain',String(g.id));
-        card.classList.add('dragging');
-      });
-      card.addEventListener('dragend',()=>card.classList.remove('dragging'));
-      card.addEventListener('dragover',e=>{e.preventDefault();card.classList.add('drag-over-card');});
-      card.addEventListener('dragleave',()=>card.classList.remove('drag-over-card'));
-      card.addEventListener('drop',e=>{
-        e.preventDefault();card.classList.remove('drag-over-card');
-        const fromId=parseInt(e.dataTransfer.getData('text/plain'));
-        const toId=g.id;
-        if(fromId===toId)return;
-        const fi=attrGroups.findIndex(x=>x.id===fromId);
-        const ti=attrGroups.findIndex(x=>x.id===toId);
-        const [moved]=attrGroups.splice(fi,1);
-        attrGroups.splice(ti,0,moved);
-        renderAttrGroupsList();
-        renderProductsTable();
-      });
-    }
+    card.className='attr-group-card';card.dataset.groupId=g.id;
+    card.draggable=true;
+    card.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',String(g.id));card.classList.add('dragging');});
+    card.addEventListener('dragend',()=>card.classList.remove('dragging'));
+    card.addEventListener('dragover',e=>{e.preventDefault();card.classList.add('drag-over-card');});
+    card.addEventListener('dragleave',()=>card.classList.remove('drag-over-card'));
+    card.addEventListener('drop',e=>{
+      e.preventDefault();card.classList.remove('drag-over-card');
+      const fromId=parseInt(e.dataTransfer.getData('text/plain'));const toId=g.id;
+      if(fromId===toId)return;
+      const fi=attrGroups.findIndex(x=>x.id===fromId);const ti=attrGroups.findIndex(x=>x.id===toId);
+      const [moved]=attrGroups.splice(fi,1);attrGroups.splice(ti,0,moved);
+      renderAttrGroupsList();renderProductsTable();
+    });
     card.innerHTML=`<div class="attr-group-card-header">
       <div style="display:flex;align-items:center;gap:10px">
-        ${!g.system?'<span class="drag-handle" style="cursor:grab;font-size:18px;color:#c0d0e0">&#9776;</span>':''}
+        <span class="drag-handle" style="cursor:grab;font-size:18px;color:#c0d0e0">&#9776;</span>
         <div class="attr-group-card-title">${g.name}</div>
-        ${g.system?'<span class="attr-group-badge-system">Systeme</span>':''}
+        ${g.isBrandGroup?'<span class="attr-group-badge-system" style="background:#fce4ec;color:#880e4f">Marque/Fourn.</span>':''}
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:12px;color:#a0b0c0">${attrs.length} attribut${attrs.length>1?'s':''}</span>
-        ${!g.system?`<button class="action-btn" onclick="editAttrGroup(${g.id})">Editer</button><button class="action-btn-danger" onclick="confirmDelete('group',${g.id},'${g.name}')">Supprimer</button>`:''}
+        <button class="action-btn" onclick="editAttrGroup(${g.id})">Editer</button>
+        <button class="action-btn-danger" onclick="confirmDelete('group',${g.id},'${g.name}')">Supprimer</button>
       </div>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">
-      ${attrs.map(a=>`<span class="attr-chip" style="background:${color.bg};color:${color.text}">${a.name}</span>`).join('')}
+      ${g.isBrandGroup
+        ?'<span class="attr-chip" style="background:#fce4ec;color:#880e4f">Fournisseur</span><span class="attr-chip" style="background:#fce4ec;color:#880e4f">Marque</span><span class="attr-chip" style="background:#fce4ec;color:#880e4f">Conditions commerciales</span><em style="font-size:11px;color:#a0b0c0;margin-left:4px">Gere automatiquement</em>'
+        :attrs.map(a=>`<span class="attr-chip" style="background:${color.bg};color:${color.text}">${a.name}</span>`).join('')}
     </div>`;
     list.appendChild(card);
   });
@@ -333,6 +311,10 @@ function editAttrGroup(id){
 }
 function renderGroupAttrToggles(g){
   const list=document.getElementById('group-attr-toggle-list');if(!list)return;list.innerHTML='';
+  if(g.isBrandGroup){
+    list.innerHTML='<div style="font-size:13px;color:#880e4f;padding:12px;background:#fce4ec;border-radius:8px">Ce groupe est gere automatiquement (Fournisseur / Marque / Conditions commerciales).<br>Son contenu est parametrable depuis la section Marques / Fournisseurs.</div>';
+    return;
+  }
   attributes.forEach(attr=>{
     const isOn=g.attrIds.includes(attr.id);
     const row=document.createElement('div');row.className='attr-toggle-row';row.dataset.attrName=attr.name.toLowerCase();
@@ -350,17 +332,19 @@ function saveGroupEdit(){
   const g=attrGroups.find(x=>x.id===editingGroupId);if(!g)return;
   g.name=document.getElementById('edit-group-name').value.trim()||g.name;
   g.code=document.getElementById('edit-group-code').value.trim()||g.code;
-  g.attrIds=[];
-  document.querySelectorAll('#group-attr-toggle-list .toggle').forEach(t=>{
-    if(t.classList.contains('on'))g.attrIds.push(parseInt(t.dataset.attrId));
-  });
+  if(!g.isBrandGroup){
+    g.attrIds=[];
+    document.querySelectorAll('#group-attr-toggle-list .toggle').forEach(t=>{
+      if(t.classList.contains('on'))g.attrIds.push(parseInt(t.dataset.attrId));
+    });
+  }
   renderAll();showPage('admin-groups',null);showNotif('Groupe mis a jour');
 }
 function createAttrGroup(){
   const name=document.getElementById('new-group-name').value.trim();
   const code=document.getElementById('new-group-code').value.trim();
   if(!name||!code){showNotif('Nom et code obligatoires');return;}
-  attrGroups.push({id:nextGroupId++,name,code,system:false,attrIds:[]});
+  attrGroups.push({id:nextGroupId++,name,code,system:false,isBrandGroup:false,attrIds:[]});
   document.getElementById('new-group-name').value='';document.getElementById('new-group-code').value='';
   closeModal('modal-create-group');renderAll();showNotif('Groupe "'+name+'" cree');
 }
@@ -416,7 +400,7 @@ function createProduct(){
   if(!cat){document.getElementById('np-cat').classList.add('field-error');document.getElementById('err-np-cat').classList.add('show');valid=false;}
   if(!valid)return;
   const today=todayStr();
-  products.push({id:nextProductId++,cat,createdAt:today,maj:nowStr(),visualSrc:null,visuals:0,history:[],
+  products.push({id:nextProductId++,cat,createdAt:today,maj:nowStr(),visualSrc:null,visuals:0,history:[],pendingChanges:[],
     fields:{sap,ean,nom:name,miseEnLigne:'',created_at:today}});
   closeModal('modal-create-product');
   ['np-sap','np-ean','np-name'].forEach(id=>document.getElementById(id).value='');
@@ -457,7 +441,6 @@ function saveSeuil(){
 // ============================================================
 let editingBrandIdx=null;
 
-// Badge type dynamique base sur la couleur de la categorie
 function catBadgeHtml(typeName){
   const cat=categories.find(c=>c.name===typeName);
   if(!cat)return`<span class="badge badge-grey" style="font-size:11px">${typeName||'—'}</span>`;
