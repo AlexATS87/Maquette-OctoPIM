@@ -12,53 +12,83 @@ function openProductDetail(id){
   updateDetailCompletion(p);
   showPage('product-detail',null);
 }
+
 function renderProductHeader(p,cat){
   const headerLeft=document.getElementById('product-header-left');if(!headerLeft)return;
   const nom=p.fields.nom||'—';
+  const activeGlobal=calcActiveGlobal(p);
+  const etatVisuel=calcEtatVisuel(p);
   headerLeft.innerHTML=`<div style="display:flex;align-items:flex-start;gap:16px">
-    <div id="detail-main-visual" onclick="triggerVisualUpload(${p.id})"
-      style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;" title="Cliquer pour ajouter un visuel">
-      ${p.visualSrc?`<img src="${p.visualSrc}" style="width:100%;height:100%;object-fit:cover;">`:`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#c0d0e0"><span style="font-size:28px">&#128247;</span><span style="font-size:10px">Ajouter</span></div>`}
+    <div id="detail-main-visual" onclick="triggerVisualUpload(${p.id},'visuel_face')"
+      style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;" title="Cliquer pour modifier le visuel face">
+      ${p.fields.visuel_face
+        ?`<img src="${p.fields.visuel_face}" style="width:100%;height:100%;object-fit:cover;">`
+        :`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#c0d0e0"><span style="font-size:28px">&#128247;</span><span style="font-size:10px">Ajouter</span></div>`}
     </div>
-    <div><div class="product-title">${nom}</div>
-    <div class="product-meta">
-      <span>SAP : ${p.fields.sap||'—'}</span>
-      <span>EAN : ${p.fields.ean||'—'}</span>
-      <span><span class="badge ${getBadgeClass(p.cat)}">${p.cat}</span></span>
-      <span style="color:#a0b0c0">Cree le ${p.createdAt||'—'}</span>
-    </div></div></div>`;
+    <div>
+      <div class="product-title">${nom}</div>
+      <div class="product-meta">
+        <span>SAP : ${p.fields.sap||'—'}</span>
+        <span>EAN : ${p.fields.ean||'—'}</span>
+        <span><span class="badge ${getBadgeClass(p.cat)}">${p.cat}</span></span>
+        <span><span class="${activeGlobal==='Activé'?'badge-active-on':'badge-active-off'}">${activeGlobal}</span></span>
+        <span><span class="${etatVisuel==='Oui'?'badge-etat-ok':'badge-etat-ko'}">Visuels : ${etatVisuel}</span></span>
+        <span style="color:#a0b0c0">Cree le ${p.createdAt||'—'}</span>
+      </div>
+    </div>
+  </div>`;
 }
-function triggerVisualUpload(productId){
+
+// ============================================================
+// UPLOAD VISUEL PAR CODE ATTRIBUT
+// ============================================================
+function triggerVisualUpload(productId, attrCode){
   const input=document.createElement('input');input.type='file';input.accept='image/*';
   input.onchange=function(e){
     const file=e.target.files[0];if(!file)return;
     const reader=new FileReader();
     reader.onload=function(ev){
       const p=products.find(x=>x.id===productId);if(!p)return;
-      const old=p.visualSrc?'(visuel existant)':'(vide)';
-      p.visualSrc=ev.target.result;p.visuals=1;
-      addHistory(p,'Visuel principal',old,'(visuel uploade)');
-      const container=document.getElementById('detail-main-visual');
-      if(container){container.innerHTML=`<img src="${p.visualSrc}" style="width:100%;height:100%;object-fit:cover;">`;container.style.borderStyle='solid';container.style.borderColor='#66bb6a';}
-      refreshVisuelsTab(p);updateDetailCompletion(p);renderProductsTable();showNotif('Visuel principal ajoute');
+      const old=p.fields[attrCode]?'(visuel existant)':'(vide)';
+      p.fields[attrCode]=ev.target.result;
+      // Retrocompat : visuel_face = visuel principal
+      if(attrCode==='visuel_face'){p.visualSrc=ev.target.result;p.visuals=1;}
+      // Recalcule le compteur de visuels
+      const visualCodes=['visuel_face','visuel_tq','visuel_profil','visuel_ambiance','visuel_fournisseur'];
+      p.visuals=visualCodes.filter(c=>p.fields[c]).length;
+      const attr=attributes.find(a=>a.code===attrCode);
+      addHistory(p,attr?attr.name:attrCode,old,'(visuel uploade)');
+      // Rafraichit le header
+      renderProductHeader(p,getCatByName(p.cat));
+      // Rafraichit le slot dans l'onglet visuels
+      refreshVisuelSlot(p,attrCode);
+      updateDetailCompletion(p);
+      renderProductsTable();
+      showNotif('Visuel mis a jour : '+(attr?attr.name:attrCode));
     };
     reader.readAsDataURL(file);
   };
   input.click();
 }
-function refreshVisuelsTab(p){
-  const tab=document.getElementById('tab-group-2');if(!tab)return;
-  const firstSlot=tab.querySelector('.visual-slot');if(!firstSlot)return;
-  const placeholder=firstSlot.querySelector('.visual-placeholder');
-  const existingImg=firstSlot.querySelector('.visual-uploaded');
-  if(p.visualSrc){
-    if(placeholder){
-      const img=document.createElement('img');img.src=p.visualSrc;img.className='visual-uploaded';
-      img.style.cssText='cursor:pointer;width:100%;border-radius:8px;height:160px;object-fit:cover;';
-      img.onclick=()=>triggerVisualUpload(p.id);placeholder.replaceWith(img);
-    } else if(existingImg){existingImg.src=p.visualSrc;}
+
+function refreshVisuelSlot(p,attrCode){
+  const slot=document.querySelector(`[data-visuel-code="${attrCode}"]`);if(!slot)return;
+  const img=slot.querySelector('.image-attr-preview');
+  const placeholder=slot.querySelector('.image-attr-placeholder');
+  if(p.fields[attrCode]){
+    if(img){img.src=p.fields[attrCode];}
+    else if(placeholder){
+      const newImg=document.createElement('img');
+      newImg.src=p.fields[attrCode];newImg.className='image-attr-preview';
+      newImg.onclick=()=>triggerVisualUpload(p.id,attrCode);
+      placeholder.replaceWith(newImg);
+    }
   }
 }
+
+// ============================================================
+// ONGLETS PRODUIT
+// ============================================================
 function renderProductTabs(p,cat){
   const tabsEl=document.getElementById('product-tabs');
   const contentsEl=document.getElementById('product-tab-contents');
@@ -87,6 +117,10 @@ function renderProductTabs(p,cat){
     contentsEl.appendChild(content);
   });
 }
+
+// ============================================================
+// ONGLET HISTORIQUE
+// ============================================================
 function renderTabHistory(p){
   if(!p.history||!p.history.length)return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucune modification enregistree.</div>';
   let rows='';
@@ -102,13 +136,18 @@ function renderTabHistory(p){
     <table class="history-table"><thead><tr><th>Date</th><th>Utilisateur</th><th>Champ</th><th>Modification</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
+
 function addHistory(p,fieldName,oldVal,newVal){
   if(!p.history)p.history=[];
   if(oldVal===newVal)return;
-  p.history.push({ts:nowStr(),user:'A. Beranger',field:fieldName,old:String(oldVal||''),new:String(newVal||'')});
+  p.history.push({ts:nowStr(),user:'J. Doe',field:fieldName,old:String(oldVal||''),new:String(newVal||'')});
   const histTab=document.getElementById('tab-group-hist');
   if(histTab&&histTab.classList.contains('active'))histTab.innerHTML=renderTabHistory(p);
 }
+
+// ============================================================
+// ONGLET INFOS GENERALES
+// ============================================================
 function renderTabGeneral(p){
   const nom=p.fields.nom||'';
   return`<div class="fields-grid">
@@ -124,29 +163,57 @@ function renderTabGeneral(p){
   <div class="field-row"><div class="field-label">Derniere MAJ</div><input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${p.maj||''}" readonly></div>
   </div></div>`;
 }
+
 function onDateMaskInput(el){
   let v=el.value.replace(/\D/g,'');
   if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);
   if(v.length>5)v=v.slice(0,5)+'/'+v.slice(5);
   el.value=v.slice(0,10);
 }
+
+// ============================================================
+// ONGLET VISUELS — groupe d'attributs type image
+// ============================================================
 function renderTabVisuels(p){
-  const labels=['Vue de face','Vue de profil','Vue 3/4','Visuel ambiance','Visuel fournisseur'];
-  const required=[true,true,true,false,false];
+  // Les 5 attributs image dans l'ordre : face, tq, profil, ambiance, fournisseur
+  const visualAttrs=[
+    {code:'visuel_face',   name:'Vue de face',          required:true,  synthVisible:true},
+    {code:'visuel_tq',     name:'Vue 3/4',              required:true,  synthVisible:false},
+    {code:'visuel_profil', name:'Vue de profil',        required:true,  synthVisible:false},
+    {code:'visuel_ambiance',  name:'Visuel ambiance',   required:false, synthVisible:false},
+    {code:'visuel_fournisseur',name:'Visuel fournisseur',required:false,synthVisible:false}
+  ];
+
   let slots='';
-  labels.forEach((l,i)=>{
-    const isMain=i===0,hasImg=isMain&&p.visualSrc;
-    slots+=`<div class="visual-slot"><div class="visual-slot-title">${l}</div>
-      <span class="${required[i]?'visual-badge-required':'visual-badge-optional'}">${required[i]?'Obligatoire':'Optionnel'}</span>
-      ${hasImg?`<img src="${p.visualSrc}" class="visual-uploaded" onclick="triggerVisualUpload(${p.id})" style="cursor:pointer;width:100%;border-radius:8px;">`
-        :`<div class="visual-placeholder" onclick="${isMain?`triggerVisualUpload(${p.id})`:`showNotif('Disponible prochainement')`}">
-          <div style="font-size:32px;color:#c0d0e0">&#128247;</div>
-          <div style="font-size:12px;color:#a0b0c0">${isMain?'Cliquer pour ajouter':'Disponible prochainement'}</div>
-        </div>`}
+  visualAttrs.forEach(va=>{
+    const hasImg=!!p.fields[va.code];
+    const badgeHtml=va.required
+      ?`<span class="visual-badge-required">Obligatoire</span>`
+      :`<span class="visual-badge-optional">Optionnel</span>`;
+    const synthBadge=va.synthVisible
+      ?`<span style="background:#e3f2fd;color:#1565c0;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600">Vue synth.</span>`
+      :'';
+    slots+=`<div class="image-attr-slot" data-visuel-code="${va.code}">
+      ${hasImg
+        ?`<img src="${p.fields[va.code]}" class="image-attr-preview" onclick="triggerVisualUpload(${p.id},'${va.code}')" title="Cliquer pour modifier">`
+        :`<div class="image-attr-placeholder" onclick="triggerVisualUpload(${p.id},'${va.code}')">
+            <span style="font-size:32px">&#128247;</span>
+            <span style="font-size:12px">Cliquer pour ajouter</span>
+          </div>`}
+      <div class="image-attr-label">${va.name}</div>
+      <div class="image-attr-badges">${badgeHtml}${synthBadge}</div>
     </div>`;
   });
-  return`<div style="background:#fff3e0;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#e65100;border-left:4px solid #ffa726">Au moins 1 visuel obligatoire. Formats : JPG, PNG — 2000x2000px minimum.</div><div class="visuals-grid">${slots}</div>`;
+
+  return`<div style="background:#fff3e0;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#e65100;border-left:4px solid #ffa726">
+    3 visuels obligatoires (Face, 3/4, Profil). Formats : JPG, PNG — 2000x2000px minimum.
+  </div>
+  <div class="image-attrs-grid">${slots}</div>`;
 }
+
+// ============================================================
+// ONGLET GROUPE D'ATTRIBUTS GENERIQUE
+// ============================================================
 function renderTabAttrGroup(p,g){
   const attrs=g.attrIds.map(id=>getAttrById(id)).filter(Boolean);
   if(!attrs.length)return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
@@ -155,7 +222,20 @@ function renderTabAttrGroup(p,g){
   attrs.forEach(a=>{
     const val=p.fields[a.code]!==undefined?p.fields[a.code]:'';
     let input='';
-    if(a.calc){
+    if(a.type==='Image'){
+      const hasImg=!!val;
+      input=`<div class="image-attr-slot" data-visuel-code="${a.code}" style="max-width:200px">
+        ${hasImg
+          ?`<img src="${val}" class="image-attr-preview" onclick="triggerVisualUpload(${p.id},'${a.code}')" title="Cliquer pour modifier">`
+          :`<div class="image-attr-placeholder" onclick="triggerVisualUpload(${p.id},'${a.code}')">
+              <span style="font-size:28px">&#128247;</span>
+              <span style="font-size:11px">Cliquer pour ajouter</span>
+            </div>`}
+        <div class="image-attr-badges">
+          ${a.required?'<span class="visual-badge-required">Obligatoire</span>':'<span class="visual-badge-optional">Optionnel</span>'}
+        </div>
+      </div>`;
+    } else if(a.calc){
       input=`<div style="position:relative"><input class="field-input" style="background:#fffde7;color:#795548;padding-right:32px" value="${val}" readonly data-calc="${a.code}">
         <div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:#ffd54f;color:#5d4037;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help" title="${a.formulaLabel||'Champ calcule'}">&#9654;</div></div>`;
     } else if(a.readonly){
@@ -181,6 +261,7 @@ function renderTabAttrGroup(p,g){
   });
   return html+'</div></div>';
 }
+
 function refreshCalcFields(productId){
   const p=products.find(x=>x.id===productId);if(!p)return;
   computeCalcFields(p);
@@ -190,6 +271,7 @@ function refreshCalcFields(productId){
   });
   updateDetailCompletion(p);
 }
+
 function onFieldChange(productId,el,fieldKey){
   const p=products.find(x=>x.id===productId);if(!p)return;
   const oldVal=p.fields[fieldKey]||'';
@@ -200,7 +282,9 @@ function onFieldChange(productId,el,fieldKey){
   addHistory(p,fieldName,oldVal,newVal);
   if(fieldKey==='nom'){const t=document.querySelector('.product-title');if(t)t.textContent=newVal;}
   computeCalcFields(p);updateDetailCompletion(p);
+  renderProductHeader(p,getCatByName(p.cat));
 }
+
 function onMultiSelectChange(productId,el,fieldKey){
   const p=products.find(x=>x.id===productId);if(!p)return;
   const oldVal=p.fields[fieldKey]||'';
@@ -210,12 +294,14 @@ function onMultiSelectChange(productId,el,fieldKey){
   addHistory(p,attr?attr.name:fieldKey,oldVal,newVal);
   updateDetailCompletion(p);
 }
+
 function onCatChange(productId,el){
   const p=products.find(x=>x.id===productId);if(!p)return;
   const oldCat=p.cat;p.cat=el.value;
   addHistory(p,'Categorie',oldCat,el.value);
   renderProductTabs(p,getCatByName(p.cat));renderProductHeader(p,getCatByName(p.cat));updateDetailCompletion(p);
 }
+
 function updateDetailCompletion(p){
   const comp=calcCompletion(p);const color=getCompletionColor(comp);
   const pctEl=document.getElementById('detail-completion-pct');
@@ -227,6 +313,7 @@ function updateDetailCompletion(p){
   const total=attrs.length+1;const filled=Math.round(comp*total/100);
   if(subEl)subEl.textContent=`${filled} / ${total} champs renseignes`;
 }
+
 function saveProduct(){
   const p=products.find(x=>x.id===currentProductId);if(!p)return;
   p.maj=nowStr();
