@@ -99,13 +99,11 @@ let attrSortState={code:null,dir:'asc'};
 function renderAttrsTable(){
   const tb=document.getElementById('attrs-tbody');if(!tb)return;
   const thead=document.getElementById('attrs-thead');
-
-  // Header avec tri
   if(thead){
     const cols=[
       {label:'Nom',code:'name'},{label:'Code',code:'code'},
       {label:'Type',code:'type'},{label:'Groupe',code:'group'},
-      {label:'Obligatoire',code:'required',noSort:true},
+      {label:'Obligatoire',noSort:true},
       {label:'Options',noSort:true},{label:'Actions',noSort:true}
     ];
     thead.innerHTML='';
@@ -124,8 +122,6 @@ function renderAttrsTable(){
     });
     thead.appendChild(tr);
   }
-
-  // Tri des attributs
   let sorted=[...attributes];
   if(attrSortState.code){
     sorted.sort((a,b)=>{
@@ -141,11 +137,9 @@ function renderAttrsTable(){
       return attrSortState.dir==='asc'?cmp:-cmp;
     });
   }
-
   tb.innerHTML='';
   sorted.forEach(a=>{
     const g=getGroupById(a.groupId);
-    // Option "clic" : un seul attribut peut l'avoir
     const clickCheck=a.type==='Texte'
       ?`<label class="attr-option-row" title="Clic sur valeur = ouvrir produit">
           <input type="checkbox" ${a.clickToOpen?'checked':''} onchange="setAttrClickToOpen(${a.id},this)"> Clic
@@ -179,17 +173,15 @@ function sortAttrsBy(code){
   renderAttrsTable();
 }
 
-// Option "clic" exclusive : un seul attribut a la fois
 function setAttrClickToOpen(attrId,cb){
   if(cb.checked){
-    // Desactive tous les autres
     attributes.forEach(a=>{a.clickToOpen=a.id===attrId;});
   }else{
     const a=attributes.find(x=>x.id===attrId);if(a)a.clickToOpen=false;
   }
   renderAttrsTable();
   renderProductsTable();
-  showNotif(cb.checked?'Clic actif sur : '+( attributes.find(x=>x.id===attrId)||{}).name:'Option clic desactivee');
+  showNotif(cb.checked?'Clic actif sur : '+(attributes.find(x=>x.id===attrId)||{}).name:'Option clic desactivee');
 }
 
 // ============================================================
@@ -205,22 +197,19 @@ function editAttribute(id){
   document.getElementById('ea-type').value=a.type;
   document.getElementById('ea-required').value=a.required?'1':'0';
   document.getElementById('ea-formula').value=a.formula||'';
-  // Groupe
   const gSel=document.getElementById('ea-group');
   if(gSel){
     gSel.innerHTML='<option value="">-- Choisir --</option>';
     attrGroups.forEach(g=>{gSel.innerHTML+=`<option value="${g.id}"${g.id===a.groupId?' selected':''}>${g.name}</option>`;});
   }
-  // Options (simple/multi select)
   const optWrap=document.getElementById('ea-options-wrap');
   if(optWrap){
     const showOpts=a.type==='Simple select'||a.type==='Multi select';
     optWrap.style.display=showOpts?'':'none';
     document.getElementById('ea-options').value=(a.options||[]).join('\n');
   }
-  // Formule
   const formulaWrap=document.getElementById('ea-formula-wrap');
-  if(formulaWrap)formulaWrap.style.display=(a.calc)?'':'none';
+  if(formulaWrap)formulaWrap.style.display=a.calc?'':'none';
   showPage('admin-attribute-edit',null);
 }
 
@@ -237,24 +226,20 @@ function saveAttributeEdit(){
   const newName=document.getElementById('ea-name').value.trim();
   const newCode=document.getElementById('ea-code').value.trim();
   if(!newName||!newCode){showNotif('Nom et code obligatoires');return;}
-  // Verifie unicite du code (sauf si inchange)
   if(newCode!==a.code&&attributes.find(x=>x.code===newCode)){showNotif('Code deja utilise par un autre attribut');return;}
   const oldGroupId=a.groupId;
   const newGroupId=parseInt(document.getElementById('ea-group').value)||null;
   const newType=document.getElementById('ea-type').value;
   const isCalc=newType==='Texte calcule'||newType==='Nombre calcule';
-  // Mise a jour de l'attribut
   a.name=newName;
   a.code=newCode;
   a.type=newType;
   a.required=document.getElementById('ea-required').value==='1';
   a.calc=isCalc;
   a.formula=isCalc?document.getElementById('ea-formula').value.trim():'';
-  // Options
   if(newType==='Simple select'||newType==='Multi select'){
     a.options=document.getElementById('ea-options').value.split('\n').map(s=>s.trim()).filter(Boolean);
   }else{a.options=[];}
-  // Changement de groupe
   if(oldGroupId!==newGroupId){
     if(oldGroupId){const og=getGroupById(oldGroupId);if(og)og.attrIds=og.attrIds.filter(id=>id!==a.id);}
     if(newGroupId){const ng=getGroupById(newGroupId);if(ng&&!ng.attrIds.includes(a.id))ng.attrIds.push(a.id);}
@@ -294,7 +279,7 @@ function createAttribute(){
 // ============================================================
 function renderAttrGroupsList(){
   const list=document.getElementById('attr-groups-list');if(!list)return;list.innerHTML='';
-  attrGroups.forEach((g,idx)=>{
+  attrGroups.forEach(g=>{
     const attrs=g.attrIds.map(id=>getAttrById(id)).filter(Boolean);
     const color=getGroupColor(g);
     const card=document.createElement('div');
@@ -319,7 +304,6 @@ function renderAttrGroupsList(){
         const [moved]=attrGroups.splice(fi,1);
         attrGroups.splice(ti,0,moved);
         renderAttrGroupsList();
-        // Propage l'ordre aux categories qui referent ces groupes
         renderProductsTable();
       });
     }
@@ -473,6 +457,13 @@ function saveSeuil(){
 // ============================================================
 let editingBrandIdx=null;
 
+// Badge type dynamique base sur la couleur de la categorie
+function catBadgeHtml(typeName){
+  const cat=categories.find(c=>c.name===typeName);
+  if(!cat)return`<span class="badge badge-grey" style="font-size:11px">${typeName||'—'}</span>`;
+  return`<span class="badge" style="font-size:11px;background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}55">${typeName}</span>`;
+}
+
 function renderSuppliersPage(){
   const page=document.getElementById('page-admin-suppliers');if(!page)return;
   let html=`<div style="display:flex;gap:12px;margin-bottom:20px;align-items:center">
@@ -502,13 +493,11 @@ function renderSuppliersTable(filter){
       ?`<span class="badge badge-green" style="font-size:11px">Oui</span>`
       :`<span class="badge badge-grey" style="font-size:11px">Non</span>`;
     const commentTrunc=b.commentaire&&b.commentaire.length>40?b.commentaire.slice(0,40)+'…':b.commentaire||'';
-    // Type badge dynamique base sur categories
-    const typeBadge=catBadgeHtml(b.type);
     tb.innerHTML+=`<tr>
       <td style="font-weight:600;white-space:nowrap">${supName}</td>
       <td style="font-family:monospace;font-size:11px;color:#607080">${b.fournisseurCode}</td>
       <td style="white-space:nowrap">${b.marque}</td>
-      <td>${typeBadge}</td>
+      <td>${catBadgeHtml(b.type)}</td>
       <td style="text-align:right">${b.rf>0?(b.rf*100).toFixed(2)+'%':'—'}</td>
       <td style="text-align:right">${b.rfa>0?(b.rfa*100).toFixed(2)+'%':'—'}</td>
       <td style="text-align:right;font-weight:600;color:#1565c0">${b.remiseAts>0?(b.remiseAts*100).toFixed(0)+'%':'—'}</td>
@@ -532,7 +521,6 @@ function openBrandEditor(idx){
   const b=isNew?{fournisseurCode:'',marque:'',type:'',rf:0,rfa:0,remiseAts:0,repriseEchange:false,conditionsLivraison:'Franco',commentaire:''}:brandSettings[idx];
   const existing=document.getElementById('brand-editor-overlay');if(existing)existing.remove();
   const supOptions=suppliers.map(s=>`<option value="${s.code}"${s.code===b.fournisseurCode?' selected':''}>${s.name} (${s.code})</option>`).join('');
-  // Type = categories existantes (valeur unique)
   const typeOptions=categories.map(c=>`<option value="${c.name}"${c.name===b.type?' selected':''}>${c.name}</option>`).join('');
   const overlay=document.createElement('div');
   overlay.id='brand-editor-overlay';
