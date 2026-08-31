@@ -3,7 +3,25 @@
 // ============================================================
 function getColUniqueValues(code){
   const vals=new Set();
-  products.forEach(p=>{computeCalcFields(p);const v=p.fields[code]||p[code];if(v!==undefined&&v!==null&&v.toString().trim()!=='')vals.add(v.toString().trim());});
+  const searchVal=(document.getElementById('products-search')||{}).value||'';
+  const catFilter=(document.getElementById('filter-cat')||{}).value||'';
+  products.filter(p=>{
+    if(catFilter&&p.cat!==catFilter)return false;
+    computeCalcFields(p);
+    const allText=Object.values(p.fields).join(' ').toLowerCase()+' '+(p.cat||'').toLowerCase();
+    if(searchVal&&!allText.includes(searchVal.toLowerCase()))return false;
+    // Applique tous les filtres colonne SAUF celui de la colonne en cours
+    for(const c in colFilters){
+      if(c===code)continue;
+      const allowed=colFilters[c];
+      const val=(p.fields[c]||p[c]||'').toString().trim();
+      if(!allowed.has(val))return false;
+    }
+    return true;
+  }).forEach(p=>{
+    const v=p.fields[code]||p[code];
+    if(v!==undefined&&v!==null&&v.toString().trim()!=='')vals.add(v.toString().trim());
+  });
   return[...vals].sort((a,b)=>a.localeCompare(b,'fr'));
 }
 function openColFilter(code,label,iconEl){
