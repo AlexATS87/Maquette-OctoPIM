@@ -66,13 +66,14 @@ function colFilterOutsideClick(e){
   }
 }
 function toggleColFilterVal(code,val,cb){
-  const vals=getColUniqueValues(code);
-  if(!colFilters[code])colFilters[code]=new Set(vals);
+  if(!colFilters[code]){
+    const allVals=getColUniqueValues(code);
+    colFilters[code]=new Set(allVals);
+  }
   if(cb.checked)colFilters[code].add(val);else colFilters[code].delete(val);
-  if(colFilters[code].size===vals.length)delete colFilters[code];
   if(activeColFilterDropdown){
     const cbAll=activeColFilterDropdown.querySelector('input[id^="cfa-"]');
-    if(cbAll)cbAll.checked=!colFilters[code];
+    if(cbAll)cbAll.checked=false;
   }
   renderProductsTable();
 }
@@ -312,14 +313,18 @@ function clearSelection(){selectedProductIds=[];compareMode=false;document.query
 // ============================================================
 function onCatFilterChange(){
   const v=(document.getElementById('filter-cat')||{}).value||'';
-  activeGroupFilters=null;
   _filterIncomplets=false;
-  if(v&&currentView==='detail'){
+  if(!v&&currentView==='detail'){
+    activeGroupFilters=null;
+    switchView('synth');
+  }else if(v&&currentView==='detail'){
     activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));
     renderGroupFilterBar();
+    renderProductsTable();
+  }else{
+    activeGroupFilters=null;
+    filterTable();
   }
-  filterTable();
-  if(!v&&currentView==='detail'){switchView('synth');}
 }
 
 function switchView(mode){
