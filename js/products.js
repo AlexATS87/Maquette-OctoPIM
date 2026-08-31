@@ -25,6 +25,8 @@ function getColUniqueValues(code){
   return[...vals].sort((a,b)=>a.localeCompare(b,'fr'));
 }
 function openColFilter(code,label,iconEl){
+  // Nettoyer proprement tout listener existant
+  document.removeEventListener('click',colFilterOutsideClick);
   if(activeColFilterDropdown){activeColFilterDropdown.remove();activeColFilterDropdown=null;}
   const vals=getColUniqueValues(code);
   const active=colFilters[code]||null;
@@ -45,6 +47,7 @@ function openColFilter(code,label,iconEl){
     <div class="col-filter-search-wrap"><input type="text" class="col-filter-search" placeholder="Rechercher..." oninput="filterColFilterList(this)"></div>
     <div class="col-filter-list">${itemsHtml}</div>`;
   document.body.appendChild(dd);activeColFilterDropdown=dd;
+  // Le setTimeout laisse le clic en cours se terminer avant d'attacher le listener
   setTimeout(()=>document.addEventListener('click',colFilterOutsideClick),0);
 }
 function filterColFilterList(input){
