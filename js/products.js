@@ -66,14 +66,13 @@ function colFilterOutsideClick(e){
   }
 }
 function toggleColFilterVal(code,val,cb){
-  if(!colFilters[code]){
-    const allVals=getColUniqueValues(code);
-    colFilters[code]=new Set(allVals);
-  }
+  const vals=getColUniqueValues(code);
+  if(!colFilters[code])colFilters[code]=new Set(vals);
   if(cb.checked)colFilters[code].add(val);else colFilters[code].delete(val);
+  // Ne jamais supprimer automatiquement — seuls clearColFilter et toggleColFilterAll le font
   if(activeColFilterDropdown){
     const cbAll=activeColFilterDropdown.querySelector('input[id^="cfa-"]');
-    if(cbAll)cbAll.checked=false;
+    if(cbAll)cbAll.checked=!colFilters[code];
   }
   renderProductsTable();
 }
