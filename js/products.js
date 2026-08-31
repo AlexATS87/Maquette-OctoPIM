@@ -44,7 +44,7 @@ function openColFilter(code,label,iconEl){
     });
   }
   dd.innerHTML=`<div class="col-filter-dropdown-header"><span>${label}</span><button onclick="clearColFilter('${code}')">Effacer</button></div>
-    <div class="col-filter-search-wrap"><input type="text" class="col-filter-search" placeholder="Rechercher..." oninput="filterColFilterList(this)"></div>
+    <div class="col-filter-search-wrap"><input type="text" class="col-filter-search" placeholder="Rechercher..." oninput="filterColFilterList(this) onkeydown="if(event.key==='Enter'){applyColFilterSearch(this)"></div>
     <div class="col-filter-list">${itemsHtml}</div>`;
   document.body.appendChild(dd);activeColFilterDropdown=dd;
   // Le setTimeout laisse le clic en cours se terminer avant d'attacher le listener
@@ -67,6 +67,24 @@ function colFilterOutsideClick(e){
     activeColFilterDropdown.remove();activeColFilterDropdown=null;
     document.removeEventListener('click',colFilterOutsideClick);
   }
+}
+function applyColFilterSearch(input){
+  const dd=input.closest('.col-filter-dropdown');if(!dd)return;
+  const code=dd.querySelector('input[id^="cfa-"]')&&dd.querySelector('input[id^="cfa-"]').id.replace('cfa-','');
+  if(!code)return;
+  const visible=[...dd.querySelectorAll('.col-filter-val-item')].filter(i=>i.style.display!=='none');
+  const hidden=[...dd.querySelectorAll('.col-filter-val-item')].filter(i=>i.style.display==='none');
+  // Cocher uniquement les visibles, décocher les cachées
+  visible.forEach(item=>item.querySelector('input').checked=true);
+  hidden.forEach(item=>item.querySelector('input').checked=false);
+  // Reconstruire colFilters[code] avec uniquement les valeurs visibles
+  const vals=visible.map(i=>i.getAttribute('data-val')).filter(Boolean);
+  if(vals.length===0){delete colFilters[code];}
+  else{colFilters[code]=new Set(vals);}
+  document.removeEventListener('click',colFilterOutsideClick);
+  renderProductsTable();
+  activeColFilterDropdown=dd;
+  setTimeout(()=>document.addEventListener('click',colFilterOutsideClick),0);
 }
 function toggleColFilterVal(code,val,cb){
   const vals=getColUniqueValues(code);
@@ -325,11 +343,14 @@ function clearSelection(){selectedProductIds=[];compareMode=false;document.query
 function onCatFilterChange(){
   const v=(document.getElementById('filter-cat')||{}).value||'';
   _filterIncomplets=false;
+  colFilters={};  // Réinitialiser les filtres colonne au changement de catégorie
   if(!v&&currentView==='detail'){
     activeGroupFilters=null;
     switchView('synth');
   }else if(v&&currentView==='detail'){
-    activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));
+    // Recalculer les groupes pour la nouvelle catégorie
+    const cat=getCatByName(v);
+    activeGroupFilters=new Set(cat?cat.groupIds:getVisibleGroupsForUser().map(g=>g.id));
     renderGroupFilterBar();
     renderProductsTable();
   }else{
