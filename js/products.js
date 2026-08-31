@@ -10,7 +10,6 @@ function getColUniqueValues(code){
     computeCalcFields(p);
     const allText=Object.values(p.fields).join(' ').toLowerCase()+' '+(p.cat||'').toLowerCase();
     if(searchVal&&!allText.includes(searchVal.toLowerCase()))return false;
-    // Applique tous les filtres colonne SAUF celui de la colonne en cours
     for(const c in colFilters){
       if(c===code)continue;
       const allowed=colFilters[c];
@@ -25,7 +24,6 @@ function getColUniqueValues(code){
   return[...vals].sort((a,b)=>a.localeCompare(b,'fr'));
 }
 function openColFilter(code,label,iconEl){
-  // Nettoyer proprement tout listener existant
   document.removeEventListener('click',colFilterOutsideClick);
   if(activeColFilterDropdown){activeColFilterDropdown.remove();activeColFilterDropdown=null;}
   const vals=getColUniqueValues(code);
@@ -44,11 +42,15 @@ function openColFilter(code,label,iconEl){
     });
   }
   dd.innerHTML=`<div class="col-filter-dropdown-header"><span>${label}</span><button onclick="clearColFilter('${code}')">Effacer</button></div>
-    <div class="col-filter-search-wrap"><input type="text" class="col-filter-search" placeholder="Rechercher..." oninput="filterColFilterList(this) onkeydown="if(event.key==='Enter'){applyColFilterSearch(this)"></div>
+    <div class="col-filter-search-wrap"><input type="text" class="col-filter-search" placeholder="Rechercher..." oninput="filterColFilterList(this)" onkeydown="if(event.key==='Enter'){applyColFilterSearch(this);}"></div>
     <div class="col-filter-list">${itemsHtml}</div>`;
-  document.body.appendChild(dd);activeColFilterDropdown=dd;
-  // Le setTimeout laisse le clic en cours se terminer avant d'attacher le listener
-  setTimeout(()=>document.addEventListener('click',colFilterOutsideClick),0);
+  document.body.appendChild(dd);
+  activeColFilterDropdown=dd;
+  setTimeout(()=>{
+    const searchInput=dd.querySelector('.col-filter-search');
+    if(searchInput)searchInput.focus();
+    document.addEventListener('click',colFilterOutsideClick);
+  },0);
 }
 function filterColFilterList(input){
   const q=input.value.toLowerCase().trim();
@@ -58,9 +60,8 @@ function filterColFilterList(input){
     item.style.display=(!q||val.includes(q))?'':'none';
   });
   const allVisible=[...dd.querySelectorAll('.col-filter-val-item')].filter(i=>i.style.display!=='none');
-  const allChecked=allVisible.every(i=>i.querySelector('input').checked);
   const cbAll=dd.querySelector('input[id^="cfa-"]');
-  if(cbAll)cbAll.checked=allChecked;
+  if(cbAll)cbAll.checked=allVisible.length>0&&allVisible.every(i=>i.querySelector('input').checked);
 }
 function colFilterOutsideClick(e){
   if(activeColFilterDropdown&&!activeColFilterDropdown.contains(e.target)){
@@ -70,20 +71,27 @@ function colFilterOutsideClick(e){
 }
 function applyColFilterSearch(input){
   const dd=input.closest('.col-filter-dropdown');if(!dd)return;
-  const code=dd.querySelector('input[id^="cfa-"]')&&dd.querySelector('input[id^="cfa-"]').id.replace('cfa-','');
+  const cbAll=dd.querySelector('input[id^="cfa-"]');
+  const code=cbAll?cbAll.id.replace('cfa-',''):null;
   if(!code)return;
-  const visible=[...dd.querySelectorAll('.col-filter-val-item')].filter(i=>i.style.display!=='none');
-  const hidden=[...dd.querySelectorAll('.col-filter-val-item')].filter(i=>i.style.display==='none');
-  // Cocher uniquement les visibles, décocher les cachées
+  const allItems=[...dd.querySelectorAll('.col-filter-val-item')];
+  const visible=allItems.filter(i=>i.style.display!=='none');
+  const hidden=allItems.filter(i=>i.style.display==='none');
   visible.forEach(item=>item.querySelector('input').checked=true);
   hidden.forEach(item=>item.querySelector('input').checked=false);
-  // Reconstruire colFilters[code] avec uniquement les valeurs visibles
   const vals=visible.map(i=>i.getAttribute('data-val')).filter(Boolean);
   if(vals.length===0){delete colFilters[code];}
   else{colFilters[code]=new Set(vals);}
   document.removeEventListener('click',colFilterOutsideClick);
   renderProductsTable();
   activeColFilterDropdown=dd;
+  input.value='';
+  allItems.forEach(item=>{
+    item.style.display='';
+    const v=item.getAttribute('data-val');
+    if(v)item.querySelector('input').checked=colFilters[code]?colFilters[code].has(v):true;
+  });
+  if(cbAll)cbAll.checked=!colFilters[code];
   setTimeout(()=>document.addEventListener('click',colFilterOutsideClick),0);
 }
 function toggleColFilterVal(code,val,cb){
@@ -91,7 +99,6 @@ function toggleColFilterVal(code,val,cb){
   if(!colFilters[code])colFilters[code]=new Set(vals);
   if(cb.checked)colFilters[code].add(val);else colFilters[code].delete(val);
   const dd=activeColFilterDropdown;
-  // Retirer temporairement le listener pour éviter qu'il ferme le dropdown
   document.removeEventListener('click',colFilterOutsideClick);
   renderProductsTable();
   activeColFilterDropdown=dd;
@@ -102,7 +109,6 @@ function toggleColFilterVal(code,val,cb){
     });
     const cbAll=dd.querySelector('input[id^="cfa-"]');
     if(cbAll)cbAll.checked=!colFilters[code];
-    // Réattacher le listener avec un délai pour laisser l'event en cours se terminer
     setTimeout(()=>document.addEventListener('click',colFilterOutsideClick),0);
   }
 }
@@ -223,7 +229,6 @@ function renderSynthRows(tbody,filtered){
     tbody.appendChild(tr);
   });
 }
-
 function getCatBadgeStyle(catName){
   const cat=getCatByName(catName);
   if(!cat)return'background:#f0f4f8;color:#607080;border:1px solid #e0e8f0;';
@@ -241,7 +246,6 @@ function getGroupsForCurrentCat(){
   if(!cat)return getVisibleGroupsForUser();
   return cat.groupIds.map(id=>getGroupById(id)).filter(Boolean);
 }
-
 function renderDetailHeader(thead){
   thead.innerHTML='';initGroupFilters();
   const catGroups=getGroupsForCurrentCat();
@@ -272,7 +276,6 @@ function renderDetailHeader(thead){
   });
   thead.appendChild(row1);thead.appendChild(row2);
 }
-
 function renderDetailRows(tbody,filtered){
   tbody.innerHTML='';initGroupFilters();
   const catGroups=getGroupsForCurrentCat();
@@ -309,6 +312,9 @@ function renderDetailRows(tbody,filtered){
   });
 }
 
+// ============================================================
+// SELECTION ET COMPARAISON
+// ============================================================
 function toggleSelectAll(cb){
   document.querySelectorAll('#products-tbody input[type=checkbox]').forEach(c=>{
     const m=c.getAttribute('onchange')&&c.getAttribute('onchange').match(/toggleSelectProduct\((\d+)/);
@@ -343,12 +349,11 @@ function clearSelection(){selectedProductIds=[];compareMode=false;document.query
 function onCatFilterChange(){
   const v=(document.getElementById('filter-cat')||{}).value||'';
   _filterIncomplets=false;
-  colFilters={};  // Réinitialiser les filtres colonne au changement de catégorie
+  colFilters={};
   if(!v&&currentView==='detail'){
     activeGroupFilters=null;
     switchView('synth');
   }else if(v&&currentView==='detail'){
-    // Recalculer les groupes pour la nouvelle catégorie
     const cat=getCatByName(v);
     activeGroupFilters=new Set(cat?cat.groupIds:getVisibleGroupsForUser().map(g=>g.id));
     renderGroupFilterBar();
@@ -358,7 +363,6 @@ function onCatFilterChange(){
     filterTable();
   }
 }
-
 function switchView(mode){
   if(mode==='detail'){
     const catFilter=(document.getElementById('filter-cat')||{}).value||'';
@@ -388,7 +392,6 @@ function switchView(mode){
   }
   renderProductsTable();
 }
-
 function filterTable(){_filterIncomplets=false;renderProductsTable();}
 
 // ============================================================
