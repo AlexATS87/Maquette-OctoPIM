@@ -66,16 +66,25 @@ function colFilterOutsideClick(e){
   }
 }
 function toggleColFilterVal(code,val,cb){
-  const vals=getColUniqueValues(code);
-  if(!colFilters[code])colFilters[code]=new Set(vals);
+  if(!colFilters[code]){
+    // Initialiser avec TOUTES les valeurs sans filtre contextuel
+    const allVals=new Set();
+    products.forEach(p=>{
+      computeCalcFields(p);
+      const v=p.fields[code]!==undefined?p.fields[code]:p[code];
+      if(v!==undefined&&v!==null&&v.toString().trim()!=='')allVals.add(v.toString().trim());
+    });
+    colFilters[code]=allVals;
+  }
   if(cb.checked)colFilters[code].add(val);else colFilters[code].delete(val);
   const dd=activeColFilterDropdown;
   renderProductsTable();
   activeColFilterDropdown=dd;
   if(dd){
-    dd.querySelectorAll('.col-filter-val-item input').forEach(input=>{
-      const v=input.closest('.col-filter-item')&&input.closest('.col-filter-item').getAttribute('data-val');
-      if(v)input.checked=!colFilters[code]||colFilters[code].has(v);
+    dd.querySelectorAll('.col-filter-val-item').forEach(item=>{
+      const v=item.getAttribute('data-val');
+      const input=item.querySelector('input');
+      if(input&&v)input.checked=colFilters[code]?colFilters[code].has(v):true;
     });
     const cbAll=dd.querySelector('input[id^="cfa-"]');
     if(cbAll)cbAll.checked=!colFilters[code];
