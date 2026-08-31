@@ -256,12 +256,12 @@ let roles=[
 ];
 let products=[
   {id:1,cat:'Montures',createdAt:'26/02/2025',maj:'04/07/2025 14:32',visualSrc:null,visuals:0,history:[
-    {ts:'04/07/2025 14:32',user:'A. Beranger',field:'PA ATS',old:'40',new:'45'},
-    {ts:'15/03/2025 09:10',user:'A. Beranger',field:'Mise en ligne',old:'',new:'15/03/2025'}
+    {ts:'04/07/2025 14:32',user:'J. Doe',field:'PA ATS',old:'40',new:'45'},
+    {ts:'15/03/2025 09:10',user:'J. Doe',field:'Mise en ligne',old:'',new:'15/03/2025'}
   ],pendingChanges:[],
    fields:{sap:'M906342000001',ean:'08056262500675',nom:'Monture Vogue VO4279S',miseEnLigne:'15/03/2025',marque:'Vogue',fournisseur_code:'R00078',ref_monture:'VO4279S',couleur:'Noir',optique_solaire:'Optique',matiere:'Acetate',cerclage:'Cercle',forme:'Rectangulaire',code_douanier:'9003190000',pa_ats:'45',remise:'10',rfa:'2',prix_catalogue:'180',active_o2:'Oui',active_lissac:'Non',active_audio2000:'Non'}},
   {id:2,cat:'Lentilles',createdAt:'28/02/2025',maj:'02/07/2025 09:15',visualSrc:null,visuals:0,history:[
-    {ts:'02/07/2025 09:15',user:'S. Mucchieli',field:'Prix de vente',old:'30',new:'35'}
+    {ts:'02/07/2025 09:15',user:'J. Doe',field:'Prix de vente',old:'30',new:'35'}
   ],pendingChanges:[],
    fields:{sap:'M906343000001',ean:'08056262500668',nom:'Lentille Aosept Plus',miseEnLigne:'01/03/2025',marque:'Alcon',laboratoire:'Alcon',nb_lentilles:'90',type_lentille:'Souple',type_vision:'Myopie',renouvellement:'Journalier',materiau_lentille:'Silicone hydrogel',hydrophilie:'38',filtre_uv:'Oui',sensibilite_o2:'140',teinte_manip:'Oui',defauts_visuels:'Myopie',prix_vente:'35',active_o2:'Oui',active_lissac:'Oui',active_audio2000:'Non'}},
   {id:3,cat:'Solaires',createdAt:'01/03/2025',maj:'01/07/2025 11:00',visualSrc:null,visuals:0,history:[],pendingChanges:[],
@@ -269,12 +269,12 @@ let products=[
   {id:4,cat:'Accessoires',createdAt:'26/02/2025',maj:'30/06/2025 08:45',visualSrc:null,visuals:0,history:[],pendingChanges:[],
    fields:{sap:'M906345000001',ean:'08056262500620',nom:'Accessoire Etui rigide',type_produit_acc:'Etui',coefficient:'2.5',active_o2:'Non',active_lissac:'Non',active_audio2000:'Non'}},
   {id:5,cat:'Montures',createdAt:'02/04/2025',maj:'03/07/2025 16:20',visualSrc:null,visuals:1,history:[
-    {ts:'03/07/2025 16:20',user:'A. Beranger',field:'Taille',old:'',new:'M'},
-    {ts:'10/04/2025 08:00',user:'A. Beranger',field:'Mise en ligne',old:'',new:'10/04/2025'}
+    {ts:'03/07/2025 16:20',user:'J. Doe',field:'Taille',old:'',new:'M'},
+    {ts:'10/04/2025 08:00',user:'J. Doe',field:'Mise en ligne',old:'',new:'10/04/2025'}
   ],pendingChanges:[],
    fields:{sap:'M906346000001',ean:'08056262361245',nom:'Monture Oakley OX8046',miseEnLigne:'10/04/2025',marque:'Oakley',fournisseur_code:'R00078',ref_monture:'OX8046',couleur:'Gris',optique_solaire:'Optique',matiere:'Metal',cerclage:'Semi-cercle',forme:'Rectangulaire',code_douanier:'9003190000',cible:'Homme',taille:'M',pa_ats:'55',remise:'12',rfa:'2',prix_catalogue:'220',active_o2:'Oui',active_lissac:'Oui',active_audio2000:'Oui'}},
   {id:6,cat:'Montures',createdAt:'26/02/2025',maj:'28/06/2025 10:10',visualSrc:null,visuals:0,history:[
-    {ts:'28/06/2025 10:10',user:'S. Mucchieli',field:'Couleur',old:'Bleu',new:'Rose'}
+    {ts:'28/06/2025 10:10',user:'J. Doe',field:'Couleur',old:'Bleu',new:'Rose'}
   ],pendingChanges:[],
    fields:{sap:'M906347000001',ean:'08056262471586',nom:'Monture Vogue VO3987',miseEnLigne:'05/03/2025',marque:'Vogue',fournisseur_code:'R00078',ref_monture:'VO3987',couleur:'Rose',optique_solaire:'Optique',matiere:'Acetate',cerclage:'Cercle',forme:'Papillon',code_douanier:'9003190000',pa_ats:'42',remise:'10',rfa:'2',prix_catalogue:'165',active_o2:'Non',active_lissac:'Non',active_audio2000:'Non'}},
   {id:7,cat:'PEL',createdAt:'25/08/2026',maj:'25/08/2026 00:00',visualSrc:null,visuals:0,history:[],pendingChanges:[],
