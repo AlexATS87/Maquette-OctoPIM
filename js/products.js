@@ -183,9 +183,21 @@ function getCatBadgeStyle(catName){
   return`background:${hex}22;color:${hex};border:1px solid ${hex}55;`;
 }
 
+// ============================================================
+// VUE DETAILLEE — groupes filtres par categorie selectionnee
+// ============================================================
+function getGroupsForCurrentCat(){
+  const catFilter=(document.getElementById('filter-cat')||{}).value||'';
+  if(!catFilter)return getVisibleGroupsForUser();
+  const cat=getCatByName(catFilter);
+  if(!cat)return getVisibleGroupsForUser();
+  return cat.groupIds.map(id=>getGroupById(id)).filter(Boolean);
+}
+
 function renderDetailHeader(thead){
   thead.innerHTML='';initGroupFilters();
-  const visibleGroups=getVisibleGroupsForUser().filter(g=>activeGroupFilters.has(g.id)&&g.code!=='visuels');
+  const catGroups=getGroupsForCurrentCat();
+  const visibleGroups=catGroups.filter(g=>activeGroupFilters.has(g.id)&&g.code!=='visuels');
   const row1=document.createElement('tr'),row2=document.createElement('tr');
   [{label:'',cb:true,noSort:true},{label:'Visuel',noSort:true},{label:'Code SAP',code:'sap'},{label:'Nom produit',code:'nom'},{label:'Categorie',noSort:true},{label:'Completion',code:'completion'},{label:'Actions',noSort:true}].forEach(col=>{
     const th=document.createElement('th');th.rowSpan=2;
@@ -212,9 +224,11 @@ function renderDetailHeader(thead){
   });
   thead.appendChild(row1);thead.appendChild(row2);
 }
+
 function renderDetailRows(tbody,filtered){
   tbody.innerHTML='';initGroupFilters();
-  const visibleGroups=getVisibleGroupsForUser().filter(g=>activeGroupFilters.has(g.id)&&g.code!=='visuels');
+  const catGroups=getGroupsForCurrentCat();
+  const visibleGroups=catGroups.filter(g=>activeGroupFilters.has(g.id)&&g.code!=='visuels');
   const allValues={};
   if(compareMode&&filtered.length>1){
     visibleGroups.forEach(g=>g.attrIds.forEach(aid=>{
@@ -246,6 +260,7 @@ function renderDetailRows(tbody,filtered){
     tr.innerHTML=cells;tbody.appendChild(tr);
   });
 }
+
 function toggleSelectAll(cb){
   document.querySelectorAll('#products-tbody input[type=checkbox]').forEach(c=>{
     const m=c.getAttribute('onchange')&&c.getAttribute('onchange').match(/toggleSelectProduct\((\d+)/);
@@ -275,37 +290,14 @@ function exitCompare(){compareMode=false;renderProductsTable();}
 function clearSelection(){selectedProductIds=[];compareMode=false;document.querySelectorAll('#products-tbody input[type=checkbox]').forEach(c=>c.checked=false);document.querySelectorAll('#products-tbody tr').forEach(tr=>tr.classList.remove('row-selected'));renderCompareBar();}
 
 // ============================================================
-// VUE DETAILLEE
+// SWITCH VUE — garde categorie + message
 // ============================================================
-
-// Met a jour l'apparence des boutons Synthetique / Detaillee
-function _updateViewButtons(mode){
-  const bs=document.getElementById('btn-view-synth');
-  const bd=document.getElementById('btn-view-detail');
-  if(bs){
-    bs.classList.toggle('active',mode==='synth');
-    bs.style.background=mode==='synth'?'#27ae60':'';
-    bs.style.color=mode==='synth'?'#fff':'';
-    bs.style.fontWeight=mode==='synth'?'600':'';
-  }
-  if(bd){
-    bd.classList.toggle('active',mode==='detail');
-    bd.style.background=mode==='detail'?'#27ae60':'';
-    bd.style.color=mode==='detail'?'#fff':'';
-    bd.style.fontWeight=mode==='detail'?'600':'';
-  }
-}
-
 function onCatFilterChange(){
   const v=(document.getElementById('filter-cat')||{}).value||'';
   activeGroupFilters=null;
   _filterIncomplets=false;
   filterTable();
-  if(!v&&currentView==='detail'){
-    currentView='synth';
-    _updateViewButtons('synth');
-    renderProductsTable();
-  }
+  if(!v&&currentView==='detail'){switchView('synth');}
 }
 
 function switchView(mode){
@@ -321,20 +313,24 @@ function switchView(mode){
           sel.removeEventListener('change',onceChange);
         });
       }
-      showNotif('Selectionnez une categorie pour activer la vue detaillee');
+      showNotif('Veuillez selectionner une categorie pour acceder a la vue detaillee');
       return;
     }
   }
   currentView=mode;
-  _updateViewButtons(mode);
+  const bs=document.getElementById('btn-view-synth');
+  const bd=document.getElementById('btn-view-detail');
+  if(bs)bs.classList.toggle('active',mode==='synth');
+  if(bd)bd.classList.toggle('active',mode==='detail');
   if(mode==='detail'){
-    activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));
+    const cat=getCatByName((document.getElementById('filter-cat')||{}).value||'');
+    activeGroupFilters=new Set(cat?cat.groupIds:getVisibleGroupsForUser().map(g=>g.id));
     renderGroupFilterBar();
   }
   renderProductsTable();
 }
 
-function filterTable(){renderProductsTable();}
+function filterTable(){_filterIncomplets=false;renderProductsTable();}
 
 // ============================================================
 // TRI — AVEC SUPPORT COMPLETION
