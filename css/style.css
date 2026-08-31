@@ -1,3 +1,4 @@
+<style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Segoe UI',sans-serif;background:#f4f6f9;color:#2c3e50;display:flex;height:100vh;overflow:hidden;}
 .sidebar{width:220px;min-width:220px;background:#1a2332;color:#fff;display:flex;flex-direction:column;height:100vh;}
@@ -244,5 +245,6 @@ tr:hover td{background:#f8fafc;}tr:last-child td{border-bottom:none;}
 .badge-active-on{background:#e8f5e9;color:#388e3c;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}
 .badge-active-off{background:#f0f4f8;color:#a0b0c0;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}
 .badge-etat-ok{background:#e8f5e9;color:#388e3c;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}
+</style>
 .badge-etat-ko{background:#ffebee;color:#c62828;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}
 .filter-cat-required{border-color:#ffa726!important;box-shadow:0 0 0 3px rgba(255,167,38,0.25)!important;background:#fffde7!important;transition:all 0.2s;}
