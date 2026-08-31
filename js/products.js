@@ -277,21 +277,41 @@ function clearSelection(){selectedProductIds=[];compareMode=false;document.query
 // ============================================================
 // VUE DETAILLEE
 // ============================================================
+
+// Met a jour l'apparence des boutons Synthetique / Detaillee
+function _updateViewButtons(mode){
+  const bs=document.getElementById('btn-view-synth');
+  const bd=document.getElementById('btn-view-detail');
+  if(bs){
+    bs.classList.toggle('active',mode==='synth');
+    bs.style.background=mode==='synth'?'#27ae60':'';
+    bs.style.color=mode==='synth'?'#fff':'';
+    bs.style.fontWeight=mode==='synth'?'600':'';
+  }
+  if(bd){
+    bd.classList.toggle('active',mode==='detail');
+    bd.style.background=mode==='detail'?'#27ae60':'';
+    bd.style.color=mode==='detail'?'#fff':'';
+    bd.style.fontWeight=mode==='detail'?'600':'';
+  }
+}
+
 function onCatFilterChange(){
   const v=(document.getElementById('filter-cat')||{}).value||'';
   activeGroupFilters=null;
   _filterIncomplets=false;
   filterTable();
-  if(!v&&currentView==='detail'){switchView('synth');}
+  if(!v&&currentView==='detail'){
+    currentView='synth';
+    _updateViewButtons('synth');
+    renderProductsTable();
+  }
 }
 
 function switchView(mode){
-  console.log('[switchView] mode demande =',mode);
   if(mode==='detail'){
     const catFilter=(document.getElementById('filter-cat')||{}).value||'';
-    console.log('[switchView] catFilter =',JSON.stringify(catFilter));
     if(!catFilter){
-      console.log('[switchView] blocage — pas de categorie');
       const sel=document.getElementById('filter-cat');
       if(sel){
         sel.classList.add('filter-cat-required');
@@ -305,23 +325,19 @@ function switchView(mode){
       return;
     }
   }
-  console.log('[switchView] passage effectif en mode =',mode);
   currentView=mode;
-  const bs=document.getElementById('btn-view-synth'),bd=document.getElementById('btn-view-detail');
-  if(bs)bs.classList.toggle('active',mode==='synth');
-  if(bd)bd.classList.toggle('active',mode==='detail');
+  _updateViewButtons(mode);
   if(mode==='detail'){
     activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));
-    console.log('[switchView] activeGroupFilters =',[...activeGroupFilters]);
     renderGroupFilterBar();
   }
   renderProductsTable();
 }
 
-function filterTable(){_filterIncomplets=false;renderProductsTable();}
+function filterTable(){renderProductsTable();}
 
 // ============================================================
-// TRI
+// TRI — AVEC SUPPORT COMPLETION
 // ============================================================
 let sortState={};
 function sortTableByCode(code){
