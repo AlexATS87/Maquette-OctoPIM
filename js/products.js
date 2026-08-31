@@ -296,6 +296,10 @@ function onCatFilterChange(){
   const v=(document.getElementById('filter-cat')||{}).value||'';
   activeGroupFilters=null;
   _filterIncomplets=false;
+  if(v&&currentView==='detail'){
+    activeGroupFilters=new Set(getVisibleGroupsForUser().map(g=>g.id));
+    renderGroupFilterBar();
+  }
   filterTable();
   if(!v&&currentView==='detail'){switchView('synth');}
 }
