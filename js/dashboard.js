@@ -34,29 +34,34 @@ function renderDashboard(){
   const donut=document.getElementById('donut-svg');
   if(donut)donut.innerHTML=`<circle cx="80" cy="80" r="62" fill="none" stroke="#f0f4f8" stroke-width="26"/>${circles}<text x="80" y="85" text-anchor="middle" font-size="14" font-weight="700" fill="#1a2332">${total}</text>`;
   const donutLeg=document.getElementById('donut-legend');if(donutLeg)donutLeg.innerHTML=legend;
-
   renderSupplierChart();
 }
+
 // ============================================================
-// Widget incomplets — navigue vers produits filtrés
+// Widget incomplets — navigue vers produits filtres
 // ============================================================
 function showIncomplets(){
   _filterIncomplets=true;
-  // Utilise showPage directement pour eviter la boucle via safeShowPage -> renderAll -> renderDashboard
+  // Passe directement par showPage pour eviter la boucle safeShowPage -> renderAll -> renderDashboard
+  productDirty=false;
+  currentProductId=null;
   const navEl=document.querySelector('.nav-item[onclick*="products"]');
   showPage('products',navEl);
-  // Met a jour les boutons de vue manuellement sans passer par switchView
+  // Active la vue synth et met a jour les boutons
   currentView='synth';
-  _updateViewButtons('synth');
+  const bs=document.getElementById('btn-view-synth');
+  const bd=document.getElementById('btn-view-detail');
+  if(bs)bs.classList.add('active');
+  if(bd)bd.classList.remove('active');
   renderProductsTable();
 }
+
 // ============================================================
 // GRAPHIQUE FOURNISSEUR — histogramme empile par categorie
 // ============================================================
 function renderSupplierChart(){
   const container=document.getElementById('supplier-chart-container');
   if(!container)return;
-
   const supplierMap={};
   products.forEach(p=>{
     computeCalcFields(p);
@@ -71,17 +76,13 @@ function renderSupplierChart(){
     if(!supplierMap[supName][cat])supplierMap[supName][cat]=0;
     supplierMap[supName][cat]++;
   });
-
   const supNames=Object.keys(supplierMap).sort();
   if(!supNames.length){container.innerHTML='<div style="color:#a0b0c0;font-size:13px;padding:20px;text-align:center">Aucune donnee fournisseur disponible.</div>';return;}
-
   const BAR_W=48,BAR_GAP=20,MARGIN_L=48,MARGIN_B=64,MARGIN_T=16,MARGIN_R=16,CHART_H=200;
   const svgW=MARGIN_L+supNames.length*(BAR_W+BAR_GAP)+MARGIN_R;
   const svgH=CHART_H+MARGIN_T+MARGIN_B;
-
   const maxVal=Math.max(...supNames.map(s=>Object.values(supplierMap[s]).reduce((a,b)=>a+b,0)));
   const yScale=v=>CHART_H-(v/Math.max(maxVal,1))*CHART_H;
-
   const yTicks=4;
   let gridLines='',yLabels='';
   for(let i=0;i<=yTicks;i++){
@@ -90,7 +91,6 @@ function renderSupplierChart(){
     gridLines+=`<line x1="${MARGIN_L}" y1="${y}" x2="${svgW-MARGIN_R}" y2="${y}" stroke="#f0f4f8" stroke-width="1"/>`;
     yLabels+=`<text x="${MARGIN_L-6}" y="${y+4}" text-anchor="end" font-size="10" fill="#a0b0c0">${val}</text>`;
   }
-
   let bars='',xLabels='';
   supNames.forEach((sup,i)=>{
     const x=MARGIN_L+i*(BAR_W+BAR_GAP);
@@ -120,13 +120,11 @@ function renderSupplierChart(){
       style="cursor:pointer" onclick="filterBySupplier('${sup.replace(/'/g,"\\'")}')"
       transform="rotate(-30,${x+BAR_W/2},${MARGIN_T+CHART_H+16})">${label}</text>`;
   });
-
   let legendHtml='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;justify-content:center">';
   categories.forEach(cat=>{
     legendHtml+=`<div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:12px;height:12px;border-radius:3px;background:${cat.color};display:inline-block"></span>${cat.name}</div>`;
   });
   legendHtml+='</div>';
-
   container.innerHTML=`
     <div style="overflow-x:auto">
       <svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">
