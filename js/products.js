@@ -69,12 +69,17 @@ function toggleColFilterVal(code,val,cb){
   const vals=getColUniqueValues(code);
   if(!colFilters[code])colFilters[code]=new Set(vals);
   if(cb.checked)colFilters[code].add(val);else colFilters[code].delete(val);
-  // Ne jamais supprimer automatiquement — seuls clearColFilter et toggleColFilterAll le font
-  if(activeColFilterDropdown){
-    const cbAll=activeColFilterDropdown.querySelector('input[id^="cfa-"]');
+  const dd=activeColFilterDropdown;
+  renderProductsTable();
+  activeColFilterDropdown=dd;
+  if(dd){
+    dd.querySelectorAll('.col-filter-val-item input').forEach(input=>{
+      const v=input.closest('.col-filter-item')&&input.closest('.col-filter-item').getAttribute('data-val');
+      if(v)input.checked=!colFilters[code]||colFilters[code].has(v);
+    });
+    const cbAll=dd.querySelector('input[id^="cfa-"]');
     if(cbAll)cbAll.checked=!colFilters[code];
   }
-  renderProductsTable();
 }
 function toggleColFilterAll(code,cb){
   if(cb.checked){
