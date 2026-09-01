@@ -5,46 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OctoPIM</title>
   <link rel="stylesheet" href="css/style.css">
-  <!-- SheetJS pour l'export .xlsx -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
 <div class="app-layout">
 
-  <!-- ============================================================
-       SIDEBAR
-       ============================================================ -->
+  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-title">OctoPIM</div>
       <div class="sidebar-logo-sub">Gestion produits</div>
     </div>
-        <nav class="sidebar-nav">
+    <nav class="sidebar-nav">
       <div class="nav-section-label">Principal</div>
-      <div class="nav-item active"
-        onclick="showPage('dashboard', this)">
+      <div class="nav-item active" onclick="showPage('dashboard', this)">
         <span class="nav-item-icon">&#127968;</span>
         <span>Tableau de bord</span>
       </div>
-      <div class="nav-item"
-        onclick="showPage('products', this)">
+      <div class="nav-item" onclick="showPage('products', this)">
         <span class="nav-item-icon">&#128230;</span>
         <span>Produits</span>
       </div>
-      <div class="nav-item"
-        onclick="showPage('imports', this)">
+      <div class="nav-item" onclick="showPage('imports', this)">
         <span class="nav-item-icon">&#8679;</span>
         <span>Imports</span>
       </div>
-      <div class="nav-item"
-        onclick="showPage('exports', this)">
+      <div class="nav-item" onclick="showPage('exports', this)">
         <span class="nav-item-icon">&#8681;</span>
         <span>Exports</span>
       </div>
       <div class="nav-section-label">Configuration</div>
-      <div class="nav-item"
-        onclick="showPage('admin', this)">
+      <div class="nav-item" onclick="showPage('admin', this)">
         <span class="nav-item-icon">&#9881;</span>
         <span>Administration</span>
       </div>
@@ -52,9 +44,7 @@
     <div class="sidebar-footer">v1.0.0</div>
   </aside>
 
-  <!-- ============================================================
-       CONTENU PRINCIPAL
-       ============================================================ -->
+  <!-- CONTENU PRINCIPAL -->
   <div class="main-content">
 
     <!-- TOPBAR -->
@@ -69,9 +59,7 @@
           <div style="width:36px;height:36px;border-radius:50%;background:#1565c0;
             color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;
             justify-content:center;flex-shrink:0;cursor:pointer"
-            title="J. Doe — Admin Systeme">
-            JD
-          </div>
+            title="J. Doe — Admin Systeme">JD</div>
         </div>
       </div>
     </div>
@@ -79,166 +67,138 @@
     <!-- PAGES -->
     <div class="page-container">
 
-      <!-- ======================================================
-           PAGE : DASHBOARD
-           ====================================================== -->
-      <!-- ======================================================
-     PAGE : DASHBOARD
-     ====================================================== -->
-<div class="page active" id="page-dashboard">
+      <!-- PAGE : DASHBOARD -->
+      <div class="page active" id="page-dashboard">
 
-  <!-- DATE EN HAUT A DROITE -->
-  <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
-    <div style="font-size:13px;color:#a0b0c0" id="dashboard-date"></div>
-  </div>
-
-  <!-- ====================================================
-       SECTION 1 — ANALYSE DES PRODUITS
-       ==================================================== -->
-  <div class="dashboard-section-label">Analyse des produits</div>
-  <div style="display:grid;grid-template-columns:1fr 1.4fr 1.4fr;gap:16px;margin-bottom:20px">
-
-    <!-- KPI Total produits -->
-    <div class="dash-kpi-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-          <div class="kpi-label">TOTAL PRODUITS</div>
-          <div class="kpi-value" id="kpi-total">—</div>
-          <div style="margin-top:8px">
-            <span style="font-size:12px;color:#1565c0;cursor:pointer;font-weight:600"
-              onclick="showPage('products',
-                document.querySelector('.nav-item[onclick*=\'products\']'))">
-              Voir evolution &rarr;
-            </span>
-          </div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+          <div style="font-size:13px;color:#a0b0c0" id="dashboard-date"></div>
         </div>
-        <div style="font-size:48px;line-height:1;opacity:0.85">&#128230;</div>
-      </div>
-    </div>
 
-    <!-- Donut repartition par categorie -->
-    <div class="dash-kpi-card">
-      <div style="font-size:12px;font-weight:700;color:#607080;
-        text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">
-        Repartition par categorie
-      </div>
-      <div style="display:flex;align-items:center;gap:16px">
-        <svg id="donut-svg" width="90" height="90"
-          viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"
-          style="flex-shrink:0"></svg>
-        <div id="donut-legend"
-          style="display:flex;flex-direction:column;gap:5px;flex:1"></div>
-      </div>
-    </div>
+        <!-- SECTION 1 — ANALYSE -->
+        <div class="dashboard-section-label">Analyse des produits</div>
+        <div style="display:grid;grid-template-columns:1fr 1.4fr 1.4fr;
+          gap:16px;margin-bottom:20px">
 
-    <!-- Evolution recente -->
-    <div class="dash-kpi-card">
-      <div style="font-size:12px;font-weight:700;color:#607080;
-        text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
-        Evolution recente
-      </div>
-      <div style="font-size:11px;color:#a0b0c0;margin-bottom:8px">
-        6 derniers mois
-      </div>
-      <div id="dashboard-evolution-chart" style="width:100%"></div>
-    </div>
-
-  </div>
-
-  <!-- ====================================================
-       SECTION 2 — QUALITE DES PRODUITS
-       ==================================================== -->
-  <div class="dashboard-section-label">Qualite des produits</div>
-  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:20px">
-
-    <!-- KPI Produits incomplets -->
-    <div class="dash-kpi-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-          <div class="kpi-label">PRODUITS INCOMPLETS</div>
-          <div class="kpi-value" style="color:#ef5350" id="kpi-incomplets">—</div>
-          <div style="margin-top:8px">
-            <div style="font-size:12px;color:#a0b0c0" id="seuil-display">
-              Seuil : &lt; <span id="seuil-label">—</span>
+          <!-- KPI Total produits -->
+          <div class="dash-kpi-card" style="cursor:pointer"
+            onclick="showPage('products',
+              document.querySelector('.nav-item[onclick*=\'products\']'))">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div class="kpi-label">TOTAL PRODUITS</div>
+                <div class="kpi-value" id="kpi-total"
+                  style="font-size:52px;line-height:1.1;margin-top:4px">—</div>
+              </div>
+              <div style="font-size:48px;line-height:1;opacity:0.85">&#128230;</div>
             </div>
-            <span style="font-size:12px;color:#1565c0;cursor:pointer;font-weight:600"
-              onclick="openSeuilModal()">
-              Configurer &rarr;
-            </span>
           </div>
-          <div style="margin-top:6px">
-            <a id="kpi-incomplets-link" href="#"
-              onclick="showIncomplets();return false;"
-              style="font-size:12px;color:#ef5350;font-weight:600;display:none">
-              Voir les incomplets &rarr;
-            </a>
+
+          <!-- Donut repartition -->
+          <div class="dash-kpi-card">
+            <div style="font-size:12px;font-weight:700;color:#607080;
+              text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">
+              Repartition par categorie
+            </div>
+            <div style="display:flex;align-items:center;gap:16px">
+              <svg id="donut-svg" width="90" height="90"
+                viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"
+                style="flex-shrink:0"></svg>
+              <div id="donut-legend"
+                style="display:flex;flex-direction:column;gap:5px;flex:1"></div>
+            </div>
           </div>
+
+          <!-- Evolution recente -->
+          <div class="dash-kpi-card">
+            <div style="font-size:12px;font-weight:700;color:#607080;
+              text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
+              Evolution recente
+            </div>
+            <div style="font-size:11px;color:#a0b0c0;margin-bottom:8px">
+              6 derniers mois
+            </div>
+            <div id="dashboard-evolution-chart" style="width:100%"></div>
+          </div>
+
         </div>
-        <div style="font-size:48px;line-height:1;opacity:0.85">&#128308;</div>
-      </div>
-    </div>
 
-    <!-- Taux de completion global + detail categories -->
-    <div class="dash-kpi-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;
-        margin-bottom:6px">
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#1a2332;
-            display:flex;align-items:center;gap:6px">
-            <span style="font-size:14px">&#9989;</span>
-            Taux de completion global
+        <!-- SECTION 2 — QUALITE -->
+        <div class="dashboard-section-label">Qualite des produits</div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;
+          gap:16px;margin-bottom:20px">
+
+          <!-- KPI Produits incomplets — clic sur le widget -->
+          <div class="dash-kpi-card" style="cursor:pointer"
+            onclick="showIncomplets()">
+            <div style="display:flex;justify-content:space-between;
+              align-items:flex-start;height:100%">
+              <div style="display:flex;flex-direction:column;
+                justify-content:space-between;height:100%">
+                <div>
+                  <div class="kpi-label">PRODUITS INCOMPLETS</div>
+                  <div class="kpi-value"
+                    style="color:#ef5350;font-size:52px;line-height:1.1;margin-top:4px"
+                    id="kpi-incomplets">—</div>
+                </div>
+                <div style="font-size:12px;color:#a0b0c0;margin-top:12px">
+                  Seuil : &lt; <span id="seuil-label">—</span>
+                </div>
+              </div>
+              <div style="font-size:48px;line-height:1;opacity:0.85">&#128308;</div>
+            </div>
           </div>
-          <div style="font-size:11px;color:#a0b0c0;margin-top:2px">
-            Objectif : <span id="objectif-label">—</span>
+
+          <!-- Taux de completion global -->
+          <div class="dash-kpi-card">
+            <div style="display:flex;align-items:center;
+              justify-content:space-between;margin-bottom:6px">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:#1a2332;
+                  display:flex;align-items:center;gap:6px">
+                  <span style="font-size:14px">&#9989;</span>
+                  Taux de completion global
+                </div>
+                <div style="font-size:11px;color:#a0b0c0;margin-top:2px">
+                  Objectif : <span id="objectif-label">—</span>
+                </div>
+              </div>
+              <div style="font-size:28px;font-weight:800;color:#1a2332"
+                id="kpi-completion-global">—</div>
+            </div>
+            <div style="height:12px;background:#f0f4f8;border-radius:6px;
+              overflow:hidden;margin-bottom:16px">
+              <div id="bar-global"
+                style="height:100%;border-radius:6px;
+                transition:width 0.4s ease;width:0%"></div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:#a0b0c0;
+              text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
+              Detail par categorie
+            </div>
+            <div id="dashboard-completion-cats"></div>
           </div>
+
         </div>
-        <div style="font-size:28px;font-weight:800;color:#1a2332"
-          id="kpi-completion-global">—</div>
-      </div>
 
-      <!-- Barre globale -->
-      <div style="height:12px;background:#f0f4f8;border-radius:6px;
-        overflow:hidden;margin-bottom:16px">
-        <div id="bar-global"
-          style="height:100%;border-radius:6px;transition:width 0.4s ease;width:0%">
+        <!-- SECTION 3 — VUE FOURNISSEUR -->
+        <div class="dashboard-section-label">Vue fournisseur</div>
+        <div class="dash-kpi-card" style="margin-bottom:20px">
+          <div id="supplier-chart-container"></div>
         </div>
+
       </div>
+      <!-- /page-dashboard -->
 
-      <!-- Detail par categorie -->
-      <div style="font-size:11px;font-weight:700;color:#a0b0c0;
-        text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
-        Detail par categorie
-      </div>
-      <div id="dashboard-completion-cats"></div>
-    </div>
-
-  </div>
-
-  <!-- ====================================================
-       SECTION 3 — VUE FOURNISSEUR
-       ==================================================== -->
-  <div class="dashboard-section-label">Vue fournisseur</div>
-  <div class="dash-kpi-card" style="margin-bottom:20px">
-    <div id="supplier-chart-container"></div>
-  </div>
-
-</div>
-<!-- /page-dashboard -->
-
-      <!-- ======================================================
-           PAGE : PRODUITS
-           ====================================================== -->
+      <!-- PAGE : PRODUITS -->
       <div class="page" id="page-products">
-
-        <!-- Toolbar -->
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px;
+          flex-wrap:wrap;margin-bottom:12px">
           <input type="text" class="search-input" id="products-search"
             placeholder="Rechercher un produit..."
             oninput="onSearchInput()">
           <select class="filter-select" id="filter-cat"
             onchange="onCatFilterChange()">
             <option value="">Toutes categories</option>
-            <!-- Options injectées par JS -->
           </select>
           <button class="btn btn-secondary" id="btn-clear-filters"
             style="display:none" onclick="clearAllFilters()">
@@ -246,58 +206,37 @@
           </button>
           <div style="flex:1"></div>
           <div class="view-toggle-pill">
-            <button id="btn-view-synth"
-              class="view-toggle-btn active"
-              onclick="switchView('synth')">
-              Synthese
-            </button>
-            <button id="btn-view-detail"
-              class="view-toggle-btn"
-              onclick="switchView('detail')">
-              Detaillee
-            </button>
+            <button id="btn-view-synth" class="view-toggle-btn active"
+              onclick="switchView('synth')">Synthese</button>
+            <button id="btn-view-detail" class="view-toggle-btn"
+              onclick="switchView('detail')">Detaillee</button>
           </div>
           <button class="btn btn-primary"
             onclick="openModal('modal-create-product')">
             + Nouveau produit
           </button>
         </div>
-
-        <!-- Barre filtres groupes (vue detaillee) -->
         <div id="group-filter-bar-container"></div>
-
-        <!-- Barre comparaison / selection -->
         <div id="compare-bar-container"></div>
-
-        <!-- Info + pagination haut -->
         <div style="display:flex;align-items:center;justify-content:space-between;
           margin-bottom:8px;flex-wrap:wrap;gap:8px">
           <div style="font-size:12px;color:#a0b0c0" id="pagination-info"></div>
           <div id="pagination-container"></div>
         </div>
-
-        <!-- Tableau -->
         <div class="table-container">
           <table id="products-table">
             <thead id="products-thead"></thead>
             <tbody id="products-tbody"></tbody>
           </table>
         </div>
-
-        <!-- Pagination bas -->
         <div style="display:flex;justify-content:flex-end;margin-top:12px">
           <div id="pagination-container-bottom"></div>
         </div>
-
       </div>
       <!-- /page-products -->
 
-      <!-- ======================================================
-           PAGE : FICHE PRODUIT
-           ====================================================== -->
+      <!-- PAGE : FICHE PRODUIT -->
       <div class="page" id="page-product-detail">
-
-        <!-- Bouton retour -->
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
             onclick="safeShowPage('products',
@@ -309,16 +248,13 @@
           </button>
           <span style="font-size:11px;color:#a0b0c0">Ctrl+S</span>
         </div>
-
-        <!-- Header produit -->
         <div style="background:#fff;border-radius:12px;padding:20px;
           box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:16px">
           <div id="product-header-left"></div>
         </div>
-
-        <!-- Barre completion -->
         <div class="detail-completion-bar">
-          <div style="font-size:12px;font-weight:600;color:#607080;min-width:80px">Completion</div>
+          <div style="font-size:12px;font-weight:600;color:#607080;
+            min-width:80px">Completion</div>
           <div class="completion-bar-bg" style="flex:1;height:10px">
             <div class="completion-bar-fill" id="detail-completion-bar"
               style="width:0%;transition:width 0.4s ease"></div>
@@ -328,88 +264,71 @@
           <div style="font-size:11px;color:#a0b0c0;min-width:160px;text-align:right"
             id="detail-completion-sub"></div>
         </div>
-
-        <!-- Onglets -->
         <div class="product-tabs-bar" id="product-tabs"></div>
         <div id="product-tab-contents"></div>
-
       </div>
       <!-- /page-product-detail -->
 
-      <!-- ======================================================
-           PAGE : EXPORTS
-           ====================================================== -->
+      <!-- PAGE : EXPORTS -->
       <div class="page" id="page-exports">
-        <!-- Contenu injecté par renderExportPage() -->
+        <!-- Contenu injecte par renderExportPage() -->
       </div>
-      <!-- ======================================================
-           PAGE : IMPORTS
-           ====================================================== -->
+
+      <!-- PAGE : IMPORTS -->
       <div class="page" id="page-imports">
-        <!-- Contenu injecté par renderImportPage() -->
+        <!-- Contenu injecte par renderImportPage() -->
       </div>
-      <!-- ======================================================
-           PAGE : ADMINISTRATION (accueil)
-           ====================================================== -->
+
+      <!-- PAGE : ADMINISTRATION -->
       <div class="page" id="page-admin">
         <div style="font-size:18px;font-weight:700;color:#1a2332;margin-bottom:20px">
           Administration
         </div>
         <div class="admin-grid">
-          <div class="admin-card"
-            onclick="showPage('admin-categories',null)">
+          <div class="admin-card" onclick="showPage('admin-categories',null)">
             <div class="admin-card-icon">&#127991;</div>
             <div class="admin-card-title">Categories</div>
             <div class="admin-card-sub">Gerer les categories produit</div>
             <div class="admin-card-count" id="admin-count-cats">—</div>
           </div>
-          <div class="admin-card"
-            onclick="showPage('admin-groups',null)">
+          <div class="admin-card" onclick="showPage('admin-groups',null)">
             <div class="admin-card-icon">&#128193;</div>
             <div class="admin-card-title">Groupes d'attributs</div>
             <div class="admin-card-sub">Organiser les attributs par groupe</div>
             <div class="admin-card-count" id="admin-count-groups">—</div>
           </div>
-          <div class="admin-card"
-            onclick="showPage('admin-attributes',null)">
+          <div class="admin-card" onclick="showPage('admin-attributes',null)">
             <div class="admin-card-icon">&#9741;</div>
             <div class="admin-card-title">Attributs</div>
             <div class="admin-card-sub">Creer et configurer les attributs</div>
             <div class="admin-card-count" id="admin-count-attrs">—</div>
           </div>
-          <div class="admin-card"
-            onclick="showPage('admin-synthese',null)">
+          <div class="admin-card" onclick="showPage('admin-synthese',null)">
             <div class="admin-card-icon">&#9783;</div>
             <div class="admin-card-title">Groupe Synthese</div>
             <div class="admin-card-sub">Configurer les colonnes de la vue synthese</div>
           </div>
-          <div class="admin-card"
-            onclick="showPage('admin-suppliers',null)">
+          <div class="admin-card" onclick="showPage('admin-suppliers',null)">
             <div class="admin-card-icon">&#127970;</div>
             <div class="admin-card-title">Marques / Fournisseurs</div>
             <div class="admin-card-sub">Conditions commerciales par marque</div>
             <div class="admin-card-count" id="admin-count-suppliers">—</div>
           </div>
-          <div class="admin-card"
-            onclick="showPage('admin-roles',null)">
+          <div class="admin-card" onclick="showPage('admin-roles',null)">
             <div class="admin-card-icon">&#128100;</div>
             <div class="admin-card-title">Roles & Permissions</div>
             <div class="admin-card-sub">Gerer les acces utilisateurs</div>
             <div class="admin-card-count" id="admin-count-roles">—</div>
           </div>
-          <div class="admin-card"
-            onclick="showPage('admin-prefs',null)">
+          <div class="admin-card" onclick="showPage('admin-prefs',null)">
             <div class="admin-card-icon">&#9881;</div>
             <div class="admin-card-title">Preferences</div>
             <div class="admin-card-sub">Pagination, seuils, options globales</div>
           </div>
         </div>
       </div>
-      <!-- /page-admin -->
 
-      <!-- ======================================================
-           PAGE : ADMIN — CATEGORIES
-           ====================================================== -->
+      <!-- PAGE : ADMIN — CATEGORIES -->
       <div class="page" id="page-admin-categories">
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
@@ -430,24 +349,26 @@
         </div>
       </div>
 
-      <!-- ======================================================
-           PAGE : ADMIN — EDITION CATEGORIE
-           ====================================================== -->
+      <!-- PAGE : ADMIN — EDITION CATEGORIE -->
       <div class="page" id="page-admin-category-edit">
         <div style="margin-bottom:16px">
           <button class="btn btn-secondary"
             onclick="showPage('admin-categories',null)">&larr; Categories</button>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;
+          gap:20px;max-width:900px">
           <div class="field-group">
             <div class="field-group-title">Informations</div>
             <div class="field-row">
               <div class="field-label">Nom *</div>
-              <input class="field-input" id="edit-cat-name">
+              <input class="field-input" id="edit-cat-name"
+                oninput="autoSlug('edit-cat-name','edit-cat-code')">
             </div>
             <div class="field-row">
-              <div class="field-label">Code *</div>
-              <input class="field-input" id="edit-cat-code">
+              <div class="field-label">Code technique</div>
+              <input class="field-input" id="edit-cat-code"
+                style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
+                readonly>
             </div>
             <div class="field-row">
               <div class="field-label">Couleur</div>
@@ -474,9 +395,7 @@
         </div>
       </div>
 
-      <!-- ======================================================
-           PAGE : ADMIN — ATTRIBUTS
-           ====================================================== -->
+      <!-- PAGE : ADMIN — ATTRIBUTS -->
       <div class="page" id="page-admin-attributes">
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
@@ -492,9 +411,7 @@
         </div>
       </div>
 
-      <!-- ======================================================
-           PAGE : ADMIN — EDITION ATTRIBUT
-           ====================================================== -->
+      <!-- PAGE : ADMIN — EDITION ATTRIBUT -->
       <div class="page" id="page-admin-attribute-edit">
         <div style="margin-bottom:16px">
           <button class="btn btn-secondary"
@@ -504,12 +421,14 @@
           <div class="field-group-title">Modifier l'attribut</div>
           <div class="field-row">
             <div class="field-label">Nom *</div>
-            <input class="field-input" id="ea-name">
+            <input class="field-input" id="ea-name"
+              oninput="autoSlug('ea-name','ea-code')">
           </div>
           <div class="field-row">
-            <div class="field-label">Code technique *</div>
+            <div class="field-label">Code technique</div>
             <input class="field-input" id="ea-code"
-              style="font-family:monospace">
+              style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
+              readonly>
           </div>
           <div class="field-row">
             <div class="field-label">Type</div>
@@ -564,9 +483,7 @@
         </div>
       </div>
 
-      <!-- ======================================================
-           PAGE : ADMIN — GROUPES D'ATTRIBUTS
-           ====================================================== -->
+      <!-- PAGE : ADMIN — GROUPES D'ATTRIBUTS -->
       <div class="page" id="page-admin-groups">
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
@@ -577,25 +494,26 @@
         <div id="attr-groups-list"></div>
       </div>
 
-      <!-- ======================================================
-           PAGE : ADMIN — EDITION GROUPE
-           ====================================================== -->
+      <!-- PAGE : ADMIN — EDITION GROUPE -->
       <div class="page" id="page-admin-group-edit">
         <div style="margin-bottom:16px">
           <button class="btn btn-secondary"
             onclick="showPage('admin-groups',null)">&larr; Groupes</button>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;
+          gap:20px;max-width:900px">
           <div class="field-group">
             <div class="field-group-title">Informations</div>
             <div class="field-row">
               <div class="field-label">Nom *</div>
-              <input class="field-input" id="edit-group-name">
+              <input class="field-input" id="edit-group-name"
+                oninput="autoSlug('edit-group-name','edit-group-code')">
             </div>
             <div class="field-row">
-              <div class="field-label">Code *</div>
+              <div class="field-label">Code technique</div>
               <input class="field-input" id="edit-group-code"
-                style="font-family:monospace">
+                style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
+                readonly>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
               <button class="btn btn-secondary"
@@ -606,7 +524,8 @@
           </div>
           <div class="field-group">
             <div class="field-group-title">Attributs du groupe</div>
-            <input type="text" class="search-input" placeholder="Rechercher un attribut..."
+            <input type="text" class="search-input"
+              placeholder="Rechercher un attribut..."
               oninput="filterGroupAttrToggles(this.value)"
               style="width:100%;margin-bottom:10px">
             <div id="group-attr-toggle-list"
@@ -615,23 +534,17 @@
         </div>
       </div>
 
-      <!-- ======================================================
-           PAGE : ADMIN — SYNTHESE
-           ====================================================== -->
+      <!-- PAGE : ADMIN — SYNTHESE -->
       <div class="page" id="page-admin-synthese">
-        <!-- Contenu injecté par renderSyntheseAdmin() -->
+        <!-- Contenu injecte par renderSyntheseAdmin() -->
       </div>
 
-      <!-- ======================================================
-           PAGE : ADMIN — MARQUES / FOURNISSEURS
-           ====================================================== -->
+      <!-- PAGE : ADMIN — MARQUES / FOURNISSEURS -->
       <div class="page" id="page-admin-suppliers">
-        <!-- Contenu injecté par renderSuppliersPage() -->
+        <!-- Contenu injecte par renderSuppliersPage() -->
       </div>
 
-      <!-- ======================================================
-           PAGE : ADMIN — ROLES
-           ====================================================== -->
+      <!-- PAGE : ADMIN — ROLES -->
       <div class="page" id="page-admin-roles">
         <div style="margin-bottom:16px">
           <button class="btn btn-secondary"
@@ -643,11 +556,9 @@
         <div class="roles-grid" id="roles-grid"></div>
       </div>
 
-      <!-- ======================================================
-           PAGE : ADMIN — PREFERENCES
-           ====================================================== -->
+      <!-- PAGE : ADMIN — PREFERENCES -->
       <div class="page" id="page-admin-prefs">
-        <!-- Contenu injecté par renderPrefsPage() -->
+        <!-- Contenu injecte par renderPrefsPage() -->
       </div>
 
     </div>
@@ -657,11 +568,8 @@
 </div>
 <!-- /app-layout -->
 
-<!-- ============================================================
-     MODALES
-     ============================================================ -->
+<!-- MODALES -->
 
-<!-- Confirmation suppression -->
 <div class="modal-overlay" id="modal-confirm-delete">
   <div class="modal-box">
     <div class="modal-title">Confirmer la suppression</div>
@@ -676,22 +584,19 @@
   </div>
 </div>
 
-<!-- Creation produit -->
 <div class="modal-overlay" id="modal-create-product">
   <div class="modal-box">
     <div class="modal-title">Nouveau produit</div>
     <div class="field-row">
       <div class="field-label">Code SAP *</div>
       <input class="field-input" id="np-sap"
-        placeholder="ex: M906342000001"
-        style="font-family:monospace">
+        placeholder="ex: M906342000001" style="font-family:monospace">
       <div class="field-error-msg" id="err-np-sap">Code SAP obligatoire.</div>
     </div>
     <div class="field-row">
       <div class="field-label">Code EAN *</div>
       <input class="field-input" id="np-ean"
-        placeholder="ex: 08056262500675"
-        style="font-family:monospace">
+        placeholder="ex: 08056262500675" style="font-family:monospace">
       <div class="field-error-msg" id="err-np-ean">Code EAN obligatoire.</div>
     </div>
     <div class="field-row">
@@ -716,7 +621,6 @@
   </div>
 </div>
 
-<!-- Creation categorie -->
 <div class="modal-overlay" id="modal-create-category">
   <div class="modal-box">
     <div class="modal-title">Nouvelle categorie</div>
@@ -745,7 +649,6 @@
   </div>
 </div>
 
-<!-- Creation attribut -->
 <div class="modal-overlay" id="modal-create-attr">
   <div class="modal-box modal-box-lg">
     <div class="modal-title">Nouvel attribut</div>
@@ -813,11 +716,10 @@
   </div>
 </div>
 
-<!-- Creation groupe d'attributs -->
 <div class="modal-overlay" id="modal-create-group">
   <div class="modal-box">
     <div class="modal-title">Nouveau groupe d'attributs</div>
-        <div class="field-row">
+    <div class="field-row">
       <div class="field-label">Nom *</div>
       <input class="field-input" id="new-group-name"
         placeholder="ex: Caracteristiques monture"
@@ -838,7 +740,6 @@
   </div>
 </div>
 
-<!-- Modifications non sauvegardees -->
 <div class="modal-overlay" id="modal-unsaved">
   <div class="modal-box">
     <div class="modal-title">Modifications non sauvegardees</div>
@@ -857,7 +758,6 @@
   </div>
 </div>
 
-<!-- Seuil de completion -->
 <div class="modal-overlay" id="modal-seuil">
   <div class="modal-box">
     <div class="modal-title">Modifier le seuil de completion</div>
@@ -875,9 +775,7 @@
   </div>
 </div>
 
-<!-- ============================================================
-     SCRIPTS
-     ============================================================ -->
+<!-- SCRIPTS -->
 <script src="js/data.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/dashboard.js"></script>
@@ -886,46 +784,37 @@
 <script src="js/export.js"></script>
 <script src="js/import.js"></script>
 
-<!-- Initialisation des selects dynamiques -->
 <script>
   document.addEventListener('DOMContentLoaded', function() {
 
-    // Select categories dans la modale creation produit
     const npCat = document.getElementById('np-cat');
     if (npCat) {
       categories.forEach(c => {
         const opt = document.createElement('option');
-        opt.value       = c.name;
-        opt.textContent = c.name;
+        opt.value = c.name; opt.textContent = c.name;
         npCat.appendChild(opt);
       });
     }
 
-    // Select categories dans la barre de filtre produits
     const filterCat = document.getElementById('filter-cat');
     if (filterCat) {
       categories.forEach(c => {
         const opt = document.createElement('option');
-        opt.value       = c.name;
-        opt.textContent = c.name;
+        opt.value = c.name; opt.textContent = c.name;
         filterCat.appendChild(opt);
       });
     }
 
-    // Select groupes dans la modale creation attribut
     const newAttrGroup = document.getElementById('new-attr-group');
     if (newAttrGroup) {
       attrGroups.forEach(g => {
         const opt = document.createElement('option');
-        opt.value       = g.id;
-        opt.textContent = g.name;
+        opt.value = g.id; opt.textContent = g.name;
         newAttrGroup.appendChild(opt);
       });
     }
 
-    // Rendu initial des roles
     renderRoles();
-
   });
 </script>
 
