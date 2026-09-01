@@ -52,11 +52,6 @@ function renderDashboardKpis() {
   const elSeuil = document.getElementById('seuil-label');
   if (elSeuil) elSeuil.textContent = '< ' + seuilCompletion + '%';
 
-  // Lien incomplets
-  const elLink = document.getElementById('kpi-incomplets-link');
-  if (elLink) elLink.style.display = incomplets > 0 ? '' : 'none';
-}
-
 function showIncomplets() {
   _filterIncomplets = true;
   currentPage = 1;
