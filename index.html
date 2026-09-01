@@ -230,11 +230,17 @@
             &#10005; Effacer les filtres
           </button>
           <div style="flex:1"></div>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-secondary active" id="btn-view-synth"
-              onclick="switchView('synth')">Synthese</button>
-            <button class="btn btn-secondary" id="btn-view-detail"
-              onclick="switchView('detail')">Detaillee</button>
+          <div class="view-toggle-pill">
+            <button id="btn-view-synth"
+              class="view-toggle-btn active"
+              onclick="switchView('synth')">
+              Synthese
+            </button>
+            <button id="btn-view-detail"
+              class="view-toggle-btn"
+              onclick="switchView('detail')">
+              Detaillee
+            </button>
           </div>
           <button class="btn btn-primary"
             onclick="openModal('modal-create-product')">
@@ -321,7 +327,12 @@
       <div class="page" id="page-exports">
         <!-- Contenu injecté par renderExportPage() -->
       </div>
-
+      <!-- ======================================================
+           PAGE : IMPORTS
+           ====================================================== -->
+      <div class="page" id="page-imports">
+        <!-- Contenu injecté par renderImportPage() -->
+      </div>
       <!-- ======================================================
            PAGE : ADMINISTRATION (accueil)
            ====================================================== -->
@@ -852,6 +863,7 @@
 <script src="js/products.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/export.js"></script>
+<script src="js/import.js"></script>
 
 <!-- Initialisation des selects dynamiques -->
 <script>
