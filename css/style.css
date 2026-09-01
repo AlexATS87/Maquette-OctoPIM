@@ -1341,3 +1341,38 @@ tr.row-selected td { background: #e3f2fd !important; }
   .topbar         { padding: 0 12px; }
   .modal-box      { padding: 20px; }
 }
+/* ============================================================
+   TOGGLE VUE SYNTHESE / DETAILLEE
+   ============================================================ */
+.view-toggle-pill {
+  display: inline-flex;
+  background: #f0f4f8;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid #dde3ea;
+}
+
+.view-toggle-btn {
+  padding: 7px 18px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #a0b0c0;
+  background: transparent;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+  white-space: nowrap;
+}
+
+.view-toggle-btn:hover:not(.active) {
+  color: #607080;
+  background: rgba(255,255,255,0.6);
+}
+
+.view-toggle-btn.active {
+  background: #1565c0;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(21,101,192,0.25);
+}
