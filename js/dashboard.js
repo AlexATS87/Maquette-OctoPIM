@@ -231,65 +231,89 @@ function renderDashboardSuppliers() {
   const container = document.getElementById('supplier-chart-container');
   if (!container) return;
 
-  const counts = {};
+  // Compte produits par fournisseur et par categorie
+  const data = {};
   products.forEach(p => {
     const code = p.fields.fournisseur_code || 'Inconnu';
     const sup  = suppliers.find(s => s.code === code);
     const name = sup ? sup.name : code;
-    counts[name] = (counts[name] || 0) + 1;
+    if (!data[name]) data[name] = {};
+    data[name][p.cat] = (data[name][p.cat] || 0) + 1;
   });
 
-  const data = Object.entries(counts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count);
+  const supNames = Object.keys(data).sort((a, b) => {
+    const ta = Object.values(data[a]).reduce((s, v) => s + v, 0);
+    const tb = Object.values(data[b]).reduce((s, v) => s + v, 0);
+    return tb - ta;
+  });
 
-  if (!data.length) {
+  if (!supNames.length) {
     container.innerHTML =
       '<div style="font-size:13px;color:#a0b0c0;padding:16px">Aucune donnee fournisseur.</div>';
     return;
   }
 
+  const catNames = categories.map(c => c.name);
+  const catColors = {};
+  categories.forEach(c => { catColors[c.name] = c.color; });
+
   const W      = container.clientWidth || 500;
-  const H      = data.length * 36 + 20;
+  const H      = supNames.length * 36 + 60;
   const padL   = 140;
   const padR   = 50;
   const padT   = 10;
   const barH   = 20;
   const gap    = 36;
-  const maxVal = Math.max(...data.map(d => d.count));
+  const maxVal = Math.max(...supNames.map(n =>
+    Object.values(data[n]).reduce((s, v) => s + v, 0)
+  ));
   const chartW = W - padL - padR;
-  const COLORS = ['#4fc3f7','#81c784','#ffb74d','#e57373','#ba68c8','#4db6ac','#f06292'];
+
+  // Legende categories
+  let legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">';
+  catNames.forEach(cat => {
+    if (products.some(p => p.cat === cat)) {
+      legendHtml += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#607080">
+        <span style="width:10px;height:10px;border-radius:2px;background:${catColors[cat]};
+          display:inline-block;flex-shrink:0"></span>${cat}
+      </div>`;
+    }
+  });
+  legendHtml += '</div>';
 
   let bars = '';
-  data.forEach((d, i) => {
-    const y    = padT + i * gap;
-    const bw   = Math.round((d.count / maxVal) * chartW);
-    const fill = COLORS[i % COLORS.length];
-    const sup  = suppliers.find(s => s.name === d.name);
-    const code = sup ? sup.code : '';
+  supNames.forEach((name, i) => {
+    const y     = padT + i * gap;
+    const total = Object.values(data[name]).reduce((s, v) => s + v, 0);
+    let x = padL;
 
-    bars += `
-      <g style="cursor:pointer" onclick="filterBySupplier('${code || d.name}')"
-        title="Voir les produits ${d.name}">
-        <text x="${padL - 8}" y="${y + barH / 2 + 4}"
-          text-anchor="end" font-size="12" fill="#607080"
-          font-family="Inter,sans-serif">${d.name}</text>
-        <rect x="${padL}" y="${y}" width="${bw}" height="${barH}"
-          rx="4" fill="${fill}" opacity="0.85"/>
-        <rect x="${padL}" y="${y}" width="${bw}" height="${barH}"
-          rx="4" fill="transparent" class="bar-hover"/>
-        <text x="${padL + bw + 6}" y="${y + barH / 2 + 4}"
-          font-size="12" font-weight="700" fill="#1a2332"
-          font-family="Inter,sans-serif">${d.count}</text>
-      </g>`;
+    bars += `<text x="${padL - 8}" y="${y + barH / 2 + 4}"
+      text-anchor="end" font-size="12" fill="#607080"
+      font-family="Inter,sans-serif">${name}</text>`;
+
+    const sup  = suppliers.find(s => s.name === name);
+    const code = sup ? sup.code : name;
+
+    catNames.forEach(cat => {
+      const count = data[name][cat] || 0;
+      if (!count) return;
+      const bw = Math.round((count / maxVal) * chartW);
+      bars += `<rect x="${x}" y="${y}" width="${bw}" height="${barH}"
+        rx="0" fill="${catColors[cat]}" opacity="0.85"
+        style="cursor:pointer"
+        onclick="filterBySupplier('${code}')"
+        title="${cat} : ${count}"/>`;
+      x += bw;
+    });
+
+    bars += `<text x="${x + 5}" y="${y + barH / 2 + 4}"
+      font-size="12" font-weight="700" fill="#1a2332"
+      font-family="Inter,sans-serif">${total}</text>`;
   });
 
-  container.innerHTML = `
+  container.innerHTML = legendHtml + `
     <svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}"
       xmlns="http://www.w3.org/2000/svg">
-      <style>
-        .bar-hover:hover { fill: rgba(0,0,0,0.06); }
-      </style>
       ${bars}
     </svg>`;
 }
