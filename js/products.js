@@ -386,7 +386,6 @@ function renderSynthRows(tbody, filtered) {
 function renderSynthCell(p, item, comp) {
   const code = item.code;
 
-  // Cas spéciaux
   if (code === 'visuel_face') {
     return `<td style="padding:6px 10px">${visualThumb(p, 40)}</td>`;
   }
@@ -397,7 +396,8 @@ function renderSynthCell(p, item, comp) {
     return `<td>
       <div class="inline-bar">
         <div class="inline-bar-bg">
-          <div class="inline-bar-fill" style="width:${comp}%;background:${getCompletionColor(comp)}"></div>
+          <div class="inline-bar-fill"
+            style="width:${comp}%;background:${getCompletionColor(comp)}"></div>
         </div>
         <span style="font-size:12px;color:#607080">${comp}%</span>
       </div>
@@ -410,16 +410,21 @@ function renderSynthCell(p, item, comp) {
     return `<td style="white-space:nowrap">${p.fields.miseEnLigne || '—'}</td>`;
   }
 
-  // Attribut cliquable (ouvre la fiche)
-  const attr = attributes.find(a => a.code === code);
-  const val  = p.fields[code] || '—';
-  if (attr && attr.clickToOpen) {
+  const val = p.fields[code] !== undefined ? p.fields[code] : '—';
+
+  // Premier attribut non systeme = cliquable
+  const systemCodes = ['visuel_face','cat','completion','createdAt','maj','miseEnLigne'];
+  const firstAttr   = syntheseItems.find(x =>
+    x.kind === 'attr' && !systemCodes.includes(x.code)
+  );
+  if (firstAttr && code === firstAttr.code) {
     return `<td class="td-name">
-      <span class="product-link" onclick="openProductDetail(${p.id})">${val}</span>
+      <span class="product-link"
+        onclick="openProductDetail(${p.id})">${val || '—'}</span>
     </td>`;
   }
 
-  return `<td style="white-space:nowrap">${val}</td>`;
+  return `<td style="white-space:nowrap">${val || '—'}</td>`;
 }
 
 // ============================================================
