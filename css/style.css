@@ -1376,3 +1376,103 @@ tr.row-selected td { background: #e3f2fd !important; }
   color: #fff;
   box-shadow: 0 2px 8px rgba(21,101,192,0.25);
 }
+/* ============================================================
+   IMPORT
+   ============================================================ */
+.import-stepper-inner {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.import-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.import-step-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f0f4f8;
+  color: #a0b0c0;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #dde3ea;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.import-step.active .import-step-circle {
+  background: #1565c0;
+  color: #fff;
+  border-color: #1565c0;
+}
+
+.import-step.done .import-step-circle {
+  background: #4caf50;
+  color: #fff;
+  border-color: #4caf50;
+}
+
+.import-step-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #a0b0c0;
+  white-space: nowrap;
+}
+
+.import-step.active .import-step-label { color: #1565c0; }
+.import-step.done  .import-step-label  { color: #4caf50; }
+
+.import-step-line {
+  flex: 1;
+  height: 2px;
+  background: #e8ecf0;
+  margin: 0 10px;
+  min-width: 32px;
+}
+
+.import-dropzone {
+  border: 2px dashed #c0d0e0;
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.import-dropzone:hover,
+.import-dropzone.drag-over {
+  border-color: #1565c0;
+  background: #f0f8ff;
+}
+
+.import-action-radio {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 2px solid #e8ecf0;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: #fafbfc;
+}
+
+.import-action-radio:hover { border-color: #90caf9; background: #f0f8ff; }
+
+.import-action-radio.selected {
+  border-color: #1565c0;
+  background: #e3f2fd;
+}
