@@ -14,7 +14,10 @@
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="sidebar-logo-title">OctoPIM</div>
+      <div class="sidebar-logo-title">
+        <span style="font-size:32px;filter:drop-shadow(0 0 4px #7c3aed88)">&#129425;</span>
+        <span style="color:#7c3aed;font-weight:800;letter-spacing:-0.5px">OctoPIM</span>
+      </div>
       <div class="sidebar-logo-sub">Gestion produits</div>
     </div>
     <nav class="sidebar-nav">
@@ -69,17 +72,14 @@
 
       <!-- PAGE : DASHBOARD -->
       <div class="page active" id="page-dashboard">
-
         <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
           <div style="font-size:13px;color:#a0b0c0" id="dashboard-date"></div>
         </div>
 
-        <!-- SECTION 1 — ANALYSE -->
         <div class="dashboard-section-label">Analyse des produits</div>
         <div style="display:grid;grid-template-columns:1fr 1.4fr 1.4fr;
           gap:16px;margin-bottom:20px">
 
-          <!-- KPI Total produits -->
           <div class="dash-kpi-card" style="cursor:pointer"
             onclick="showPage('products',
               document.querySelector('.nav-item[onclick*=\'products\']'))">
@@ -93,7 +93,6 @@
             </div>
           </div>
 
-          <!-- Donut repartition -->
           <div class="dash-kpi-card">
             <div style="font-size:12px;font-weight:700;color:#607080;
               text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">
@@ -108,7 +107,6 @@
             </div>
           </div>
 
-          <!-- Evolution recente -->
           <div class="dash-kpi-card">
             <div style="font-size:12px;font-weight:700;color:#607080;
               text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
@@ -122,12 +120,10 @@
 
         </div>
 
-        <!-- SECTION 2 — QUALITE -->
         <div class="dashboard-section-label">Qualite des produits</div>
         <div style="display:grid;grid-template-columns:1fr 2fr;
           gap:16px;margin-bottom:20px">
 
-          <!-- KPI Produits incomplets — clic sur le widget -->
           <div class="dash-kpi-card" style="cursor:pointer"
             onclick="showIncomplets()">
             <div style="display:flex;justify-content:space-between;
@@ -148,7 +144,6 @@
             </div>
           </div>
 
-          <!-- Taux de completion global -->
           <div class="dash-kpi-card">
             <div style="display:flex;align-items:center;
               justify-content:space-between;margin-bottom:6px">
@@ -180,14 +175,11 @@
 
         </div>
 
-        <!-- SECTION 3 — VUE FOURNISSEUR -->
         <div class="dashboard-section-label">Vue fournisseur</div>
         <div class="dash-kpi-card" style="margin-bottom:20px">
           <div id="supplier-chart-container"></div>
         </div>
-
       </div>
-      <!-- /page-dashboard -->
 
       <!-- PAGE : PRODUITS -->
       <div class="page" id="page-products">
@@ -233,7 +225,6 @@
           <div id="pagination-container-bottom"></div>
         </div>
       </div>
-      <!-- /page-products -->
 
       <!-- PAGE : FICHE PRODUIT -->
       <div class="page" id="page-product-detail">
@@ -267,17 +258,12 @@
         <div class="product-tabs-bar" id="product-tabs"></div>
         <div id="product-tab-contents"></div>
       </div>
-      <!-- /page-product-detail -->
 
       <!-- PAGE : EXPORTS -->
-      <div class="page" id="page-exports">
-        <!-- Contenu injecte par renderExportPage() -->
-      </div>
+      <div class="page" id="page-exports"></div>
 
       <!-- PAGE : IMPORTS -->
-      <div class="page" id="page-imports">
-        <!-- Contenu injecte par renderImportPage() -->
-      </div>
+      <div class="page" id="page-imports"></div>
 
       <!-- PAGE : ADMINISTRATION -->
       <div class="page" id="page-admin">
@@ -400,6 +386,10 @@
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
             onclick="showPage('admin',null)">&larr; Administration</button>
+          <input type="text" class="search-input" id="attrs-search"
+            placeholder="Rechercher un attribut..."
+            oninput="renderAttrsTable()"
+            style="max-width:260px">
           <button class="btn btn-primary"
             onclick="openModal('modal-create-attr')">+ Nouvel attribut</button>
         </div>
@@ -436,9 +426,7 @@
               onchange="onEditAttrTypeChange()">
               <option>Texte</option>
               <option>Texte long</option>
-              <option>Texte calcule</option>
               <option>Nombre</option>
-              <option>Nombre calcule</option>
               <option>Simple select</option>
               <option>Multi select</option>
               <option>Oui / Non</option>
@@ -457,8 +445,8 @@
               <option value="0">Non</option>
             </select>
           </div>
-          <div class="field-row">
-            <div class="field-label">Formule (champs calcules)</div>
+          <div class="field-row" id="ea-formula-wrap">
+            <div class="field-label">Formule</div>
             <input class="field-input" id="ea-formula"
               placeholder="ex: =[marque]+[ref_monture]"
               style="font-family:monospace">
@@ -535,14 +523,10 @@
       </div>
 
       <!-- PAGE : ADMIN — SYNTHESE -->
-      <div class="page" id="page-admin-synthese">
-        <!-- Contenu injecte par renderSyntheseAdmin() -->
-      </div>
+      <div class="page" id="page-admin-synthese"></div>
 
       <!-- PAGE : ADMIN — MARQUES / FOURNISSEURS -->
-      <div class="page" id="page-admin-suppliers">
-        <!-- Contenu injecte par renderSuppliersPage() -->
-      </div>
+      <div class="page" id="page-admin-suppliers"></div>
 
       <!-- PAGE : ADMIN — ROLES -->
       <div class="page" id="page-admin-roles">
@@ -557,16 +541,11 @@
       </div>
 
       <!-- PAGE : ADMIN — PREFERENCES -->
-      <div class="page" id="page-admin-prefs">
-        <!-- Contenu injecte par renderPrefsPage() -->
-      </div>
+      <div class="page" id="page-admin-prefs"></div>
 
     </div>
-    <!-- /page-container -->
   </div>
-  <!-- /main-content -->
 </div>
-<!-- /app-layout -->
 
 <!-- MODALES -->
 
@@ -672,9 +651,7 @@
         <select class="form-select" id="new-attr-type">
           <option>Texte</option>
           <option>Texte long</option>
-          <option>Texte calcule</option>
           <option>Nombre</option>
-          <option>Nombre calcule</option>
           <option>Simple select</option>
           <option>Multi select</option>
           <option>Oui / Non</option>
@@ -701,8 +678,8 @@
           placeholder="ex: A999999999999" style="font-family:monospace">
       </div>
     </div>
-    <div class="field-row" style="margin-top:14px">
-      <div class="field-label">Formule (si champ calcule)</div>
+    <div class="field-row" style="margin-top:14px" id="new-attr-formula-wrap">
+      <div class="field-label">Formule</div>
       <input class="field-input" id="new-attr-formula"
         placeholder="ex: =[marque]+[ref_monture]"
         style="font-family:monospace">
@@ -781,12 +758,12 @@
 <script src="js/dashboard.js"></script>
 <script src="js/products.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/detail.js"></script>
 <script src="js/export.js"></script>
 <script src="js/import.js"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-
     const npCat = document.getElementById('np-cat');
     if (npCat) {
       categories.forEach(c => {
@@ -795,7 +772,6 @@
         npCat.appendChild(opt);
       });
     }
-
     const filterCat = document.getElementById('filter-cat');
     if (filterCat) {
       categories.forEach(c => {
@@ -804,7 +780,6 @@
         filterCat.appendChild(opt);
       });
     }
-
     const newAttrGroup = document.getElementById('new-attr-group');
     if (newAttrGroup) {
       attrGroups.forEach(g => {
@@ -813,7 +788,6 @@
         newAttrGroup.appendChild(opt);
       });
     }
-
     renderRoles();
   });
 </script>
