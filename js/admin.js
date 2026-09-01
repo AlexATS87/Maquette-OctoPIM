@@ -1099,6 +1099,105 @@ function renderSuppliersTable(filter) {
   });
 }
 
+function editBrandSetting(i) {
+  const b = brandSettings[i];
+  if (!b) return;
+
+  // Construire la liste des fournisseurs et categories pour les selects
+  const supOptions = suppliers.map(s =>
+    `<option value="${s.code}" ${s.code === b.fournisseurCode ? 'selected' : ''}>
+      ${s.name}
+    </option>`
+  ).join('');
+
+  const catOptions = categories.map(c =>
+    `<option value="${c.name}" ${c.name === b.type ? 'selected' : ''}>
+      ${c.name}
+    </option>`
+  ).join('');
+
+  // Ouvrir une modale generique de modification
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-title">Modifier — ${b.marque}</div>
+      <div class="field-row">
+        <div class="field-label">Fournisseur</div>
+        <select class="form-select" id="eb-sup">${supOptions}</select>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Marque</div>
+        <input class="field-input" id="eb-marque" value="${b.marque}">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Type</div>
+        <select class="form-select" id="eb-type">${catOptions}</select>
+      </div>
+      <div class="field-row">
+        <div class="field-label">RF (%)</div>
+        <input class="field-input" id="eb-rf" type="number" step="0.01"
+          value="${((b.rf || 0) * 100).toFixed(2)}">
+      </div>
+      <div class="field-row">
+        <div class="field-label">RFA (%)</div>
+        <input class="field-input" id="eb-rfa" type="number" step="0.01"
+          value="${((b.rfa || 0) * 100).toFixed(2)}">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Marge interne (%)</div>
+        <input class="field-input" id="eb-marge" type="number" step="1"
+          value="${((b.margeInterne || 0) * 100).toFixed(0)}">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Reprise echange</div>
+        <select class="form-select" id="eb-reprise">
+          <option value="1" ${b.repriseEchange ? 'selected' : ''}>Oui</option>
+          <option value="0" ${!b.repriseEchange ? 'selected' : ''}>Non</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Conditions livraison</div>
+        <input class="field-input" id="eb-livraison"
+          value="${b.conditionsLivraison || ''}">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Commentaire</div>
+        <input class="field-input" id="eb-commentaire"
+          value="${b.commentaire || ''}">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">
+          Annuler
+        </button>
+        <button class="btn btn-primary" onclick="saveBrandSetting(${i},this)">
+          Enregistrer
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function saveBrandSetting(i, btn) {
+  const b = brandSettings[i];
+  if (!b) return;
+
+  b.fournisseurCode     = document.getElementById('eb-sup').value;
+  b.marque              = document.getElementById('eb-marque').value.trim();
+  b.type                = document.getElementById('eb-type').value;
+  b.rf                  = parseFloat(document.getElementById('eb-rf').value) / 100 || 0;
+  b.rfa                 = parseFloat(document.getElementById('eb-rfa').value) / 100 || 0;
+  b.margeInterne        = parseFloat(document.getElementById('eb-marge').value) / 100 || 0;
+  b.repriseEchange      = document.getElementById('eb-reprise').value === '1';
+  b.conditionsLivraison = document.getElementById('eb-livraison').value.trim();
+  b.commentaire         = document.getElementById('eb-commentaire').value.trim();
+
+  btn.closest('.modal-overlay').remove();
+  renderSuppliersPage();
+  showNotif('Marque "' + b.marque + '" mise a jour');
+}
+
 function filterSuppliersTable() {
   const q = (document.getElementById('supplier-search') || {}).value || '';
   renderSuppliersTable(q);
