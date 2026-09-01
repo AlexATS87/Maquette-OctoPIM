@@ -743,13 +743,15 @@
       <div class="form-field">
         <div class="form-label">Nom *</div>
         <input class="field-input" id="new-attr-name"
-          placeholder="ex: Code douanier">
+          placeholder="ex: Code douanier"
+          oninput="autoSlug('new-attr-name','new-attr-code')">
         <div class="field-error-msg" id="err-attr-name">Nom obligatoire.</div>
       </div>
       <div class="form-field">
-        <div class="form-label">Code technique *</div>
+        <div class="form-label">Code technique</div>
         <input class="field-input" id="new-attr-code"
-          placeholder="ex: code_douanier" style="font-family:monospace">
+          style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
+          placeholder="auto-genere" readonly>
         <div class="field-error-msg" id="err-attr-code">Code obligatoire.</div>
       </div>
       <div class="form-field">
