@@ -614,28 +614,35 @@ function createAttribute() {
   const maskEl    = document.getElementById('new-attr-mask');
   const formulaEl = document.getElementById('new-attr-formula');
 
-  const name    = nameEl.value.trim();
-  const code    = codeEl.value.trim();
-  const type    = typeEl.value;
-  const groupId = groupEl.value ? parseInt(groupEl.value) : null;
-  const required = reqEl.value === '1';
-  const mask    = maskEl ? maskEl.value.trim() : '';
-  const formula = formulaEl ? formulaEl.value.trim() : '';
+  if (!nameEl || !codeEl || !typeEl) {
+    showNotif('Erreur : champs introuvables', 'error');
+    return;
+  }
+
+  const name     = nameEl.value.trim();
+  const code     = codeEl.value.trim();
+  const type     = typeEl.value;
+  const groupId  = groupEl && groupEl.value ? parseInt(groupEl.value) : null;
+  const required = reqEl ? reqEl.value === '1' : false;
+  const mask     = maskEl    ? maskEl.value.trim()    : '';
+  const formula  = formulaEl ? formulaEl.value.trim() : '';
 
   let valid = true;
-  document.getElementById('err-attr-name').classList.remove('show');
-  document.getElementById('err-attr-code').classList.remove('show');
+  const errName = document.getElementById('err-attr-name');
+  const errCode = document.getElementById('err-attr-code');
+  if (errName) errName.classList.remove('show');
+  if (errCode) errCode.classList.remove('show');
   nameEl.classList.remove('field-error');
   codeEl.classList.remove('field-error');
 
   if (!name) {
     nameEl.classList.add('field-error');
-    document.getElementById('err-attr-name').classList.add('show');
+    if (errName) errName.classList.add('show');
     valid = false;
   }
   if (!code) {
     codeEl.classList.add('field-error');
-    document.getElementById('err-attr-code').classList.add('show');
+    if (errCode) errCode.classList.add('show');
     valid = false;
   }
   if (!valid) return;
@@ -647,7 +654,7 @@ function createAttribute() {
   }
 
   const newAttr = {
-    id:       Math.max(0, ...attributes.map(a => a.id)) + 1,
+    id:      Math.max(0, ...attributes.map(a => a.id)) + 1,
     name,
     code,
     type,
@@ -655,8 +662,8 @@ function createAttribute() {
     required,
     mask,
     formula,
-    calc:     !!formula,
-    options:  [],
+    calc:    !!formula,
+    options: [],
   };
   attributes.push(newAttr);
 
