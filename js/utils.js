@@ -303,7 +303,9 @@ function onSearchInput() {
   currentPage = 1;
   renderProductsTable();
 }
-//Autoslug pour le code technique
+// ============================================================
+// AUTO-SLUG CODE TECHNIQUE
+// ============================================================
   function autoSlug(sourceId, targetId) {
   const src = document.getElementById(sourceId);
   const tgt = document.getElementById(targetId);
