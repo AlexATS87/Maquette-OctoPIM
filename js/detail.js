@@ -70,7 +70,7 @@ function renderProductHeader(p,cat){
         <span><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></span>
         <span><span class="${activeGlobal==='Actif'?'badge-active-on':'badge-active-off'}">${activeGlobal}</span></span>
         <span><span class="${etatVisuel==='Oui'?'badge-etat-ok':'badge-etat-ko'}">Visuels : ${etatVisuel}</span></span>
-        ${brandInfo?`<span style="font-size:12px;color:#607080">${brandInfo.sup} / ${brandInfo.marque} — Remise ATS : <strong style="color:#1565c0">${(brandInfo.remiseAts*100).toFixed(0)}%</strong></span>`:''}
+        ${brandInfo?`<span style="font-size:12px;color:#607080">${brandInfo.sup} / ${brandInfo.marque} — Remise interne : <strong style="color:#1565c0">${(brandInfo.remiseAts*100).toFixed(0)}%</strong></span>`:''}
         <span style="color:#a0b0c0">Cree le ${p.createdAt||'—'}</span>
       </div>
     </div>
@@ -365,7 +365,7 @@ function renderBrandInfoPanel(brandInfo){
     {label:'Fournisseur',val:brandInfo.sup},
     {label:'RF',val:brandInfo.rf>0?(brandInfo.rf*100).toFixed(2)+'%':'—'},
     {label:'RFA',val:brandInfo.rfa>0?(brandInfo.rfa*100).toFixed(2)+'%':'—'},
-    {label:'Remise ATS',val:`<strong style="color:#1565c0;font-size:14px">${(brandInfo.remiseAts*100).toFixed(0)}%</strong>`},
+    {label:'Remise interne',val:`<strong style="color:#1565c0;font-size:14px">${(brandInfo.remiseAts*100).toFixed(0)}%</strong>`},
     {label:'Reprise echange',val:brandInfo.repriseEchange?'<span class="badge-active-on">Oui</span>':'<span class="badge-active-off">Non</span>'},
     {label:'Conditions livraison',val:brandInfo.conditionsLivraison||'—'},
     {label:'Commentaire',val:brandInfo.commentaire?`<span style="font-size:12px;color:#607080">${brandInfo.commentaire}</span>`:'—'}
