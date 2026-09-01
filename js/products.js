@@ -708,6 +708,20 @@ function switchView(mode) {
       return;
     }
   }
+  currentView = mode;
+  currentPage = 1;
+
+  const bs = document.getElementById('btn-view-synth');
+  const bd = document.getElementById('btn-view-detail');
+  if (bs) bs.classList.toggle('active', mode === 'synth');
+  if (bd) bd.classList.toggle('active', mode === 'detail');
+
+  if (mode === 'detail') {
+    const cat = getCatByName((document.getElementById('filter-cat') || {}).value || '');
+    activeGroupFilters = new Set(cat ? cat.groupIds : getVisibleGroupsForUser().map(g => g.id));
+    renderGroupFilterBar();
+  }
+  renderProductsTable();
 }
 
 function filterTable() { _filterIncomplets = false; currentPage = 1; renderProductsTable(); }
