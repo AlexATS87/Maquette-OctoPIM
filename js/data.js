@@ -79,14 +79,14 @@ let attributes = [
   { id:16, name:'Code douanier',       code:'code_douanier', type:'Texte',           groupId:4,  required:true,  calc:false, formula:'', mask:'99999999', showInSynth:false, clickToOpen:false },
   { id:17, name:'Commentaire',         code:'commentaire',   type:'Texte long',      groupId:4,  required:false, calc:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:18, name:'Prix catalogue',      code:'prix_catalogue',type:'Nombre',          groupId:5,  required:false, calc:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:19, name:'PA ATS',              code:'pa_ats',        type:'Nombre',          groupId:5,  required:true,  calc:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:19, name:'pa interne',              code:'pa_interne',        type:'Nombre',          groupId:5,  required:true,  calc:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:20, name:'Remise sur facture',  code:'remise',        type:'Nombre',          groupId:5,  required:true,  calc:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:21, name:'RFA',                 code:'rfa',           type:'Nombre',          groupId:5,  required:true,  calc:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:22, name:'marge interne',           code:'marge_interne',     type:'Nombre calcule',  groupId:5,  required:false, calc:true,
-    formula:'=[pa_ats]*(1-[remise]/100)*(1+[rfa]/100)', formulaLabel:'PA ATS x (1 - Remise/100) x (1 + RFA/100)',
+    formula:'=[pa_interne]*(1-[remise]/100)*(1+[rfa]/100)', formulaLabel:'pa interne x (1 - Remise/100) x (1 + RFA/100)',
     mask:'', showInSynth:false, clickToOpen:false },
   { id:23, name:'PA opticien',         code:'pa_opticien',   type:'Nombre calcule',  groupId:5,  required:false, calc:true,
-    formula:'=[pa_ats]*(1-[remise]/100)', formulaLabel:'PA ATS x (1 - Remise/100)',
+    formula:'=[pa_interne]*(1-[remise]/100)', formulaLabel:'pa interne x (1 - Remise/100)',
     mask:'', showInSynth:false, clickToOpen:false },
   { id:24, name:'Prix final arrondi',  code:'prix_final',    type:'Nombre calcule',  groupId:5,  required:false, calc:true,
     formula:'=[pa_opticien]*2', formulaLabel:'PA opticien x 2',
@@ -269,7 +269,7 @@ function computeCalcFields(product) {
   attributes.filter(a => a.calc && a.formula && a.formula.startsWith('=')).forEach(attr => {
     f[attr.code] = evalFormula(attr.formula, f);
   });
-  const pa = parseFloat(f.pa_ats) || 0;
+  const pa = parseFloat(f.pa_interne) || 0;
   const rem = parseFloat(f.remise) || 0;
   const rfa = parseFloat(f.rfa) || 0;
   const pv  = parseFloat(f.prix_vente) || 0;
@@ -360,13 +360,13 @@ const currentUserRole = 'admin'; // 'admin' | 'user'
 let products = [
   { id:1,  cat:'Montures',    createdAt:'26/02/2025', maj:'04/07/2025 14:32', visualSrc:null, visuals:0,
     history:[
-      { ts:'04/07/2025 14:32', user:'J. Doe', field:'PA ATS',       old:'40',        new:'45'         },
+      { ts:'04/07/2025 14:32', user:'J. Doe', field:'pa interne',       old:'40',        new:'45'         },
       { ts:'15/03/2025 09:10', user:'J. Doe', field:'Mise en ligne', old:'',         new:'15/03/2025' },
     ], pendingChanges:[],
     fields:{ sap:'M906342000001', ean:'08056262500675', nom:'Monture Vogue VO4279S', miseEnLigne:'15/03/2025',
              marque:'Vogue', fournisseur_code:'R00078', ref_monture:'VO4279S', couleur:'Noir',
              optique_solaire:'Optique', matiere:'Acetate', cerclage:'Cercle', forme:'Rectangulaire',
-             code_douanier:'9003190000', pa_ats:'45', remise:'10', rfa:'2', prix_catalogue:'180',
+             code_douanier:'9003190000', pa_interne:'45', remise:'10', rfa:'2', prix_catalogue:'180',
              active_o2:'Oui', active_lissac:'Non', active_audio2000:'Non' } },
   { id:2,  cat:'Lentilles',   createdAt:'28/02/2025', maj:'02/07/2025 09:15', visualSrc:null, visuals:0,
     history:[
@@ -383,7 +383,7 @@ let products = [
     fields:{ sap:'M906344000001', ean:'08056262500637', nom:'Solaire Ray-Ban RB3025',
              marque:'Ray-Ban', fournisseur_code:'R00078', ref_monture:'RB3025', couleur:'Or',
              optique_solaire:'Solaire', matiere:'Metal', cerclage:'Cercle', forme:'Aviateur',
-             code_douanier:'9004100000', pa_ats:'60', remise:'15', rfa:'3',
+             code_douanier:'9004100000', pa_interne:'60', remise:'15', rfa:'3',
              active_o2:'Non', active_lissac:'Non', active_audio2000:'Non' } },
   { id:4,  cat:'Accessoires', createdAt:'26/02/2025', maj:'30/06/2025 08:45', visualSrc:null, visuals:0,
     history:[], pendingChanges:[],
@@ -398,7 +398,7 @@ let products = [
     fields:{ sap:'M906346000001', ean:'08056262361245', nom:'Monture Oakley OX8046', miseEnLigne:'10/04/2025',
              marque:'Oakley', fournisseur_code:'R00078', ref_monture:'OX8046', couleur:'Gris',
              optique_solaire:'Optique', matiere:'Metal', cerclage:'Semi-cercle', forme:'Rectangulaire',
-             code_douanier:'9003190000', cible:'Homme', taille:'M', pa_ats:'55', remise:'12', rfa:'2',
+             code_douanier:'9003190000', cible:'Homme', taille:'M', pa_interne:'55', remise:'12', rfa:'2',
              prix_catalogue:'220', active_o2:'Oui', active_lissac:'Oui', active_audio2000:'Oui' } },
   { id:6,  cat:'Montures',    createdAt:'26/02/2025', maj:'28/06/2025 10:10', visualSrc:null, visuals:0,
     history:[
@@ -407,7 +407,7 @@ let products = [
     fields:{ sap:'M906347000001', ean:'08056262471586', nom:'Monture Vogue VO3987', miseEnLigne:'05/03/2025',
              marque:'Vogue', fournisseur_code:'R00078', ref_monture:'VO3987', couleur:'Rose',
              optique_solaire:'Optique', matiere:'Acetate', cerclage:'Cercle', forme:'Papillon',
-             code_douanier:'9003190000', pa_ats:'42', remise:'10', rfa:'2', prix_catalogue:'165',
+             code_douanier:'9003190000', pa_interne:'42', remise:'10', rfa:'2', prix_catalogue:'165',
              active_o2:'Non', active_lissac:'Non', active_audio2000:'Non' } },
   { id:7,  cat:'PEL', createdAt:'25/08/2026', maj:'25/08/2026 00:00', visualSrc:null, visuals:0,
     history:[], pendingChanges:[],
