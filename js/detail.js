@@ -248,40 +248,51 @@ function onDateMaskInput(el){
 // ============================================================
 // ONGLET VISUELS
 // ============================================================
-function renderTabVisuels(p){
-  const visualAttrs=[
-    {code:'visuel_face',   name:'Vue de face',            required:true},
-    {code:'visuel_tq',     name:'Vue 3/4',                required:true},
-    {code:'visuel_profil', name:'Vue de profil',          required:true},
-    {code:'visuel_ambiance',   name:'Visuel ambiance',    required:false},
-    {code:'visuel_fournisseur',name:'Visuel fournisseur', required:false}
-  ];
-  let slots='';
-  visualAttrs.forEach(va=>{
-    const attrDef=attributes.find(a=>a.code===va.code);
-    if(attrDef&&attrDef.type!=='Image'){
-      slots+=renderAttrFieldHtml(p,attrDef,va.name);
-      return;
-    }
-    const hasImg=!!p.fields[va.code];
-    slots+=`<div class="image-attr-slot" data-visuel-code="${va.code}">
+function renderTabVisuels(p) {
+  // Recupere les attributs de type Image du groupe visuels
+  const cat         = getCatByName(p.cat);
+  const visuelsGroup = cat
+    ? cat.groupIds.map(id => getGroupById(id)).filter(Boolean).find(g => g.code === 'visuels')
+    : null;
+
+  const visualAttrs = visuelsGroup
+    ? visuelsGroup.attrIds.map(id => getAttrById(id)).filter(Boolean)
+    : attributes.filter(a => a.type === 'Image');
+
+  if (!visualAttrs.length)
+    return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut visuel configure.</div>';
+
+  const obligatoires = visualAttrs.filter(a => a.required);
+
+  let slots = '';
+  visualAttrs.forEach(va => {
+    const hasImg = !!p.fields[va.code];
+    slots += `<div class="image-attr-slot" data-visuel-code="${va.code}">
       ${hasImg
-        ?`<img src="${p.fields[va.code]}" class="image-attr-preview"
-            onclick="triggerVisualUpload(${p.id},'${va.code}')" title="Cliquer pour modifier">`
-        :`<div class="image-attr-placeholder" onclick="triggerVisualUpload(${p.id},'${va.code}')">
-            <span style="font-size:32px">&#128247;</span>
-            <span style="font-size:12px">Cliquer pour ajouter</span>
-          </div>`}
+        ? `<img src="${p.fields[va.code]}" class="image-attr-preview"
+             onclick="triggerVisualUpload(${p.id},'${va.code}')"
+             title="Cliquer pour modifier">`
+        : `<div class="image-attr-placeholder"
+             onclick="triggerVisualUpload(${p.id},'${va.code}')">
+             <span style="font-size:32px">&#128247;</span>
+             <span style="font-size:12px">Cliquer pour ajouter</span>
+           </div>`}
       <div class="image-attr-label">${va.name}</div>
       <div class="image-attr-badges">
         ${va.required
-          ?'<span class="visual-badge-required">Obligatoire</span>'
-          :'<span class="visual-badge-optional">Optionnel</span>'}
+          ? '<span class="visual-badge-required">Obligatoire</span>'
+          : '<span class="visual-badge-optional">Optionnel</span>'}
       </div>
     </div>`;
   });
-  return`<div style="background:#fff3e0;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#e65100;border-left:4px solid #ffa726">
-    3 visuels obligatoires (Face, 3/4, Profil). Formats : JPG, PNG — 2000x2000px minimum.
+
+  const infoMsg = obligatoires.length
+    ? `${obligatoires.length} visuel${obligatoires.length > 1 ? 's' : ''} obligatoire${obligatoires.length > 1 ? 's' : ''} : ${obligatoires.map(a => a.name).join(', ')}. Formats : JPG, PNG — 2000x2000px minimum.`
+    : 'Formats acceptes : JPG, PNG — 2000x2000px minimum.';
+
+  return `<div style="background:#fff3e0;border-radius:8px;padding:12px 16px;
+    margin-bottom:20px;font-size:13px;color:#e65100;border-left:4px solid #ffa726">
+    ${infoMsg}
   </div>
   <div class="image-attrs-grid">${slots}</div>`;
 }
@@ -406,55 +417,117 @@ function refreshBrandInfoPanel(p){
 // ============================================================
 // ONGLET GROUPE D'ATTRIBUTS GENERIQUE
 // ============================================================
-function renderTabAttrGroup(p,g){
-  const attrs=g.attrIds.map(id=>getAttrById(id)).filter(Boolean);
-  if(!attrs.length)return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
+function renderTabAttrGroup(p, g) {
+  // Strictement les attributs du groupe dans l'ordre de attrIds
+  const attrs = g.attrIds.map(id => getAttrById(id)).filter(Boolean);
+
+  if (!attrs.length)
+    return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
+
   computeCalcFields(p);
-  let html='<div class="fields-grid"><div class="field-group">';
-  attrs.forEach(a=>{
-    const val=p.fields[a.code]!==undefined?p.fields[a.code]:'';
-    let input='';
-    if(a.type==='Image'){
-      const hasImg=!!val;
-      input=`<div class="image-attr-slot" data-visuel-code="${a.code}" style="max-width:200px">
+  let html = '<div class="fields-grid"><div class="field-group">';
+
+  attrs.forEach(a => {
+    const val = p.fields[a.code] !== undefined ? p.fields[a.code] : '';
+    let input = '';
+
+    if (a.type === 'Image') {
+      const hasImg = !!val;
+      input = `<div class="image-attr-slot" data-visuel-code="${a.code}"
+        style="max-width:200px">
         ${hasImg
-          ?`<img src="${val}" class="image-attr-preview" onclick="triggerVisualUpload(${p.id},'${a.code}')" title="Cliquer pour modifier">`
-          :`<div class="image-attr-placeholder" onclick="triggerVisualUpload(${p.id},'${a.code}')">
-              <span style="font-size:28px">&#128247;</span><span style="font-size:11px">Cliquer pour ajouter</span>
-            </div>`}
+          ? `<img src="${val}" class="image-attr-preview"
+               onclick="triggerVisualUpload(${p.id},'${a.code}')"
+               title="Cliquer pour modifier">`
+          : `<div class="image-attr-placeholder"
+               onclick="triggerVisualUpload(${p.id},'${a.code}')">
+               <span style="font-size:28px">&#128247;</span>
+               <span style="font-size:11px">Cliquer pour ajouter</span>
+             </div>`}
         <div class="image-attr-badges">
-          ${a.required?'<span class="visual-badge-required">Obligatoire</span>':'<span class="visual-badge-optional">Optionnel</span>'}
+          ${a.required
+            ? '<span class="visual-badge-required">Obligatoire</span>'
+            : '<span class="visual-badge-optional">Optionnel</span>'}
         </div>
       </div>`;
-    }else if(a.calc){
-      input=`<div style="position:relative">
-        <input class="field-input" style="background:#fffde7;color:#795548;padding-right:32px" value="${val}" readonly data-calc="${a.code}">
-        <div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:#ffd54f;color:#5d4037;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help" title="${a.formulaLabel||'Champ calcule'}">&#9654;</div>
+    } else if (a.calc || (a.formula && !a.readonly)) {
+      input = `<div style="position:relative">
+        <input class="field-input"
+          style="background:#fffde7;color:#795548;padding-right:32px"
+          value="${val}" readonly data-calc="${a.code}">
+        <div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
+          width:18px;height:18px;border-radius:50%;background:#ffd54f;color:#5d4037;
+          font-size:11px;font-weight:700;display:flex;align-items:center;
+          justify-content:center;cursor:help"
+          title="Champ calcule : ${a.formula || ''}">&#9654;</div>
       </div>`;
-    }else if(a.readonly){
-      input=`<input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${val}" readonly>`;
-    }else if(a.type==='Simple select'){
-      const opts=(a.options||[]).map(o=>`<option${o===val?' selected':''}>${o}</option>`).join('');
-      input=`<select class="field-input form-select" onchange="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})"><option value="">-- Choisir --</option>${opts}</select>`;
-    }else if(a.type==='Multi select'){
-      const opts=(a.options||[]).map(o=>`<option${(val||'').includes(o)?' selected':''}>${o}</option>`).join('');
-      input=`<select class="field-input form-select" multiple onchange="onMultiSelectChange(${p.id},this,'${a.code}')">${opts}</select>`;
-    }else if(a.type==='Oui / Non'){
-      input=`<select class="field-input form-select" onchange="onFieldChange(${p.id},this,'${a.code}')"><option value="">-- Choisir --</option><option${val==='Oui'?' selected':''}>Oui</option><option${val==='Non'?' selected':''}>Non</option></select>`;
-    }else if(a.type==='Texte long'){
-      input=`<textarea class="field-input" rows="3" oninput="onFieldChange(${p.id},this,'${a.code}')">${val}</textarea>`;
-    }else if(a.type==='Nombre'||a.type==='Nombre decimal'){
-      input=`<input class="field-input" type="number" value="${val}" oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
-    }else if(a.type==='Date'){
-      input=`<input class="field-input" style="font-family:monospace" value="${val}" placeholder="jj/mm/aaaa" maxlength="10" oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'${a.code}')">`;
-    }else{
-      input=`<input class="field-input" value="${val}" oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
+    } else if (a.readonly) {
+      input = `<input class="field-input"
+        style="background:#f0f4f8;color:#a0b0c0" value="${val}" readonly>`;
+    } else if (a.type === 'Simple select') {
+      const opts = (a.options || []).map(o =>
+        `<option${o === val ? ' selected' : ''}>${o}</option>`
+      ).join('');
+      input = `<select class="field-input form-select"
+        onchange="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">
+        <option value="">-- Choisir --</option>${opts}
+      </select>`;
+    } else if (a.type === 'Multi select') {
+      const opts = (a.options || []).map(o =>
+        `<option${(val || '').includes(o) ? ' selected' : ''}>${o}</option>`
+      ).join('');
+      input = `<select class="field-input form-select" multiple
+        onchange="onMultiSelectChange(${p.id},this,'${a.code}')">${opts}</select>`;
+    } else if (a.type === 'Oui / Non') {
+      input = `<select class="field-input form-select"
+        onchange="onFieldChange(${p.id},this,'${a.code}')">
+        <option value="">-- Choisir --</option>
+        <option${val === 'Oui' ? ' selected' : ''}>Oui</option>
+        <option${val === 'Non' ? ' selected' : ''}>Non</option>
+      </select>`;
+    } else if (a.type === 'Texte long') {
+      input = `<textarea class="field-input" rows="3"
+        oninput="onFieldChange(${p.id},this,'${a.code}')">${val}</textarea>`;
+    } else if (a.type === 'Nombre' || a.type === 'Nombre decimal') {
+      input = `<input class="field-input" type="number" value="${val}"
+        oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
+    } else if (a.type === 'Date') {
+      input = `<input class="field-input" style="font-family:monospace"
+        value="${val}" placeholder="jj/mm/aaaa" maxlength="10"
+        oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'${a.code}')">`;
+    } else {
+      const maskId = a.mask ? `id="fi-${a.code}-${p.id}"` : '';
+      input = `<input class="field-input" ${maskId} value="${val}"
+        oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
     }
-    html+=`<div class="field-row"><div class="field-label">${a.name}${a.required?' <span class="field-required">*</span>':''}</div>${input}</div>`;
-  });
-  return html+'</div></div>';
-}
 
+    html += `<div class="field-row">
+      <div class="field-label">
+        ${a.name}${a.required ? ' <span class="field-required">*</span>' : ''}
+        ${a.formula
+          ? `<span style="display:inline-flex;align-items:center;justify-content:center;
+               width:14px;height:14px;border-radius:50%;background:#ffd54f;color:#5d4037;
+               font-size:9px;font-weight:700;margin-left:4px;cursor:help"
+               title="Champ calcule : ${a.formula}">&#9654;</span>`
+          : ''}
+      </div>
+      ${input}
+    </div>`;
+  });
+
+  html += '</div></div>';
+
+  setTimeout(() => {
+    attrs.forEach(a => {
+      if (a.mask && !a.calc && !a.readonly) {
+        const el = document.getElementById('fi-' + a.code + '-' + p.id);
+        if (el) applyInputMask(el, a.mask);
+      }
+    });
+  }, 0);
+
+  return html;
+}
 // ============================================================
 // CHAMPS CALCULES
 // ============================================================
