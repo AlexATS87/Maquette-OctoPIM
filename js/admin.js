@@ -9,44 +9,140 @@ function renderSyntheseAdmin() {
   const page = document.getElementById('page-admin-synthese');
   if (!page) return;
 
-  page.innerHTML = `
-    <div style="margin-bottom:16px">
-      <button class="btn btn-secondary" onclick="showPage('admin',null)">&larr; Administration</button>
-    </div>
-    <div style="margin-bottom:20px">
-      <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:6px">Groupe Synthese</div>
-      <div style="font-size:13px;color:#a0b0c0;margin-bottom:16px">
-        Ce groupe est transversal a toutes les categories. Il definit les colonnes affichees
-        dans la vue synthese de la liste produits. Les elements sont reordonnables par
-        glisser-deposer. Les actions (ex : Supprimer) sont positionnables comme des attributs.
-      </div>
-    </div>
-    <div id="synthese-items-list" style="margin-bottom:24px"></div>
-    <div style="background:#fff;border-radius:10px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:20px">
-      <div class="field-group-title" style="margin-bottom:14px">Ajouter un attribut</div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <select id="synth-add-attr-select" class="form-select" style="flex:1;min-width:200px">
-          <option value="">-- Choisir un attribut --</option>
-        </select>
-        <input type="text" id="synth-add-attr-label" class="field-input"
-          placeholder="Label colonne (optionnel)" style="flex:1;min-width:160px">
-        <button class="btn btn-primary" onclick="addSyntheseAttr()">Ajouter</button>
-      </div>
-    </div>
-    <div style="background:#fff;border-radius:10px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.07)">
-      <div class="field-group-title" style="margin-bottom:14px">Ajouter une action</div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <select id="synth-add-action-select" class="form-select" style="flex:1;min-width:200px">
-          <option value="delete">Supprimer</option>
-        </select>
-        <input type="text" id="synth-add-action-label" class="field-input"
-          placeholder="Label colonne (optionnel)" style="flex:1;min-width:160px">
-        <button class="btn btn-primary" onclick="addSyntheseAction()">Ajouter</button>
-      </div>
-    </div>`;
+  const actionItems = [
+    { code: 'delete', label: 'Supprimer', kind: 'action' },
+  ];
+  const attrOptions = attributes.map(a =>
+    `<option value="${a.id}">${a.name} (${a.code})</option>`
+  ).join('');
+  const actionOptions = actionItems.map(a =>
+    `<option value="action_${a.code}">${a.label}</option>`
+  ).join('');
 
-  renderSyntheseItemsList();
-  renderSyntheseAttrSelect();
+  page.innerHTML = `
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <button class="btn btn-secondary" onclick="showPage('admin',null)">&larr; Administration</button>
+      <span style="font-size:15px;font-weight:700;color:#1a2332">Vue Synthese — colonnes</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;max-width:1000px">
+
+      <!-- Liste des colonnes actives -->
+      <div class="field-group">
+        <div class="field-group-title">Colonnes actives <span style="font-size:12px;font-weight:400;color:#a0b0c0">(glisser pour reordonner)</span></div>
+        <div id="synthese-items-list">
+          ${syntheseItems.map((item, i) => `
+            <div class="cat-group-order-item" draggable="true"
+              ondragstart="synthDragStart(${i})"
+              ondragover="synthDragOver(event,${i})"
+              ondrop="synthDrop(event,${i})">
+              <span class="drag-handle">&#8942;&#8942;</span>
+              <span style="flex:1;font-size:13px;font-weight:600;color:#1a2332">${item.label}</span>
+              <span class="badge badge-grey" style="font-size:11px">${item.kind === 'action' ? 'Action' : item.code}</span>
+              <button class="action-btn-danger" style="padding:2px 8px;font-size:11px"
+                onclick="removeSyntheseItem(${i})">&#10005;</button>
+            </div>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- Panneau ajout a droite -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="field-group">
+          <div class="field-group-title">Ajouter un attribut</div>
+          <select class="form-select" id="synth-add-attr" style="margin-bottom:10px">
+            <option value="">-- Choisir --</option>
+            ${attrOptions}
+          </select>
+          <button class="btn btn-primary" style="width:100%"
+            onclick="addSyntheseAttr()">+ Ajouter</button>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title">Ajouter une action</div>
+          <select class="form-select" id="synth-add-action" style="margin-bottom:10px">
+            <option value="">-- Choisir --</option>
+            ${actionOptions}
+          </select>
+          <button class="btn btn-primary" style="width:100%"
+            onclick="addSyntheseAction()">+ Ajouter</button>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title">Colonnes systeme</div>
+          <div style="font-size:12px;color:#607080;margin-bottom:10px">
+            Colonnes toujours disponibles, non supprimables.
+          </div>
+          ${[
+            { code: 'visuel_face', label: 'Visuel' },
+            { code: 'cat',        label: 'Categorie' },
+            { code: 'completion', label: 'Completion' },
+            { code: 'createdAt',  label: 'Date creation' },
+            { code: 'maj',        label: 'Derniere MAJ' },
+          ].map(s => `
+            <div style="display:flex;align-items:center;justify-content:space-between;
+              padding:5px 0;border-bottom:1px solid #f0f4f8">
+              <span style="font-size:12px;color:#607080">${s.label}</span>
+              <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px"
+                onclick="addSyntheseSystem('${s.code}','${s.label}')">+ Ajouter</button>
+            </div>`
+          ).join('')}
+        </div>
+      </div>
+
+    </div>`;
+}
+
+let synthDragIdx = null;
+
+function synthDragStart(i) { synthDragIdx = i; }
+
+function synthDragOver(e, i) { e.preventDefault(); }
+
+function synthDrop(e, i) {
+  e.preventDefault();
+  if (synthDragIdx === null || synthDragIdx === i) return;
+  const moved = syntheseItems.splice(synthDragIdx, 1)[0];
+  syntheseItems.splice(i, 0, moved);
+  synthDragIdx = null;
+  renderSyntheseAdmin();
+}
+
+function removeSyntheseItem(i) {
+  syntheseItems.splice(i, 1);
+  renderSyntheseAdmin();
+}
+
+function addSyntheseAttr() {
+  const sel = document.getElementById('synth-add-attr');
+  if (!sel || !sel.value) { showNotif('Choisissez un attribut', 'warn'); return; }
+  const attr = attributes.find(a => a.id === parseInt(sel.value));
+  if (!attr) return;
+  if (syntheseItems.find(x => x.code === attr.code)) {
+    showNotif('Cet attribut est deja dans la vue synthese', 'warn'); return;
+  }
+  syntheseItems.push({ code: attr.code, label: attr.name, kind: 'attr' });
+  renderSyntheseAdmin();
+  showNotif(attr.name + ' ajoute a la vue synthese');
+}
+
+function addSyntheseAction() {
+  const sel = document.getElementById('synth-add-action');
+  if (!sel || !sel.value) { showNotif('Choisissez une action', 'warn'); return; }
+  const code  = sel.value.replace('action_', '');
+  const label = sel.options[sel.selectedIndex].text;
+  if (syntheseItems.find(x => x.code === code && x.kind === 'action')) {
+    showNotif('Cette action est deja presente', 'warn'); return;
+  }
+  syntheseItems.push({ code, label, kind: 'action' });
+  renderSyntheseAdmin();
+}
+
+function addSyntheseSystem(code, label) {
+  if (syntheseItems.find(x => x.code === code)) {
+    showNotif(label + ' est deja dans la vue synthese', 'warn'); return;
+  }
+  syntheseItems.push({ code, label, kind: 'attr' });
+  renderSyntheseAdmin();
+  showNotif(label + ' ajoute');
 }
 
 function renderSyntheseAttrSelect() {
