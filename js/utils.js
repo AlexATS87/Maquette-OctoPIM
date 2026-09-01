@@ -334,6 +334,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  //Autoslug pour le code technique
+  function autoSlug(sourceId, targetId) {
+  const src = document.getElementById(sourceId);
+  const tgt = document.getElementById(targetId);
+  if (!src || !tgt) return;
+  tgt.value = src.value
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
   // Fermeture dropdown filtre colonne au scroll du tableau
   const tableWrap = document.querySelector('.table-container');
   if (tableWrap) {
