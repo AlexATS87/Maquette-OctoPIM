@@ -298,15 +298,35 @@ function saveCategoryEdit() {
 }
 
 function createCategory() {
-  const name  = document.getElementById('new-cat-name').value.trim();
-  const code  = document.getElementById('new-cat-code').value.trim();
-  const color = document.getElementById('new-cat-color').value;
-  if (!name || !code) { showNotif('Nom et code obligatoires'); return; }
-  categories.push({ id: nextCatId++, name, code, color, groupIds: [1, 2] });
+  const nameEl  = document.getElementById('new-cat-name');
+  const codeEl  = document.getElementById('new-cat-code');
+  const colorEl = document.getElementById('new-cat-color');
+  const name    = nameEl.value.trim();
+  const code    = codeEl.value.trim();
+  const color   = colorEl.value || '#4fc3f7';
+
+  if (!name) { showNotif('Le nom est obligatoire', 'error'); nameEl.focus(); return; }
+  if (!code) { showNotif('Le code est obligatoire', 'error'); codeEl.focus(); return; }
+  if (categories.find(c => c.code === code)) {
+    showNotif('Ce code existe deja', 'error'); codeEl.focus(); return;
+  }
+
+  const newCat = {
+    id:       Math.max(0, ...categories.map(c => c.id)) + 1,
+    name,
+    code,
+    color,
+    groupIds: [],
+  };
+  categories.push(newCat);
+
+  nameEl.value  = '';
+  codeEl.value  = '';
+  colorEl.value = '#4fc3f7';
+
   closeModal('modal-create-category');
-  document.getElementById('new-cat-name').value = '';
-  document.getElementById('new-cat-code').value = '';
-  renderAll();
+  renderCatsTable();
+  renderAdminHome();
   showNotif('Categorie "' + name + '" creee');
 }
 
