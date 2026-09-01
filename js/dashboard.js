@@ -40,17 +40,18 @@ function renderDashboardKpis() {
   const total      = products.length;
   const incomplets = products.filter(p => calcCompletion(p) < seuilCompletion).length;
 
-  // Total produits
   const elTotal = document.getElementById('kpi-total');
   if (elTotal) elTotal.textContent = total;
 
-  // Produits incomplets
   const elIncomplets = document.getElementById('kpi-incomplets');
   if (elIncomplets) elIncomplets.textContent = incomplets;
 
-  // Seuil label
   const elSeuil = document.getElementById('seuil-label');
-  if (elSeuil) elSeuil.textContent = '< ' + seuilCompletion + '%';
+  if (elSeuil) elSeuil.textContent = seuilCompletion + '%';
+
+  const elObjectif = document.getElementById('objectif-label');
+  if (elObjectif) elObjectif.textContent = seuilCompletion + '%';
+}
 
 function showIncomplets() {
   _filterIncomplets = true;
