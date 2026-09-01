@@ -235,7 +235,6 @@ function renderDashboardSuppliers() {
   const container = document.getElementById('supplier-chart-container');
   if (!container) return;
 
-  // Compte produits par fournisseur
   const counts = {};
   products.forEach(p => {
     const code = p.fields.fournisseur_code || 'Inconnu';
@@ -244,7 +243,7 @@ function renderDashboardSuppliers() {
     counts[name] = (counts[name] || 0) + 1;
   });
 
-  const data   = Object.entries(counts)
+  const data = Object.entries(counts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
 
@@ -254,25 +253,63 @@ function renderDashboardSuppliers() {
     return;
   }
 
+  const W      = container.clientWidth || 500;
+  const H      = data.length * 36 + 20;
+  const padL   = 140;
+  const padR   = 50;
+  const padT   = 10;
+  const barH   = 20;
+  const gap    = 36;
   const maxVal = Math.max(...data.map(d => d.count));
+  const chartW = W - padL - padR;
   const COLORS = ['#4fc3f7','#81c784','#ffb74d','#e57373','#ba68c8','#4db6ac','#f06292'];
 
-  container.innerHTML = data.map((d, i) => `
-    <div style="display:flex;align-items:center;gap:12px;padding:7px 0;
-      border-bottom:1px solid #f8fafc">
-      <div style="font-size:13px;font-weight:600;color:#1a2332;
-        min-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-        ${d.name}
-      </div>
-      <div style="flex:1;height:10px;background:#f0f4f8;border-radius:5px;overflow:hidden">
-        <div style="width:${Math.round((d.count / maxVal) * 100)}%;height:100%;
-          background:${COLORS[i % COLORS.length]};border-radius:5px;
-          transition:width 0.4s ease"></div>
-      </div>
-      <span style="font-size:13px;font-weight:700;color:#1a2332;
-        min-width:28px;text-align:right">${d.count}</span>
-    </div>`
-  ).join('');
+  let bars = '';
+  data.forEach((d, i) => {
+    const y    = padT + i * gap;
+    const bw   = Math.round((d.count / maxVal) * chartW);
+    const fill = COLORS[i % COLORS.length];
+    const sup  = suppliers.find(s => s.name === d.name);
+    const code = sup ? sup.code : '';
+
+    bars += `
+      <g style="cursor:pointer" onclick="filterBySupplier('${code || d.name}')"
+        title="Voir les produits ${d.name}">
+        <text x="${padL - 8}" y="${y + barH / 2 + 4}"
+          text-anchor="end" font-size="12" fill="#607080"
+          font-family="Inter,sans-serif">${d.name}</text>
+        <rect x="${padL}" y="${y}" width="${bw}" height="${barH}"
+          rx="4" fill="${fill}" opacity="0.85"/>
+        <rect x="${padL}" y="${y}" width="${bw}" height="${barH}"
+          rx="4" fill="transparent" class="bar-hover"/>
+        <text x="${padL + bw + 6}" y="${y + barH / 2 + 4}"
+          font-size="12" font-weight="700" fill="#1a2332"
+          font-family="Inter,sans-serif">${d.count}</text>
+      </g>`;
+  });
+
+  container.innerHTML = `
+    <svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}"
+      xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .bar-hover:hover { fill: rgba(0,0,0,0.06); }
+      </style>
+      ${bars}
+    </svg>`;
+}
+
+function filterBySupplier(codeOrName) {
+  const navEl = document.querySelector('.nav-item[onclick*="products"]');
+  showPage('products', navEl);
+  const filterCat = document.getElementById('filter-cat');
+  if (filterCat) filterCat.value = '';
+  colFilters = {};
+  _filterIncomplets = false;
+  currentPage = 1;
+  const search = document.getElementById('products-search');
+  if (search) search.value = codeOrName;
+  renderProductsTable();
+  showNotif('Filtre fournisseur : ' + codeOrName);
 }
 
 // ============================================================
