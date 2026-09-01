@@ -677,6 +677,11 @@ function createAttribute() {
   showNotif('Attribut "' + name + '" cree');
 }
 
+function onNewAttrTypeChange() {
+  const type = (document.getElementById('new-attr-type') || {}).value || '';
+  const wrap = document.getElementById('new-attr-formula-wrap');
+  if (wrap) wrap.style.display = type === 'Image' ? 'none' : '';
+}
 // ============================================================
 // ADMIN — GROUPES D'ATTRIBUTS
 // ============================================================
