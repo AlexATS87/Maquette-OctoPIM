@@ -613,8 +613,8 @@ function downloadTrame() {
   const catName = (document.getElementById('trame-cat') || {}).value || '';
   const cat     = getCatByName(catName);
 
-  // Colonnes de la trame
-  const baseHeaders = ['EAN', 'SAP', 'Nom produit', 'Categorie'];
+    // Colonnes de la trame — entetes = code technique
+  const baseHeaders = ['ean', 'sap', 'nom', 'categorie'];
   let attrHeaders   = [];
 
   if (cat) {
@@ -624,21 +624,21 @@ function downloadTrame() {
       .filter(g => g.code !== 'visuels')
       .flatMap(g => g.attrIds.map(id => getAttrById(id)).filter(Boolean))
       .filter(a => !a.calc && !a.readonly)
-      .map(a => a.name);
+      .map(a => a.code);
   } else {
     attrHeaders = attributes
       .filter(a => !a.calc && !a.readonly)
-      .map(a => a.name);
+      .map(a => a.code);
   }
 
   const headers = [...baseHeaders, ...attrHeaders];
 
   // Ligne exemple
-  const exampleRow = headers.map((h, i) => {
-    if (h === 'EAN')          return '08056262500675';
-    if (h === 'SAP')          return 'M906342000001';
-    if (h === 'Nom produit')  return 'Exemple produit';
-    if (h === 'Categorie')    return catName || (categories[0] ? categories[0].name : '');
+  const exampleRow = headers.map(h => {
+    if (h === 'ean')       return '08056262500675';
+    if (h === 'sap')       return 'M906342000001';
+    if (h === 'nom')       return 'Exemple produit';
+    if (h === 'categorie') return catName || (categories[0] ? categories[0].name : '');
     return '';
   });
 
