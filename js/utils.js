@@ -306,7 +306,7 @@ function onSearchInput() {
 // ============================================================
 // AUTO-SLUG CODE TECHNIQUE
 // ============================================================
-  function autoSlug(sourceId, targetId) {
+function autoSlug(sourceId, targetId) {
   const src = document.getElementById(sourceId);
   const tgt = document.getElementById(targetId);
   if (!src || !tgt) return;
