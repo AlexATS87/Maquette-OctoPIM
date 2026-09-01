@@ -170,39 +170,6 @@ function renderSyntheseAttrSelect() {
   });
 }
 
-function addSyntheseAttr() {
-  const sel   = document.getElementById('synth-add-attr-select');
-  const lblEl = document.getElementById('synth-add-attr-label');
-  if (!sel || !sel.value) { showNotif('Veuillez choisir un attribut'); return; }
-  const code  = sel.value;
-  const opt   = sel.options[sel.selectedIndex];
-  const label = (lblEl && lblEl.value.trim()) || (opt ? opt.getAttribute('data-label') : code);
-  syntheseItems.push({ kind: 'attr', code, label });
-  sel.value = '';
-  if (lblEl) lblEl.value = '';
-  renderSyntheseItemsList();
-  renderSyntheseAttrSelect();
-  renderProductsTable();
-  showNotif('Attribut ajoute a la synthese : ' + label);
-}
-
-function addSyntheseAction() {
-  const sel   = document.getElementById('synth-add-action-select');
-  const lblEl = document.getElementById('synth-add-action-label');
-  if (!sel) return;
-  const code  = sel.value;
-  const label = (lblEl && lblEl.value.trim()) || (code === 'delete' ? 'Suppr.' : code);
-  // Une seule action delete autorisée
-  if (code === 'delete' && syntheseItems.some(i => i.kind === 'action' && i.code === 'delete')) {
-    showNotif('L\'action Supprimer est deja presente'); return;
-  }
-  syntheseItems.push({ kind: 'action', code, label });
-  if (lblEl) lblEl.value = '';
-  renderSyntheseItemsList();
-  renderProductsTable();
-  showNotif('Action ajoutee a la synthese : ' + label);
-}
-
 function renderSyntheseItemsList() {
   const list = document.getElementById('synthese-items-list');
   if (!list) return;
