@@ -11,7 +11,6 @@
 
 <div class="app-layout">
 
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-title">
@@ -47,10 +46,8 @@
     <div class="sidebar-footer">v1.0.0</div>
   </aside>
 
-  <!-- CONTENU PRINCIPAL -->
   <div class="main-content">
 
-    <!-- TOPBAR -->
     <div class="topbar">
       <div class="topbar-title" id="topbar-title">Tableau de bord</div>
       <div class="topbar-actions">
@@ -67,10 +64,9 @@
       </div>
     </div>
 
-    <!-- PAGES -->
     <div class="page-container">
 
-      <!-- PAGE : DASHBOARD -->
+      <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
         <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
           <div style="font-size:13px;color:#a0b0c0" id="dashboard-date"></div>
@@ -140,7 +136,7 @@
                   Seuil : &lt; <span id="seuil-label">—</span>
                 </div>
               </div>
-              <div style="font-size:48px;line-height:1;opacity:0.85">&#128308;</div>
+              <div style="font-size:48px;line-height:1;opacity:0.85">&#128679;</div>
             </div>
           </div>
 
@@ -181,7 +177,7 @@
         </div>
       </div>
 
-      <!-- PAGE : PRODUITS -->
+      <!-- PRODUITS -->
       <div class="page" id="page-products">
         <div style="display:flex;align-items:center;gap:10px;
           flex-wrap:wrap;margin-bottom:12px">
@@ -226,7 +222,7 @@
         </div>
       </div>
 
-      <!-- PAGE : FICHE PRODUIT -->
+      <!-- FICHE PRODUIT -->
       <div class="page" id="page-product-detail">
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
@@ -259,13 +255,13 @@
         <div id="product-tab-contents"></div>
       </div>
 
-      <!-- PAGE : EXPORTS -->
+      <!-- EXPORTS -->
       <div class="page" id="page-exports"></div>
 
-      <!-- PAGE : IMPORTS -->
+      <!-- IMPORTS -->
       <div class="page" id="page-imports"></div>
 
-      <!-- PAGE : ADMINISTRATION -->
+      <!-- ADMINISTRATION -->
       <div class="page" id="page-admin">
         <div style="font-size:18px;font-weight:700;color:#1a2332;margin-bottom:20px">
           Administration
@@ -314,7 +310,7 @@
         </div>
       </div>
 
-      <!-- PAGE : ADMIN — CATEGORIES -->
+      <!-- ADMIN CATEGORIES -->
       <div class="page" id="page-admin-categories">
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
@@ -335,14 +331,13 @@
         </div>
       </div>
 
-      <!-- PAGE : ADMIN — EDITION CATEGORIE -->
+      <!-- ADMIN EDITION CATEGORIE -->
       <div class="page" id="page-admin-category-edit">
         <div style="margin-bottom:16px">
           <button class="btn btn-secondary"
             onclick="showPage('admin-categories',null)">&larr; Categories</button>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;
-          gap:20px;max-width:900px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
           <div class="field-group">
             <div class="field-group-title">Informations</div>
             <div class="field-row">
@@ -353,8 +348,7 @@
             <div class="field-row">
               <div class="field-label">Code technique</div>
               <input class="field-input" id="edit-cat-code"
-                style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
-                readonly>
+                style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
             </div>
             <div class="field-row">
               <div class="field-label">Couleur</div>
@@ -381,7 +375,7 @@
         </div>
       </div>
 
-      <!-- PAGE : ADMIN — ATTRIBUTS -->
+      <!-- ADMIN ATTRIBUTS -->
       <div class="page" id="page-admin-attributes">
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
@@ -401,7 +395,7 @@
         </div>
       </div>
 
-      <!-- PAGE : ADMIN — EDITION ATTRIBUT -->
+      <!-- ADMIN EDITION ATTRIBUT -->
       <div class="page" id="page-admin-attribute-edit">
         <div style="margin-bottom:16px">
           <button class="btn btn-secondary"
@@ -417,8 +411,7 @@
           <div class="field-row">
             <div class="field-label">Code technique</div>
             <input class="field-input" id="ea-code"
-              style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
-              readonly>
+              style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
           </div>
           <div class="field-row">
             <div class="field-label">Type</div>
@@ -471,7 +464,7 @@
         </div>
       </div>
 
-      <!-- PAGE : ADMIN — GROUPES D'ATTRIBUTS -->
+      <!-- ADMIN GROUPES -->
       <div class="page" id="page-admin-groups">
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
@@ -482,14 +475,13 @@
         <div id="attr-groups-list"></div>
       </div>
 
-      <!-- PAGE : ADMIN — EDITION GROUPE -->
+      <!-- ADMIN EDITION GROUPE -->
       <div class="page" id="page-admin-group-edit">
         <div style="margin-bottom:16px">
           <button class="btn btn-secondary"
             onclick="showPage('admin-groups',null)">&larr; Groupes</button>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;
-          gap:20px;max-width:900px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
           <div class="field-group">
             <div class="field-group-title">Informations</div>
             <div class="field-row">
@@ -500,8 +492,7 @@
             <div class="field-row">
               <div class="field-label">Code technique</div>
               <input class="field-input" id="edit-group-code"
-                style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
-                readonly>
+                style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
               <button class="btn btn-secondary"
@@ -522,13 +513,13 @@
         </div>
       </div>
 
-      <!-- PAGE : ADMIN — SYNTHESE -->
+      <!-- ADMIN SYNTHESE -->
       <div class="page" id="page-admin-synthese"></div>
 
-      <!-- PAGE : ADMIN — MARQUES / FOURNISSEURS -->
+      <!-- ADMIN FOURNISSEURS -->
       <div class="page" id="page-admin-suppliers"></div>
 
-      <!-- PAGE : ADMIN — ROLES -->
+      <!-- ADMIN ROLES -->
       <div class="page" id="page-admin-roles">
         <div style="margin-bottom:16px">
           <button class="btn btn-secondary"
@@ -540,7 +531,7 @@
         <div class="roles-grid" id="roles-grid"></div>
       </div>
 
-      <!-- PAGE : ADMIN — PREFERENCES -->
+      <!-- ADMIN PREFERENCES -->
       <div class="page" id="page-admin-prefs"></div>
 
     </div>
@@ -648,7 +639,8 @@
       </div>
       <div class="form-field">
         <div class="form-label">Type</div>
-        <select class="form-select" id="new-attr-type">
+        <select class="form-select" id="new-attr-type"
+          onchange="onNewAttrTypeChange()">
           <option>Texte</option>
           <option>Texte long</option>
           <option>Nombre</option>
