@@ -111,31 +111,6 @@ function removeSyntheseItem(i) {
   renderSyntheseAdmin();
 }
 
-function addSyntheseAttr() {
-  const sel = document.getElementById('synth-add-attr');
-  if (!sel || !sel.value) { showNotif('Choisissez un attribut', 'warn'); return; }
-  const attr = attributes.find(a => a.id === parseInt(sel.value));
-  if (!attr) return;
-  if (syntheseItems.find(x => x.code === attr.code)) {
-    showNotif('Cet attribut est deja dans la vue synthese', 'warn'); return;
-  }
-  syntheseItems.push({ code: attr.code, label: attr.name, kind: 'attr' });
-  renderSyntheseAdmin();
-  showNotif(attr.name + ' ajoute a la vue synthese');
-}
-
-function addSyntheseAction() {
-  const sel = document.getElementById('synth-add-action');
-  if (!sel || !sel.value) { showNotif('Choisissez une action', 'warn'); return; }
-  const code  = sel.value.replace('action_', '');
-  const label = sel.options[sel.selectedIndex].text;
-  if (syntheseItems.find(x => x.code === code && x.kind === 'action')) {
-    showNotif('Cette action est deja presente', 'warn'); return;
-  }
-  syntheseItems.push({ code, label, kind: 'action' });
-  renderSyntheseAdmin();
-}
-
 function addSyntheseSystem(code, label) {
   if (syntheseItems.find(x => x.code === code)) {
     showNotif(label + ' est deja dans la vue synthese', 'warn'); return;
