@@ -32,6 +32,9 @@ function showPage(id, navEl) {
     case 'exports':
       renderExportPage();
       break;
+    case 'imports':
+      renderImportPage();
+      break;
     case 'admin':
       renderAdminHome();
       break;
@@ -310,7 +313,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Calcul initial des champs calculés sur tous les produits
   products.forEach(p => computeCalcFields(p));
-
+  // Date dashboard
+  const datEl = document.getElementById('dashboard-date');
+  if (datEl) {
+    const now  = new Date();
+    const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    datEl.textContent = now.toLocaleDateString('fr-FR', opts);
+  }
   // Affichage de la page dashboard par défaut
   const defaultNav = document.querySelector('.nav-item[onclick*="dashboard"]');
   showPage('dashboard', defaultNav);
