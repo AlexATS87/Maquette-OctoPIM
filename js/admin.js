@@ -336,94 +336,36 @@ function createCategory() {
 let attrSortState = { code: null, dir: 'asc' };
 
 function renderAttrsTable() {
-  const tb    = document.getElementById('attrs-tbody');
-  if (!tb) return;
   const thead = document.getElementById('attrs-thead');
-  if (thead) {
-    const cols = [
-      { label: 'Nom',         code: 'name'  },
-      { label: 'Code',        code: 'code'  },
-      { label: 'Type',        code: 'type'  },
-      { label: 'Groupe',      code: 'group' },
-      { label: 'Obligatoire', noSort: true  },
-      { label: 'Masque',      noSort: true  },
-      { label: 'Options',     noSort: true  },
-      { label: 'Actions',     noSort: true  },
-    ];
-    thead.innerHTML = '';
-    const tr = document.createElement('tr');
-    cols.forEach(col => {
-      const th = document.createElement('th');
-      if (col.noSort) {
-        th.textContent = col.label;
-        th.className   = 'no-sort';
-      } else {
-        const dir = (attrSortState.code === col.code) ? attrSortState.dir : null;
-        th.innerHTML = `<div style="display:flex;align-items:center;gap:4px;cursor:pointer"
-          onclick="sortAttrsBy('${col.code}')">
-          <span>${col.label}</span>
-          <span style="font-size:11px;color:${dir ? '#1a2332' : '#c0d0e0'}">
-            ${dir === 'asc' ? '▲' : dir === 'desc' ? '▼' : '⇅'}
-          </span>
-        </div>`;
-      }
-      tr.appendChild(th);
-    });
-    thead.appendChild(tr);
-  }
+  const tbody = document.getElementById('attrs-tbody');
+  if (!thead || !tbody) return;
 
-  let sorted = [...attributes];
-  if (attrSortState.code) {
-    sorted.sort((a, b) => {
-      let va = '', vb = '';
-      if (attrSortState.code === 'name')  { va = a.name; vb = b.name; }
-      else if (attrSortState.code === 'code')  { va = a.code; vb = b.code; }
-      else if (attrSortState.code === 'type')  { va = a.type; vb = b.type; }
-      else if (attrSortState.code === 'group') {
-        const ga = getGroupById(a.groupId);
-        const gb = getGroupById(b.groupId);
-        va = ga ? ga.name : ''; vb = gb ? gb.name : '';
-      }
-      const cmp = va.localeCompare(vb, 'fr');
-      return attrSortState.dir === 'asc' ? cmp : -cmp;
-    });
-  }
+  thead.innerHTML = `<tr>
+    <th>Nom</th>
+    <th>Type</th>
+    <th>Groupe</th>
+    <th>Obligatoire</th>
+    <th>Calcule</th>
+    <th>Actions</th>
+  </tr>`;
 
-  tb.innerHTML = '';
-  sorted.forEach(a => {
-    const g          = getGroupById(a.groupId);
-    const maskLabel  = a.mask
-      ? `<code style="font-size:11px;background:#f0f4f8;padding:2px 6px;border-radius:4px">${a.mask}</code>`
-      : '<span style="color:#c0d0e0">—</span>';
-    const clickCheck = a.type === 'Texte' && a.showInSynth
-      ? `<label class="attr-option-row" title="Clic sur valeur = ouvrir produit">
-           <input type="checkbox" ${a.clickToOpen ? 'checked' : ''}
-             onchange="setAttrClickToOpen(${a.id},this)"> Clic
-         </label>`
-      : '';
-    // Code technique masqué pour les non-admins
-    const codeCell = currentUserRole === 'admin'
-      ? `<td style="font-family:monospace;font-size:12px;color:#607080">${a.code}</td>`
-      : `<td style="color:#c0d0e0;font-size:12px">••••</td>`;
-
-    tb.innerHTML += `<tr>
+  tbody.innerHTML = '';
+  attributes.forEach(a => {
+    const group = getGroupById(a.groupId);
+    const tr    = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:600">${a.name}</td>
+      <td><span class="badge badge-grey">${a.type}</span></td>
+      <td>${group ? `<span class="attr-chip" style="background:${getGroupColor(group).bg};color:${getGroupColor(group).text}">${group.name}</span>` : '—'}</td>
+      <td>${a.required ? '<span class="badge-active-on">Oui</span>' : '<span class="badge-active-off">Non</span>'}</td>
+      <td>${a.calc ? '<span class="badge-orange">Calcule</span>' : '—'}</td>
       <td>
-        <span class="product-link" onclick="editAttribute(${a.id})" title="Cliquer pour modifier">
-          ${a.name}${a.calc ? ' <span style="font-size:10px;color:#ffa726">&#9654;</span>' : ''}
-        </span>
-      </td>
-      ${codeCell}
-      <td>${a.type}</td>
-      <td>${g ? g.name : '—'}</td>
-      <td><span class="badge ${a.required ? 'badge-green' : 'badge-grey'}">${a.required ? 'Oui' : 'Non'}</span></td>
-      <td>${maskLabel}</td>
-      <td>${clickCheck}</td>
-      <td><div class="td-actions">
-        <button class="action-btn" onclick="editAttribute(${a.id})">Editer</button>
-        <button class="action-btn-danger"
-          onclick="confirmDelete('attr',${a.id},'${a.name}')">Supprimer</button>
-      </div></td>
-    </tr>`;
+        <div class="td-actions">
+          <button class="action-btn" onclick="editAttribute(${a.id})">Modifier</button>
+          <button class="action-btn-danger" onclick="confirmDelete('attr',${a.id},'${a.name.replace(/'/g,"\\'")}')">Suppr.</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
   });
 }
 
