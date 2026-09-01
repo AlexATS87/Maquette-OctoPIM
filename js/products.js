@@ -436,35 +436,42 @@ function getGroupsForCurrentCat() {
 function renderDetailHeader(thead) {
   thead.innerHTML = '';
   initGroupFilters();
-  const catGroups    = getGroupsForCurrentCat();
-  const visibleGroups = catGroups.filter(g => activeGroupFilters.has(g.id) && g.code !== 'visuels');
+  const catGroups     = getGroupsForCurrentCat();
+  const visibleGroups = catGroups.filter(g =>
+    activeGroupFilters.has(g.id) && g.code !== 'visuels'
+  );
+
   const row1 = document.createElement('tr');
   const row2 = document.createElement('tr');
 
-  // Colonnes fixes
-  [
-    { label: '',           cb: true,   noSort: true },
-    { label: 'Visuel',     noSort: true },
-    { label: 'Code SAP',   code: 'sap' },
-    { label: 'Nom produit',code: 'nom' },
-    { label: 'Categorie',  noSort: true },
-    { label: 'Completion', code: 'completion' },
-    { label: 'Actions',    noSort: true },
-  ].forEach(col => {
-    const th = document.createElement('th');
-    th.rowSpan = 2;
-    if (col.cb) {
-      th.style.width = '36px';
-      th.innerHTML = '<input type="checkbox" onchange="toggleSelectAll(this)">';
-    } else if (col.noSort || !col.code) {
-      th.textContent = col.label;
+  // Colonnes synthese fixes (checkbox)
+  const thCb = document.createElement('th');
+  thCb.rowSpan = 2;
+  thCb.style.width = '36px';
+  thCb.innerHTML = '<input type="checkbox" onchange="toggleSelectAll(this)">';
+  row1.appendChild(thCb);
+
+  // Colonnes synthese dynamiques
+  syntheseItems.forEach(item => {
+    if (item.kind === 'action') {
+      const th = document.createElement('th');
+      th.rowSpan = 2;
+      th.textContent = item.label;
+      row1.appendChild(th);
     } else {
-      th.appendChild(makeSortFilterTh(col.label, col.code));
+      const noSort = ['visuel_face', 'cat'];
+      const th = document.createElement('th');
+      th.rowSpan = 2;
+      if (noSort.includes(item.code)) {
+        th.textContent = item.label;
+      } else {
+        th.appendChild(makeSortFilterTh(item.label, item.code));
+      }
+      row1.appendChild(th);
     }
-    row1.appendChild(th);
   });
 
-  // Groupes d'attributs
+  // Colonnes groupes d'attributs
   visibleGroups.forEach(g => {
     const groupAttrs = g.attrIds.map(id => getAttrById(id)).filter(Boolean);
     if (!groupAttrs.length) return;
@@ -484,11 +491,11 @@ function renderDetailHeader(thead) {
       th2.innerHTML = `<div style="display:flex;align-items:center;gap:4px;white-space:nowrap">
         <span class="sort-btn" onclick="sortTableByCode('${attr.code}')"
           title="Trier" style="cursor:pointer;font-size:13px;color:#8a9bb0">&#8645;</span>
-        <span onclick="sortTableByCode('${attr.code}')" style="cursor:pointer;flex:1">
-          ${attr.name}${attr.calc ? `<span style="font-size:10px;color:#ffa726" title="${attr.formulaLabel || ''}">&#9654;</span>` : ''}
-        </span>
+        <span onclick="sortTableByCode('${attr.code}')"
+          style="cursor:pointer;flex:1">${attr.name}</span>
         <span class="th-filter-icon${isFiltered ? ' filter-active' : ''}"
-          title="Filtrer" onclick="openColFilter('${attr.code}','${attr.name}',this)">&#9663;</span>
+          title="Filtrer"
+          onclick="openColFilter('${attr.code}','${attr.name}',this)">&#9663;</span>
       </div>`;
       row2.appendChild(th2);
     });
@@ -502,9 +509,10 @@ function renderDetailRows(tbody, filtered) {
   tbody.innerHTML = '';
   initGroupFilters();
   const catGroups     = getGroupsForCurrentCat();
-  const visibleGroups = catGroups.filter(g => activeGroupFilters.has(g.id) && g.code !== 'visuels');
+  const visibleGroups = catGroups.filter(g =>
+    activeGroupFilters.has(g.id) && g.code !== 'visuels'
+  );
 
-  // Valeurs pour comparaison
   const allValues = {};
   if (compareMode && filtered.length > 1) {
     visibleGroups.forEach(g => g.attrIds.forEach(aid => {
@@ -522,42 +530,37 @@ function renderDetailRows(tbody, filtered) {
     const tr         = document.createElement('tr');
     if (isSelected) tr.className = 'row-selected';
 
-    let cells = `
-      <td style="width:36px;text-align:center">
-        <input type="checkbox" ${isSelected ? 'checked' : ''}
-          onchange="toggleSelectProduct(${p.id},this)">
-      </td>
-      <td style="padding:6px 10px">${visualThumb(p, 36)}</td>
-      <td style="white-space:nowrap;font-size:12px">${p.fields.sap || '—'}</td>
-      <td class="td-name">
-        <span class="product-link" onclick="openProductDetail(${p.id})">${nom}</span>
-      </td>
-      <td><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></td>
-      <td>
-        <div class="inline-bar">
-          <div class="inline-bar-bg">
-            <div class="inline-bar-fill" style="width:${comp}%;background:${getCompletionColor(comp)}"></div>
-          </div>
-          <span style="font-size:12px;color:#607080">${comp}%</span>
-        </div>
-      </td>
-      <td>
-        <div class="td-actions">
+    // Checkbox
+    let cells = `<td style="width:36px;text-align:center">
+      <input type="checkbox" ${isSelected ? 'checked' : ''}
+        onchange="toggleSelectProduct(${p.id},this)">
+    </td>`;
+
+    // Colonnes synthese (meme logique que renderSynthRows)
+    syntheseItems.forEach(item => {
+      if (item.kind === 'action' && item.code === 'delete') {
+        cells += `<td>
           <button class="action-btn-danger"
-            onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g, "\\'")}')">
+            onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g,"\\'")}')">
             Suppr.
           </button>
-        </div>
-      </td>`;
+        </td>`;
+      } else if (item.kind === 'attr') {
+        cells += renderSynthCell(p, item, comp);
+      }
+    });
 
+    // Colonnes groupes d'attributs
     visibleGroups.forEach(g => {
       const color = getGroupColor(g);
       g.attrIds.map(id => getAttrById(id)).filter(Boolean).forEach(attr => {
-        const val    = p.fields[attr.code] !== undefined && p.fields[attr.code] !== '' ? p.fields[attr.code] : '—';
-        let isDiff   = false;
+        const val  = p.fields[attr.code] !== undefined && p.fields[attr.code] !== ''
+          ? p.fields[attr.code] : '—';
+        let isDiff = false;
         if (compareMode && allValues[attr.code])
           isDiff = new Set(allValues[attr.code].map(v => v.toString().trim())).size > 1;
-        cells += `<td style="white-space:nowrap;font-size:12px;background:${isDiff ? '#fff9c4' : color.bg + '55'}">${val}</td>`;
+        cells += `<td style="white-space:nowrap;font-size:12px;
+          background:${isDiff ? '#fff9c4' : color.bg + '55'}">${val}</td>`;
       });
     });
 
