@@ -61,7 +61,18 @@
     <div class="topbar">
       <div class="topbar-title" id="topbar-title">Tableau de bord</div>
       <div class="topbar-actions">
-        <span style="font-size:12px;color:#a0b0c0">J. Doe</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:600;color:#1a2332">J. Doe</div>
+            <div style="font-size:11px;color:#a0b0c0">Admin Systeme</div>
+          </div>
+          <div style="width:36px;height:36px;border-radius:50%;background:#1565c0;
+            color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;
+            justify-content:center;flex-shrink:0;cursor:pointer"
+            title="J. Doe — Admin Systeme">
+            JD
+          </div>
+        </div>
       </div>
     </div>
 
@@ -77,8 +88,7 @@
 <div class="page active" id="page-dashboard">
 
   <!-- DATE EN HAUT A DROITE -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-    <div style="font-size:20px;font-weight:800;color:#1a2332">Dashboard</div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
     <div style="font-size:13px;color:#a0b0c0" id="dashboard-date"></div>
   </div>
 
