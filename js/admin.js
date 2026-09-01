@@ -9,27 +9,30 @@ function renderSyntheseAdmin() {
   const page = document.getElementById('page-admin-synthese');
   if (!page) return;
 
-  const actionItems = [
-    { code: 'delete', label: 'Supprimer', kind: 'action' },
-  ];
   const attrOptions = attributes.map(a =>
     `<option value="${a.id}">${a.name} (${a.code})</option>`
   ).join('');
-  const actionOptions = actionItems.map(a =>
-    `<option value="action_${a.code}">${a.label}</option>`
-  ).join('');
+
+  const actionOptions = `<option value="action_delete">Supprimer</option>`;
 
   page.innerHTML = `
     <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
-      <button class="btn btn-secondary" onclick="showPage('admin',null)">&larr; Administration</button>
-      <span style="font-size:15px;font-weight:700;color:#1a2332">Vue Synthese — colonnes</span>
+      <button class="btn btn-secondary"
+        onclick="showPage('admin',null)">&larr; Administration</button>
+      <span style="font-size:15px;font-weight:700;color:#1a2332">
+        Vue Synthese — colonnes
+      </span>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;max-width:1000px">
 
-      <!-- Liste des colonnes actives -->
       <div class="field-group">
-        <div class="field-group-title">Colonnes actives <span style="font-size:12px;font-weight:400;color:#a0b0c0">(glisser pour reordonner)</span></div>
+        <div class="field-group-title">
+          Colonnes actives
+          <span style="font-size:12px;font-weight:400;color:#a0b0c0">
+            (glisser pour reordonner)
+          </span>
+        </div>
         <div id="synthese-items-list">
           ${syntheseItems.map((item, i) => `
             <div class="cat-group-order-item" draggable="true"
@@ -37,17 +40,22 @@ function renderSyntheseAdmin() {
               ondragover="synthDragOver(event,${i})"
               ondrop="synthDrop(event,${i})">
               <span class="drag-handle">&#8942;&#8942;</span>
-              <span style="flex:1;font-size:13px;font-weight:600;color:#1a2332">${item.label}</span>
-              <span class="badge badge-grey" style="font-size:11px">${item.kind === 'action' ? 'Action' : item.code}</span>
-              <button class="action-btn-danger" style="padding:2px 8px;font-size:11px"
+              <span style="flex:1;font-size:13px;font-weight:600;color:#1a2332">
+                ${item.label}
+              </span>
+              <span class="badge badge-grey" style="font-size:11px">
+                ${item.kind === 'action' ? 'Action' : item.code}
+              </span>
+              <button class="action-btn-danger"
+                style="padding:2px 8px;font-size:11px"
                 onclick="removeSyntheseItem(${i})">&#10005;</button>
             </div>`
           ).join('')}
         </div>
       </div>
 
-      <!-- Panneau ajout a droite -->
       <div style="display:flex;flex-direction:column;gap:14px">
+
         <div class="field-group">
           <div class="field-group-title">Ajouter un attribut</div>
           <select class="form-select" id="synth-add-attr" style="margin-bottom:10px">
@@ -57,6 +65,7 @@ function renderSyntheseAdmin() {
           <button class="btn btn-primary" style="width:100%"
             onclick="addSyntheseAttr()">+ Ajouter</button>
         </div>
+
         <div class="field-group">
           <div class="field-group-title">Ajouter une action</div>
           <select class="form-select" id="synth-add-action" style="margin-bottom:10px">
@@ -66,28 +75,32 @@ function renderSyntheseAdmin() {
           <button class="btn btn-primary" style="width:100%"
             onclick="addSyntheseAction()">+ Ajouter</button>
         </div>
+
         <div class="field-group">
           <div class="field-group-title">Colonnes systeme</div>
           <div style="font-size:12px;color:#607080;margin-bottom:10px">
-            Colonnes toujours disponibles, non supprimables.
+            Toujours disponibles, non supprimables.
           </div>
           ${[
-            { code: 'visuel_face', label: 'Visuel' },
-            { code: 'cat',        label: 'Categorie' },
-            { code: 'completion', label: 'Completion' },
+            { code: 'visuel_face', label: 'Visuel'       },
+            { code: 'cat',        label: 'Categorie'     },
+            { code: 'completion', label: 'Completion'    },
             { code: 'createdAt',  label: 'Date creation' },
-            { code: 'maj',        label: 'Derniere MAJ' },
+            { code: 'maj',        label: 'Derniere MAJ'  },
           ].map(s => `
             <div style="display:flex;align-items:center;justify-content:space-between;
               padding:5px 0;border-bottom:1px solid #f0f4f8">
               <span style="font-size:12px;color:#607080">${s.label}</span>
-              <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px"
-                onclick="addSyntheseSystem('${s.code}','${s.label}')">+ Ajouter</button>
+              <button class="btn btn-secondary"
+                style="font-size:11px;padding:3px 10px"
+                onclick="addSyntheseSystem('${s.code}','${s.label}')">
+                + Ajouter
+              </button>
             </div>`
           ).join('')}
         </div>
-      </div>
 
+      </div>
     </div>`;
 }
 
@@ -118,6 +131,32 @@ function addSyntheseSystem(code, label) {
   syntheseItems.push({ code, label, kind: 'attr' });
   renderSyntheseAdmin();
   showNotif(label + ' ajoute');
+}
+
+function addSyntheseAttr() {
+  const sel = document.getElementById('synth-add-attr');
+  if (!sel || !sel.value) { showNotif('Choisissez un attribut', 'warn'); return; }
+  const attr = attributes.find(a => a.id === parseInt(sel.value));
+  if (!attr) return;
+  if (syntheseItems.find(x => x.code === attr.code)) {
+    showNotif('Cet attribut est deja dans la vue synthese', 'warn'); return;
+  }
+  syntheseItems.push({ code: attr.code, label: attr.name, kind: 'attr' });
+  renderSyntheseAdmin();
+  showNotif(attr.name + ' ajoute a la vue synthese');
+}
+
+function addSyntheseAction() {
+  const sel = document.getElementById('synth-add-action');
+  if (!sel || !sel.value) { showNotif('Choisissez une action', 'warn'); return; }
+  const code  = sel.value.replace('action_', '');
+  const label = sel.options[sel.selectedIndex].text;
+  if (syntheseItems.find(x => x.code === code && x.kind === 'action')) {
+    showNotif('Cette action est deja presente', 'warn'); return;
+  }
+  syntheseItems.push({ code, label, kind: 'action' });
+  renderSyntheseAdmin();
+  showNotif('Action "' + label + '" ajoutee');
 }
 
 function renderSyntheseAttrSelect() {
@@ -379,32 +418,96 @@ function renderAttrsTable() {
   if (!thead || !tbody) return;
 
   thead.innerHTML = `<tr>
-    <th>Nom</th>
-    <th>Type</th>
-    <th>Groupe</th>
-    <th>Obligatoire</th>
-    <th>Calcule</th>
+    <th class="th-sortable" onclick="sortAttrsTable('name')">
+      Nom <span style="color:#8a9bb0;font-size:11px">&#8645;</span>
+    </th>
+    <th class="th-sortable" onclick="sortAttrsTable('type')">
+      Type <span style="color:#8a9bb0;font-size:11px">&#8645;</span>
+    </th>
+    <th class="th-sortable" onclick="sortAttrsTable('group')">
+      Groupe <span style="color:#8a9bb0;font-size:11px">&#8645;</span>
+    </th>
+    <th class="th-sortable" onclick="sortAttrsTable('required')">
+      Obligatoire <span style="color:#8a9bb0;font-size:11px">&#8645;</span>
+    </th>
     <th>Actions</th>
   </tr>`;
 
+  const search = (document.getElementById('attrs-search') || {}).value || '';
+  const q      = search.toLowerCase();
+
+  let list = [...attributes];
+  if (q) list = list.filter(a =>
+    a.name.toLowerCase().includes(q) ||
+    a.code.toLowerCase().includes(q) ||
+    a.type.toLowerCase().includes(q)
+  );
+
+  if (_attrSortState.col) {
+    list.sort((a, b) => {
+      let va, vb;
+      if (_attrSortState.col === 'name')     { va = a.name;  vb = b.name; }
+      if (_attrSortState.col === 'type')     { va = a.type;  vb = b.type; }
+      if (_attrSortState.col === 'required') { va = a.required ? 1 : 0; vb = b.required ? 1 : 0; }
+      if (_attrSortState.col === 'group')    {
+        const ga = getGroupById(a.groupId);
+        const gb = getGroupById(b.groupId);
+        va = ga ? ga.name : ''; vb = gb ? gb.name : '';
+      }
+      if (typeof va === 'string')
+        return _attrSortState.dir === 'asc'
+          ? va.localeCompare(vb, 'fr') : vb.localeCompare(va, 'fr');
+      return _attrSortState.dir === 'asc' ? va - vb : vb - va;
+    });
+  }
+
   tbody.innerHTML = '';
-  attributes.forEach(a => {
+  list.forEach(a => {
     const group = getGroupById(a.groupId);
     const tr    = document.createElement('tr');
     tr.innerHTML = `
-      <td style="font-weight:600">${a.name}</td>
+      <td style="font-weight:600">
+        ${a.name}
+        ${a.calc || a.formula
+          ? `<span style="display:inline-flex;align-items:center;justify-content:center;
+               width:16px;height:16px;border-radius:50%;background:#ffd54f;color:#5d4037;
+               font-size:10px;font-weight:700;margin-left:5px;cursor:help"
+               title="Champ calcule : ${a.formula || ''}">&#9654;</span>`
+          : ''}
+      </td>
       <td><span class="badge badge-grey">${a.type}</span></td>
-      <td>${group ? `<span class="attr-chip" style="background:${getGroupColor(group).bg};color:${getGroupColor(group).text}">${group.name}</span>` : '—'}</td>
-      <td>${a.required ? '<span class="badge-active-on">Oui</span>' : '<span class="badge-active-off">Non</span>'}</td>
-      <td>${a.calc ? '<span class="badge-orange">Calcule</span>' : '—'}</td>
+      <td>${group
+        ? `<span class="attr-chip"
+             style="background:${getGroupColor(group).bg};color:${getGroupColor(group).text}">
+             ${group.name}
+           </span>`
+        : '—'}</td>
+      <td>${a.required
+        ? '<span class="badge-active-on">Oui</span>'
+        : '<span class="badge-active-off">Non</span>'}</td>
       <td>
         <div class="td-actions">
-          <button class="action-btn" onclick="editAttribute(${a.id})">Modifier</button>
-          <button class="action-btn-danger" onclick="confirmDelete('attr',${a.id},'${a.name.replace(/'/g,"\\'")}')">Suppr.</button>
+          <button class="action-btn"
+            onclick="editAttribute(${a.id})">Modifier</button>
+          <button class="action-btn-danger"
+            onclick="confirmDelete('attr',${a.id},'${a.name.replace(/'/g,"\\'")}')">
+            Suppr.
+          </button>
         </div>
       </td>`;
     tbody.appendChild(tr);
   });
+}
+
+let _attrSortState = { col: null, dir: 'asc' };
+
+function sortAttrsTable(col) {
+  if (_attrSortState.col === col) {
+    _attrSortState.dir = _attrSortState.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _attrSortState = { col, dir: 'asc' };
+  }
+  renderAttrsTable();
 }
 
 function sortAttrsBy(code) {
@@ -503,38 +606,74 @@ function saveAttributeEdit() {
 }
 
 function createAttribute() {
-  const nEl   = document.getElementById('new-attr-name');
-  const cEl   = document.getElementById('new-attr-code');
-  const name  = nEl.value.trim();
-  const code  = cEl.value.trim();
-  let valid   = true;
-  nEl.classList.remove('field-error'); cEl.classList.remove('field-error');
+  const nameEl    = document.getElementById('new-attr-name');
+  const codeEl    = document.getElementById('new-attr-code');
+  const typeEl    = document.getElementById('new-attr-type');
+  const groupEl   = document.getElementById('new-attr-group');
+  const reqEl     = document.getElementById('new-attr-required');
+  const maskEl    = document.getElementById('new-attr-mask');
+  const formulaEl = document.getElementById('new-attr-formula');
+
+  const name    = nameEl.value.trim();
+  const code    = codeEl.value.trim();
+  const type    = typeEl.value;
+  const groupId = groupEl.value ? parseInt(groupEl.value) : null;
+  const required = reqEl.value === '1';
+  const mask    = maskEl ? maskEl.value.trim() : '';
+  const formula = formulaEl ? formulaEl.value.trim() : '';
+
+  let valid = true;
   document.getElementById('err-attr-name').classList.remove('show');
   document.getElementById('err-attr-code').classList.remove('show');
-  if (!name) { nEl.classList.add('field-error'); document.getElementById('err-attr-name').classList.add('show'); valid = false; }
-  if (!code) { cEl.classList.add('field-error'); document.getElementById('err-attr-code').classList.add('show'); valid = false; }
-  if (code && attributes.find(a => a.code === code)) {
-    cEl.classList.add('field-error');
-    document.getElementById('err-attr-code').textContent = 'Code deja existant.';
+  nameEl.classList.remove('field-error');
+  codeEl.classList.remove('field-error');
+
+  if (!name) {
+    nameEl.classList.add('field-error');
+    document.getElementById('err-attr-name').classList.add('show');
+    valid = false;
+  }
+  if (!code) {
+    codeEl.classList.add('field-error');
     document.getElementById('err-attr-code').classList.add('show');
     valid = false;
   }
   if (!valid) return;
-  const type     = document.getElementById('new-attr-type').value;
-  const groupId  = parseInt(document.getElementById('new-attr-group').value) || null;
-  const required = document.getElementById('new-attr-required').value === '1';
-  const formula  = document.getElementById('new-attr-formula').value.trim();
-  const mask     = document.getElementById('new-attr-mask').value.trim();
-  const isCalc   = type === 'Texte calcule' || type === 'Nombre calcule';
-  const newAttr  = {
-    id: nextAttrId++, name, code, type, groupId, required,
-    calc: isCalc, formula, mask, options: [], clickToOpen: false, showInSynth: false,
+
+  if (attributes.find(a => a.code === code)) {
+    showNotif('Ce code technique existe deja', 'error');
+    codeEl.classList.add('field-error');
+    return;
+  }
+
+  const newAttr = {
+    id:       Math.max(0, ...attributes.map(a => a.id)) + 1,
+    name,
+    code,
+    type,
+    groupId,
+    required,
+    mask,
+    formula,
+    calc:     !!formula,
+    options:  [],
   };
   attributes.push(newAttr);
-  if (groupId) { const g = getGroupById(groupId); if (g) g.attrIds.push(newAttr.id); }
-  nEl.value = ''; cEl.value = '';
-  renderAll();
-  showPage('admin-attributes', null);
+
+  if (groupId) {
+    const g = getGroupById(groupId);
+    if (g && !g.attrIds.includes(newAttr.id)) g.attrIds.push(newAttr.id);
+  }
+
+  nameEl.value  = '';
+  codeEl.value  = '';
+  typeEl.value  = 'Texte';
+  if (maskEl)    maskEl.value    = '';
+  if (formulaEl) formulaEl.value = '';
+
+  closeModal('modal-create-attr');
+  renderAttrsTable();
+  renderAdminHome();
   showNotif('Attribut "' + name + '" cree');
 }
 
