@@ -835,7 +835,32 @@ function renderRoles() {
     grid.appendChild(card);
   });
 }
-
+function renderBrandInfoPanel(brandInfo) {
+  if (!brandInfo) {
+    return `<div class="field-group-title">Conditions commerciales</div>
+      <div style="color:#a0b0c0;font-size:13px;padding:8px">
+        Selectionnez un fournisseur et une marque pour afficher les conditions.
+      </div>`;
+  }
+  const rows = [
+    { label: 'Fournisseur',          val: brandInfo.sup },
+    { label: 'RF',                   val: brandInfo.rf > 0 ? (brandInfo.rf * 100).toFixed(2) + '%' : '—' },
+    { label: 'RFA',                  val: brandInfo.rfa > 0 ? (brandInfo.rfa * 100).toFixed(2) + '%' : '—' },
+    { label: 'Marge interne',        val: `<strong style="color:#1565c0;font-size:14px">${(brandInfo.margeInterne * 100).toFixed(0)}%</strong>` },
+    { label: 'Reprise echange',      val: brandInfo.repriseEchange ? '<span class="badge-active-on">Oui</span>' : '<span class="badge-active-off">Non</span>' },
+    { label: 'Conditions livraison', val: brandInfo.conditionsLivraison || '—' },
+    { label: 'Commentaire',          val: brandInfo.commentaire ? `<span style="font-size:12px;color:#607080">${brandInfo.commentaire}</span>` : '—' },
+  ];
+  let html = `<div class="field-group-title">Conditions — ${brandInfo.marque}</div>`;
+  rows.forEach(r => {
+    html += `<div class="field-row" style="display:flex;justify-content:space-between;
+      align-items:center;padding:5px 0;border-bottom:1px solid #f0f4f8">
+      <div class="field-label" style="margin:0;flex:1">${r.label}</div>
+      <div style="font-size:13px;color:#1a2332;text-align:right">${r.val}</div>
+    </div>`;
+  });
+  return html;
+}
 function permRow(role, key, label, color) {
   const p   = role.perms[key] || { r: false, w: false, d: false };
   const dot = color ? `<span class="cat-dot" style="background:${color}"></span>` : '';
@@ -967,26 +992,61 @@ function catBadgeHtml(typeName) {
 function renderSuppliersPage() {
   const page = document.getElementById('page-admin-suppliers');
   if (!page) return;
-  let html = `
-    <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center">
-      <input class="search-input" type="text" id="supplier-search"
-        placeholder="Rechercher une marque ou un fournisseur..."
-        oninput="filterSuppliersTable()" style="flex:1">
-      <button class="btn btn-primary" onclick="openBrandEditor(-1)">+ Nouvelle entree</button>
-    </div>
-    <div class="table-container"><table id="suppliers-table">
-      <thead><tr>
-        <th>Fournisseur</th><th>Code</th><th>Marque</th><th>Type</th>
-        <th>RF</th><th>RFA</th><th>Remise ATS</th><th>Reprise</th>
-        <th>Conditions livraison</th><th>Commentaire</th><th>Actions</th>
-      </tr></thead>
-      <tbody id="suppliers-tbody"></tbody>
-    </table></div>`;
+
+  let rows = '';
+  brandSettings.forEach((b, i) => {
+    const sup = suppliers.find(s => s.code === b.fournisseurCode);
+    const cat = categories.find(c => c.name === b.type);
+    const typeBadge = cat
+      ? `<span class="badge" style="background:${cat.color}22;color:${cat.color};
+           border:1px solid ${cat.color}55">${b.type}</span>`
+      : (b.type
+          ? `<span class="badge badge-grey">${b.type}</span>`
+          : '—');
+    rows += `<tr>
+      <td style="font-weight:600">${sup ? sup.name : b.fournisseurCode}</td>
+      <td>${b.marque}</td>
+      <td>${typeBadge}</td>
+      <td>${b.rf > 0 ? (b.rf * 100).toFixed(2) + '%' : '—'}</td>
+      <td>${b.rfa > 0 ? (b.rfa * 100).toFixed(2) + '%' : '—'}</td>
+      <td><strong style="color:#1565c0">${(b.margeInterne * 100).toFixed(0)}%</strong></td>
+      <td>${b.repriseEchange
+        ? '<span class="badge-active-on">Oui</span>'
+        : '<span class="badge-active-off">Non</span>'}</td>
+      <td>
+        <div class="td-actions">
+          <button class="action-btn" onclick="editBrandSetting(${i})">Modifier</button>
+          <button class="action-btn-danger"
+            onclick="confirmDelete('brand',${i},'${b.marque}')">Suppr.</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+
   page.innerHTML = `
-    <div style="margin-bottom:16px">
-      <button class="btn btn-secondary" onclick="showPage('admin',null)">&larr; Administration</button>
-    </div>${html}`;
-  renderSuppliersTable();
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <button class="btn btn-secondary"
+        onclick="showPage('admin',null)">&larr; Administration</button>
+      <button class="btn btn-primary"
+        onclick="openModal('modal-create-brand')">+ Nouvelle marque</button>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Fournisseur</th>
+            <th>Marque</th>
+            <th>Type</th>
+            <th>RF</th>
+            <th>RFA</th>
+            <th>Marge interne</th>
+            <th>Reprise echange</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 function renderSuppliersTable(filter) {
