@@ -805,15 +805,17 @@
 <div class="modal-overlay" id="modal-create-group">
   <div class="modal-box">
     <div class="modal-title">Nouveau groupe d'attributs</div>
-    <div class="field-row">
+        <div class="field-row">
       <div class="field-label">Nom *</div>
       <input class="field-input" id="new-group-name"
-        placeholder="ex: Caracteristiques monture">
+        placeholder="ex: Caracteristiques monture"
+        oninput="autoSlug('new-group-name','new-group-code')">
     </div>
     <div class="field-row">
-      <div class="field-label">Code *</div>
+      <div class="field-label">Code technique</div>
       <input class="field-input" id="new-group-code"
-        placeholder="ex: caract_monture" style="font-family:monospace">
+        style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
+        placeholder="auto-genere" readonly>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary"
