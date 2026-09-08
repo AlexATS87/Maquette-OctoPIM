@@ -49,41 +49,88 @@ function cancelLeaveUnsaved(){
 // ============================================================
 // HEADER PRODUIT
 // ============================================================
-function renderProductHeader(p,cat){
-  const headerLeft=document.getElementById('product-header-left');if(!headerLeft)return;
-  const nom=p.fields.nom||'—';
-  const activeGlobal=calcActiveGlobal(p);
-  const etatVisuel=calcEtatVisuel(p);
-  const brandInfo=getBrandInfoForProduct(p);
-  headerLeft.innerHTML=`<div style="display:flex;align-items:flex-start;gap:16px">
-    <div onclick="triggerVisualUpload(${p.id},'visuel_face')"
-      style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;" title="Cliquer pour modifier le visuel face">
-      ${p.fields.visuel_face
-        ?`<img src="${p.fields.visuel_face}" style="width:100%;height:100%;object-fit:cover;">`
-        :`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#c0d0e0"><span style="font-size:28px">&#128247;</span><span style="font-size:10px">Ajouter</span></div>`}
-    </div>
-    <div style="flex:1">
-      <div class="product-title">${nom}</div>
-      <div class="product-meta">
-        <span>SAP : ${p.fields.sap||'—'}</span>
-        <span>EAN : ${p.fields.ean||'—'}</span>
-        <span><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></span>
-        <span><span class="${activeGlobal==='Actif'?'badge-active-on':'badge-active-off'}">${activeGlobal}</span></span>
-        <span><span class="${etatVisuel==='Oui'?'badge-etat-ok':'badge-etat-ko'}">Visuels : ${etatVisuel}</span></span>
-        ${brandInfo?`<span style="font-size:12px;color:#607080">${brandInfo.sup} / ${brandInfo.marque} — Remise interne : <strong style="color:#1565c0">${(brandInfo.remiseAts*100).toFixed(0)}%</strong></span>`:''}
-        <span style="color:#a0b0c0">Cree le ${p.createdAt||'—'}</span>
+function renderProductHeader(p, cat) {
+  const headerLeft = document.getElementById('product-header-left');
+  if (!headerLeft) return;
+  const nom          = p.fields.nom || '—';
+  const activeGlobal = calcActiveGlobal(p);
+  const etatVisuel   = calcEtatVisuel(p);
+  const brandInfo    = getBrandInfoForProduct(p);
+
+  const margeHtml = brandInfo && typeof brandInfo.margeInterne === 'number'
+    ? `<span style="font-size:12px;color:#607080">
+         ${brandInfo.sup} / ${brandInfo.marque} —
+         Marge interne : <strong style="color:#1565c0">
+           ${(brandInfo.margeInterne * 100).toFixed(0)}%
+         </strong>
+       </span>`
+    : '';
+
+  headerLeft.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:16px">
+      <div onclick="triggerVisualUpload(${p.id},'visuel_face')"
+        style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;
+          overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;
+          justify-content:center;background:#f8fafc;"
+        title="Cliquer pour modifier le visuel face">
+        ${p.fields.visuel_face
+          ? `<img src="${p.fields.visuel_face}"
+               style="width:100%;height:100%;object-fit:cover;">`
+          : `<div style="display:flex;flex-direction:column;align-items:center;
+               gap:4px;color:#c0d0e0">
+               <span style="font-size:28px">&#128247;</span>
+               <span style="font-size:10px">Ajouter</span>
+             </div>`}
       </div>
-    </div>
-  </div>`;
+      <div style="flex:1">
+        <div class="product-title">${nom}</div>
+        <div class="product-meta">
+          <span>SAP : ${p.fields.sap || '—'}</span>
+          <span>EAN : ${p.fields.ean || '—'}</span>
+          <span><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></span>
+          <span><span class="${activeGlobal === 'Actif' ? 'badge-active-on' : 'badge-active-off'}">
+            ${activeGlobal}
+          </span></span>
+          <span><span class="${etatVisuel === 'Oui' ? 'badge-etat-ok' : 'badge-etat-ko'}">
+            Visuels : ${etatVisuel}
+          </span></span>
+          ${margeHtml}
+          <span style="color:#a0b0c0">Cree le ${p.createdAt || '—'}</span>
+        </div>
+      </div>
+    </div>`;
+}
+function getBrandInfoForProduct(p) {
+  if (!p.fields.marque) return null;
+  const fCode = p.fields.fournisseur_code || '';
+
+  // Chercher avec segmentation correspondante en priorité
+  const withSeg = brandSettings.filter(b =>
+    b.marque === p.fields.marque &&
+    (!fCode || b.fournisseurCode === fCode) &&
+    b.segAttrCode &&
+    p.fields[b.segAttrCode] === b.segAttrValue
+  );
+  if (withSeg.length) {
+    const b = withSeg[0];
+    const sup = suppliers.find(s => s.code === b.fournisseurCode);
+    return { ...b, sup: sup ? sup.name : b.fournisseurCode };
+  }
+
+  // Sinon sans segmentation, correspondance exacte catégorie
+  const noSeg = brandSettings.filter(b =>
+    b.marque === p.fields.marque &&
+    (!fCode || b.fournisseurCode === fCode) &&
+    !b.segAttrCode
+  );
+  const exact    = noSeg.find(b => b.type === p.cat);
+  const fallback = noSeg[0];
+  const b        = exact || fallback;
+  if (!b) return null;
+  const sup = suppliers.find(s => s.code === b.fournisseurCode);
+  return { ...b, sup: sup ? sup.name : b.fournisseurCode };
 }
 
-function getBrandInfoForProduct(p){
-  if(!p.fields.fournisseur_code||!p.fields.marque)return null;
-  const b=brandSettings.find(x=>x.fournisseurCode===p.fields.fournisseur_code&&x.marque===p.fields.marque);
-  if(!b)return null;
-  const sup=suppliers.find(s=>s.code===b.fournisseurCode);
-  return{...b,sup:sup?sup.name:b.fournisseurCode};
-}
 function calcActiveGlobal(p){
   const f=p.fields;
   return((f.active_o2||'').toLowerCase()==='oui'||(f.active_lissac||'').toLowerCase()==='oui')?'Actif':'Inactif';
@@ -317,62 +364,102 @@ function renderAttrFieldHtml(p,a,labelOverride){
 // ============================================================
 // ONGLET MARQUE / FOURNISSEUR
 // ============================================================
-function renderTabMarque(p,g){
+function renderTabMarque(p, g) {
   computeCalcFields(p);
-  const catName=p.cat;
-  const eligibleSupCodes=[...new Set(
-    brandSettings.filter(b=>!b.type||matchBrandType(b.type,catName)).map(b=>b.fournisseurCode)
+  const catName = p.cat;
+
+  // Tous les fournisseurs qui ont au moins une condition pour cette catégorie
+  const eligibleSupCodes = [...new Set(
+    brandSettings
+      .filter(b => !b.type || b.type === catName)
+      .map(b => b.fournisseurCode)
   )];
-  const eligibleSuppliers=suppliers.filter(s=>eligibleSupCodes.includes(s.code));
-  const supOptions=eligibleSuppliers.map(s=>
-    `<option value="${s.code}"${p.fields.fournisseur_code===s.code?' selected':''}>${s.name} (${s.code})</option>`
-  ).join('');
-  const currentSup=p.fields.fournisseur_code||'';
-  const availableMarques=[...new Set(
-    brandSettings.filter(b=>(!currentSup||b.fournisseurCode===currentSup)&&(!b.type||matchBrandType(b.type,catName))).map(b=>b.marque)
+  const eligibleSuppliers = suppliers.filter(s => eligibleSupCodes.includes(s.code));
+
+  const currentSup    = p.fields.fournisseur_code || '';
+  const currentMarque = p.fields.marque || '';
+
+  const supOptions = `<option value="">-- Choisir --</option>` +
+    eligibleSuppliers.map(s =>
+      `<option value="${s.code}" ${s.code === currentSup ? 'selected' : ''}>
+        ${s.name} (${s.code})
+      </option>`
+    ).join('');
+
+  const availableMarques = [...new Set(
+    brandSettings
+      .filter(b =>
+        (!currentSup || b.fournisseurCode === currentSup) &&
+        (!b.type || b.type === catName)
+      )
+      .map(b => b.marque)
   )].sort();
-  const marqueOptions=availableMarques.map(m=>
-    `<option${p.fields.marque===m?' selected':''}>${m}</option>`
-  ).join('');
-  const brandInfo=getBrandInfoForProduct(p);
-  return`<div class="fields-grid">
-  <div class="field-group"><div class="field-group-title">Couple Fournisseur / Marque</div>
-    <div style="font-size:12px;color:#a0b0c0;margin-bottom:12px">Filtre sur la categorie : <strong style="color:#607080">${catName}</strong></div>
-    <div class="field-row">
-      <div class="field-label">Fournisseur</div>
-      <select class="field-input form-select" id="detail-fournisseur-${p.id}" onchange="onFournisseurChange(${p.id},this)">
-        <option value="">-- Choisir --</option>${supOptions}
-      </select>
+
+  const marqueOptions = `<option value="">-- Choisir --</option>` +
+    availableMarques.map(m =>
+      `<option ${m === currentMarque ? 'selected' : ''}>${m}</option>`
+    ).join('');
+
+  const brandInfo = getBrandInfoForProduct(p);
+
+  return `<div class="fields-grid">
+    <div class="field-group">
+      <div class="field-group-title">Couple Fournisseur / Marque</div>
+      <div style="font-size:12px;color:#a0b0c0;margin-bottom:12px">
+        Filtre sur la categorie : <strong style="color:#607080">${catName}</strong>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Fournisseur</div>
+        <select class="field-input form-select"
+          id="detail-fournisseur-${p.id}"
+          onchange="onFournisseurChange(${p.id},this)">
+          ${supOptions}
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Marque <span class="field-required">*</span></div>
+        <select class="field-input form-select"
+          id="detail-marque-${p.id}"
+          onchange="onMarqueChange(${p.id},this)">
+          ${marqueOptions}
+        </select>
+      </div>
     </div>
-    <div class="field-row">
-      <div class="field-label">Marque <span class="field-required">*</span></div>
-      <select class="field-input form-select" id="detail-marque-${p.id}" onchange="onMarqueChange(${p.id},this)">
-        <option value="">-- Choisir --</option>${marqueOptions}
-      </select>
+    <div class="field-group" id="brand-info-panel-${p.id}">
+      ${renderBrandInfoPanel(brandInfo)}
     </div>
-  </div>
-  <div class="field-group" id="brand-info-panel-${p.id}">
-    ${renderBrandInfoPanel(brandInfo)}
-  </div></div>`;
+  </div>`;
 }
 
-function renderBrandInfoPanel(brandInfo){
-  if(!brandInfo){
-    return`<div class="field-group-title">Conditions commerciales</div>
-      <div style="color:#a0b0c0;font-size:13px;padding:8px">Selectionnez un fournisseur et une marque pour afficher les conditions.</div>`;
+function renderBrandInfoPanel(brandInfo) {
+  if (!brandInfo) {
+    return `<div class="field-group-title">Conditions commerciales</div>
+      <div style="color:#a0b0c0;font-size:13px;padding:8px">
+        Selectionnez un fournisseur et une marque pour afficher les conditions.
+      </div>`;
   }
-  const rows=[
-    {label:'Fournisseur',val:brandInfo.sup},
-    {label:'RF',val:brandInfo.rf>0?(brandInfo.rf*100).toFixed(2)+'%':'—'},
-    {label:'RFA',val:brandInfo.rfa>0?(brandInfo.rfa*100).toFixed(2)+'%':'—'},
-    {label:'Remise interne',val:`<strong style="color:#1565c0;font-size:14px">${(brandInfo.remiseAts*100).toFixed(0)}%</strong>`},
-    {label:'Reprise echange',val:brandInfo.repriseEchange?'<span class="badge-active-on">Oui</span>':'<span class="badge-active-off">Non</span>'},
-    {label:'Conditions livraison',val:brandInfo.conditionsLivraison||'—'},
-    {label:'Commentaire',val:brandInfo.commentaire?`<span style="font-size:12px;color:#607080">${brandInfo.commentaire}</span>`:'—'}
+  const marge = typeof brandInfo.margeInterne === 'number'
+    ? `<strong style="color:#1565c0;font-size:14px">
+         ${(brandInfo.margeInterne * 100).toFixed(0)}%
+       </strong>`
+    : '—';
+  const rows = [
+    { label: 'Fournisseur',          val: brandInfo.sup || '—' },
+    { label: 'RF',                   val: brandInfo.rf > 0 ? (brandInfo.rf * 100).toFixed(2) + '%' : '—' },
+    { label: 'RFA',                  val: brandInfo.rfa > 0 ? (brandInfo.rfa * 100).toFixed(2) + '%' : '—' },
+    { label: 'Marge interne',        val: marge },
+    { label: 'Reprise echange',      val: brandInfo.repriseEchange
+        ? '<span class="badge-active-on">Oui</span>'
+        : '<span class="badge-active-off">Non</span>' },
+    { label: 'Conditions livraison', val: brandInfo.conditionsLivraison || '—' },
+    { label: 'Commentaire',          val: brandInfo.commentaire
+        ? `<span style="font-size:12px;color:#607080">${brandInfo.commentaire}</span>`
+        : '—' },
   ];
-  let html=`<div class="field-group-title">Conditions — ${brandInfo.marque}</div>`;
-  rows.forEach(r=>{
-    html+=`<div class="field-row" style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f0f4f8">
+  let html = `<div class="field-group-title">Conditions — ${brandInfo.marque}</div>`;
+  rows.forEach(r => {
+    html += `<div class="field-row" style="display:flex;justify-content:space-between;
+      align-items:center;padding:5px 0;border-bottom:1px solid #f0f4f8">
       <div class="field-label" style="margin:0;flex:1">${r.label}</div>
       <div style="font-size:13px;color:#1a2332;text-align:right">${r.val}</div>
     </div>`;
@@ -380,26 +467,40 @@ function renderBrandInfoPanel(brandInfo){
   return html;
 }
 
-function onFournisseurChange(productId,el){
-  const p=products.find(x=>x.id===productId);if(!p)return;
-  const oldVal=p.fields.fournisseur_code||'';
-  p.fields.fournisseur_code=el.value;
-  addPendingChange(p,'Fournisseur',oldVal,el.value);
-  productDirty=true;
-  const catName=p.cat;
-  const marqueSelect=document.getElementById('detail-marque-'+productId);
-  if(marqueSelect){
-    const available=[...new Set(
-      brandSettings.filter(b=>(!el.value||b.fournisseurCode===el.value)&&(!b.type||matchBrandType(b.type,catName))).map(b=>b.marque)
+function onFournisseurChange(productId, el) {
+  const p = products.find(x => x.id === productId);
+  if (!p) return;
+  const oldVal = p.fields.fournisseur_code || '';
+  p.fields.fournisseur_code = el.value;
+  addPendingChange(p, 'Fournisseur', oldVal, el.value);
+  productDirty = true;
+
+  const catName      = p.cat;
+  const marqueSelect = document.getElementById('detail-marque-' + productId);
+  if (marqueSelect) {
+    const available = [...new Set(
+      brandSettings
+        .filter(b =>
+          (!el.value || b.fournisseurCode === el.value) &&
+          (!b.type || b.type === catName)
+        )
+        .map(b => b.marque)
     )].sort();
-    marqueSelect.innerHTML='<option value="">-- Choisir --</option>'+
-      available.map(m=>`<option${p.fields.marque===m?' selected':''}>${m}</option>`).join('');
+    marqueSelect.innerHTML = '<option value="">-- Choisir --</option>' +
+      available.map(m =>
+        `<option ${p.fields.marque === m ? 'selected' : ''}>${m}</option>`
+      ).join('');
   }
-  const stillValid=brandSettings.some(b=>b.fournisseurCode===el.value&&b.marque===p.fields.marque);
-  if(!stillValid)p.fields.marque='';
+
+  const stillValid = brandSettings.some(b =>
+    b.fournisseurCode === el.value && b.marque === p.fields.marque
+  );
+  if (!stillValid) p.fields.marque = '';
+
   refreshBrandInfoPanel(p);
-  renderProductHeader(p,getCatByName(p.cat));
+  renderProductHeader(p, getCatByName(p.cat));
 }
+
 function onMarqueChange(productId,el){
   const p=products.find(x=>x.id===productId);if(!p)return;
   const oldVal=p.fields.marque||'';
