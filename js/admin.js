@@ -831,13 +831,31 @@ function renderRoles() {
   const grid = document.getElementById('roles-grid');
   if (!grid) return;
   grid.innerHTML = '';
+
+  const adminModules = [
+    { key: 'mod_categories',   label: 'Categories'             },
+    { key: 'mod_groups',       label: 'Groupes d\'attributs'   },
+    { key: 'mod_attributes',   label: 'Attributs'              },
+    { key: 'mod_synthese',     label: 'Vue Synthese'           },
+    { key: 'mod_conditions',   label: 'Conditions commerciales'},
+    { key: 'mod_roles',        label: 'Roles & Permissions'    },
+    { key: 'mod_prefs',        label: 'Preferences'            },
+  ];
+
   roles.forEach(role => {
     const card = document.createElement('div');
     card.className = 'role-card';
-    let permsHtml = '<div class="perm-section-title">Administration</div>';
-    permsHtml += permRow(role, 'gestion_roles', 'Gestion des roles', '');
-    permsHtml += '<div class="perm-section-title">Categories de produit</div>';
-    categories.forEach(cat => { permsHtml += permRow(role, 'cat_' + cat.id, cat.name, cat.color); });
+
+    let permsHtml = '<div class="perm-section-title">Categories de produit</div>';
+    categories.forEach(cat => {
+      permsHtml += permRow(role, 'cat_' + cat.id, cat.name, cat.color);
+    });
+
+    permsHtml += '<div class="perm-section-title" style="margin-top:12px">Modules administration</div>';
+    adminModules.forEach(m => {
+      permsHtml += permRow(role, m.key, m.label, '');
+    });
+
     card.innerHTML = `
       <div class="role-card-header">
         <div class="role-name">${role.name}</div>
@@ -847,6 +865,7 @@ function renderRoles() {
     grid.appendChild(card);
   });
 }
+
 function renderBrandInfoPanel(brandInfo) {
   if (!brandInfo) {
     return `<div class="field-group-title">Conditions commerciales</div>
@@ -1011,17 +1030,28 @@ function renderSuppliersPage() {
     const cat = categories.find(c => c.name === b.type);
     const typeBadge = cat
       ? `<span class="badge" style="background:${cat.color}22;color:${cat.color};
-           border:1px solid ${cat.color}55">${b.type}</span>`
-      : (b.type
-          ? `<span class="badge badge-grey">${b.type}</span>`
-          : '—');
+           border:1px solid ${cat.color}55;padding:2px 8px;border-radius:4px;
+           font-size:11px;font-weight:600">${b.type}</span>`
+      : (b.type ? `<span class="badge badge-grey">${b.type}</span>` : '—');
+
+    const segAttr = b.segAttrCode
+      ? attributes.find(a => a.code === b.segAttrCode) : null;
+    const segLabel = segAttr
+      ? `<div style="font-size:11px;color:#607080;margin-top:2px">
+           ${segAttr.name} = <strong>${b.segAttrValue || '—'}</strong>
+         </div>`
+      : '';
+
+    const marge = typeof b.margeInterne === 'number'
+      ? (b.margeInterne * 100).toFixed(0) + '%' : '—';
+
     rows += `<tr>
       <td style="font-weight:600">${sup ? sup.name : b.fournisseurCode}</td>
       <td>${b.marque}</td>
-      <td>${typeBadge}</td>
+      <td>${typeBadge}${segLabel}</td>
       <td>${b.rf > 0 ? (b.rf * 100).toFixed(2) + '%' : '—'}</td>
       <td>${b.rfa > 0 ? (b.rfa * 100).toFixed(2) + '%' : '—'}</td>
-      <td><strong style="color:#1565c0">${(b.margeInterne * 100).toFixed(0)}%</strong></td>
+      <td><strong style="color:#1565c0">${marge}</strong></td>
       <td>${b.repriseEchange
         ? '<span class="badge-active-on">Oui</span>'
         : '<span class="badge-active-off">Non</span>'}</td>
@@ -1029,7 +1059,9 @@ function renderSuppliersPage() {
         <div class="td-actions">
           <button class="action-btn" onclick="editBrandSetting(${i})">Modifier</button>
           <button class="action-btn-danger"
-            onclick="confirmDelete('brand',${i},'${b.marque}')">Suppr.</button>
+            onclick="confirmDelete('brand',${i},'${b.marque.replace(/'/g,"\\'")}')">
+            Suppr.
+          </button>
         </div>
       </td>
     </tr>`;
@@ -1039,21 +1071,20 @@ function renderSuppliersPage() {
     <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
       <button class="btn btn-secondary"
         onclick="showPage('admin',null)">&larr; Administration</button>
+      <span style="font-size:15px;font-weight:700;color:#1a2332">
+        Conditions commerciales
+      </span>
+      <div style="flex:1"></div>
       <button class="btn btn-primary"
-        onclick="openModal('modal-create-brand')">+ Nouvelle marque</button>
+        onclick="openCreateBrandModal()">+ Nouvelle condition commerciale</button>
     </div>
     <div class="table-container">
       <table>
         <thead>
           <tr>
-            <th>Fournisseur</th>
-            <th>Marque</th>
-            <th>Type</th>
-            <th>RF</th>
-            <th>RFA</th>
-            <th>Marge interne</th>
-            <th>Reprise echange</th>
-            <th>Actions</th>
+            <th>Fournisseur</th><th>Marque</th><th>Type / Segmentation</th>
+            <th>RF</th><th>RFA</th><th>Marge interne</th>
+            <th>Reprise echange</th><th>Actions</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -1103,77 +1134,92 @@ function editBrandSetting(i) {
   const b = brandSettings[i];
   if (!b) return;
 
-  // Construire la liste des fournisseurs et categories pour les selects
   const supOptions = suppliers.map(s =>
-    `<option value="${s.code}" ${s.code === b.fournisseurCode ? 'selected' : ''}>
-      ${s.name}
-    </option>`
+    `<option value="${s.code}" ${s.code === b.fournisseurCode ? 'selected' : ''}>${s.name}</option>`
   ).join('');
-
   const catOptions = categories.map(c =>
-    `<option value="${c.name}" ${c.name === b.type ? 'selected' : ''}>
-      ${c.name}
-    </option>`
+    `<option value="${c.name}" ${c.name === b.type ? 'selected' : ''}>${c.name}</option>`
   ).join('');
 
-  // Ouvrir une modale generique de modification
+  const cat = categories.find(c => c.name === b.type);
+  const segAttrs = _getSegAttrsForCat(cat);
+  const segAttrOptions = `<option value="">-- Aucune --</option>` +
+    segAttrs.map(a =>
+      `<option value="${a.code}" ${a.code === b.segAttrCode ? 'selected' : ''}>${a.name}</option>`
+    ).join('');
+  const segAttr = b.segAttrCode ? attributes.find(a => a.code === b.segAttrCode) : null;
+  const segValOptions = segAttr
+    ? (segAttr.options || []).map(o =>
+        `<option ${o === b.segAttrValue ? 'selected' : ''}>${o}</option>`
+      ).join('') : '';
+
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.style.display = 'flex';
   overlay.innerHTML = `
-    <div class="modal-box">
+    <div class="modal-box" style="max-width:560px;width:100%">
       <div class="modal-title">Modifier — ${b.marque}</div>
-      <div class="field-row">
-        <div class="field-label">Fournisseur</div>
-        <select class="form-select" id="eb-sup">${supOptions}</select>
+      <div class="form-grid">
+        <div class="form-field">
+          <div class="form-label">Fournisseur</div>
+          <select class="form-select" id="eb-sup">${supOptions}</select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Marque</div>
+          <input class="field-input" id="eb-marque" value="${b.marque}">
+        </div>
+        <div class="form-field">
+          <div class="form-label">Type (categorie)</div>
+          <select class="form-select" id="eb-type"
+            onchange="onEditBrandCatChange(this)">${catOptions}</select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Segmentation</div>
+          <select class="form-select" id="eb-seg-attr"
+            onchange="onEditBrandSegAttrChange(this)">${segAttrOptions}</select>
+        </div>
+        <div class="form-field" id="eb-seg-val-wrap"
+          style="${segAttr ? '' : 'display:none'}">
+          <div class="form-label">Valeur</div>
+          <select class="form-select" id="eb-seg-val">${segValOptions}</select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">RF (%)</div>
+          <input class="field-input" id="eb-rf" type="number" step="0.01"
+            value="${((b.rf || 0) * 100).toFixed(2)}">
+        </div>
+        <div class="form-field">
+          <div class="form-label">RFA (%)</div>
+          <input class="field-input" id="eb-rfa" type="number" step="0.01"
+            value="${((b.rfa || 0) * 100).toFixed(2)}">
+        </div>
+        <div class="form-field">
+          <div class="form-label">Marge interne (%)</div>
+          <input class="field-input" id="eb-marge" type="number" step="1"
+            value="${((b.margeInterne || 0) * 100).toFixed(0)}">
+        </div>
+        <div class="form-field">
+          <div class="form-label">Reprise echange</div>
+          <select class="form-select" id="eb-reprise">
+            <option value="1" ${b.repriseEchange ? 'selected' : ''}>Oui</option>
+            <option value="0" ${!b.repriseEchange ? 'selected' : ''}>Non</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Conditions livraison</div>
+          <input class="field-input" id="eb-livraison"
+            value="${b.conditionsLivraison || ''}">
+        </div>
       </div>
-      <div class="field-row">
-        <div class="field-label">Marque</div>
-        <input class="field-input" id="eb-marque" value="${b.marque}">
-      </div>
-      <div class="field-row">
-        <div class="field-label">Type</div>
-        <select class="form-select" id="eb-type">${catOptions}</select>
-      </div>
-      <div class="field-row">
-        <div class="field-label">RF (%)</div>
-        <input class="field-input" id="eb-rf" type="number" step="0.01"
-          value="${((b.rf || 0) * 100).toFixed(2)}">
-      </div>
-      <div class="field-row">
-        <div class="field-label">RFA (%)</div>
-        <input class="field-input" id="eb-rfa" type="number" step="0.01"
-          value="${((b.rfa || 0) * 100).toFixed(2)}">
-      </div>
-      <div class="field-row">
-        <div class="field-label">Marge interne (%)</div>
-        <input class="field-input" id="eb-marge" type="number" step="1"
-          value="${((b.margeInterne || 0) * 100).toFixed(0)}">
-      </div>
-      <div class="field-row">
-        <div class="field-label">Reprise echange</div>
-        <select class="form-select" id="eb-reprise">
-          <option value="1" ${b.repriseEchange ? 'selected' : ''}>Oui</option>
-          <option value="0" ${!b.repriseEchange ? 'selected' : ''}>Non</option>
-        </select>
-      </div>
-      <div class="field-row">
-        <div class="field-label">Conditions livraison</div>
-        <input class="field-input" id="eb-livraison"
-          value="${b.conditionsLivraison || ''}">
-      </div>
-      <div class="field-row">
+      <div class="field-row" style="margin-top:8px">
         <div class="field-label">Commentaire</div>
-        <input class="field-input" id="eb-commentaire"
-          value="${b.commentaire || ''}">
+        <input class="field-input" id="eb-commentaire" value="${b.commentaire || ''}">
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">
-          Annuler
-        </button>
-        <button class="btn btn-primary" onclick="saveBrandSetting(${i},this)">
-          Enregistrer
-        </button>
+        <button class="btn btn-secondary"
+          onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+        <button class="btn btn-primary"
+          onclick="saveBrandSetting(${i}, this)">Enregistrer</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -1182,20 +1228,179 @@ function editBrandSetting(i) {
 function saveBrandSetting(i, btn) {
   const b = brandSettings[i];
   if (!b) return;
-
   b.fournisseurCode     = document.getElementById('eb-sup').value;
   b.marque              = document.getElementById('eb-marque').value.trim();
   b.type                = document.getElementById('eb-type').value;
+  b.segAttrCode         = document.getElementById('eb-seg-attr').value || null;
+  const vSel            = document.getElementById('eb-seg-val');
+  b.segAttrValue        = b.segAttrCode && vSel ? vSel.value : null;
   b.rf                  = parseFloat(document.getElementById('eb-rf').value) / 100 || 0;
   b.rfa                 = parseFloat(document.getElementById('eb-rfa').value) / 100 || 0;
   b.margeInterne        = parseFloat(document.getElementById('eb-marge').value) / 100 || 0;
   b.repriseEchange      = document.getElementById('eb-reprise').value === '1';
   b.conditionsLivraison = document.getElementById('eb-livraison').value.trim();
   b.commentaire         = document.getElementById('eb-commentaire').value.trim();
-
   btn.closest('.modal-overlay').remove();
   renderSuppliersPage();
-  showNotif('Marque "' + b.marque + '" mise a jour');
+  showNotif('Condition "' + b.marque + '" mise a jour');
+}
+
+function _getSegAttrsForCat(cat) {
+  if (!cat) return [];
+  return cat.groupIds
+    .flatMap(gid => { const g = getGroupById(gid); return g ? g.attrIds : []; })
+    .map(aid => getAttrById(aid))
+    .filter(a => a && (a.type === 'Simple select' || a.type === 'Oui / Non'));
+}
+
+function onEditBrandCatChange(sel) {
+  const cat      = categories.find(c => c.name === sel.value);
+  const segAttrs = _getSegAttrsForCat(cat);
+  const segSel   = document.getElementById('eb-seg-attr');
+  if (segSel) {
+    segSel.innerHTML = `<option value="">-- Aucune --</option>` +
+      segAttrs.map(a => `<option value="${a.code}">${a.name}</option>`).join('');
+  }
+  const wrap = document.getElementById('eb-seg-val-wrap');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function onEditBrandSegAttrChange(sel) {
+  const attr = sel.value ? attributes.find(a => a.code === sel.value) : null;
+  const wrap = document.getElementById('eb-seg-val-wrap');
+  const vSel = document.getElementById('eb-seg-val');
+  if (!wrap || !vSel) return;
+  if (attr && attr.options && attr.options.length) {
+    vSel.innerHTML = attr.options.map(o => `<option>${o}</option>`).join('');
+    wrap.style.display = '';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function onNewBrandCatChange(sel) {
+  const cat      = categories.find(c => c.name === sel.value);
+  const segAttrs = _getSegAttrsForCat(cat);
+  const segSel   = document.getElementById('nb-seg-attr');
+  if (segSel) {
+    segSel.innerHTML = `<option value="">-- Aucune --</option>` +
+      segAttrs.map(a => `<option value="${a.code}">${a.name}</option>`).join('');
+  }
+  const wrap = document.getElementById('nb-seg-val-wrap');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function onNewBrandSegAttrChange(sel) {
+  const attr = sel.value ? attributes.find(a => a.code === sel.value) : null;
+  const wrap = document.getElementById('nb-seg-val-wrap');
+  const vSel = document.getElementById('nb-seg-val');
+  if (!wrap || !vSel) return;
+  if (attr && attr.options && attr.options.length) {
+    vSel.innerHTML = attr.options.map(o => `<option>${o}</option>`).join('');
+    wrap.style.display = '';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function openCreateBrandModal() {
+  const supOptions = suppliers.map(s =>
+    `<option value="${s.code}">${s.name}</option>`).join('');
+  const catOptions = categories.map(c =>
+    `<option value="${c.name}">${c.name}</option>`).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:560px;width:100%">
+      <div class="modal-title">Nouvelle condition commerciale</div>
+      <div class="form-grid">
+        <div class="form-field">
+          <div class="form-label">Fournisseur *</div>
+          <select class="form-select" id="nb-sup">${supOptions}</select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Marque *</div>
+          <input class="field-input" id="nb-marque" placeholder="ex: Ray-Ban">
+        </div>
+        <div class="form-field">
+          <div class="form-label">Type (categorie) *</div>
+          <select class="form-select" id="nb-type"
+            onchange="onNewBrandCatChange(this)">${catOptions}</select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Segmentation</div>
+          <select class="form-select" id="nb-seg-attr"
+            onchange="onNewBrandSegAttrChange(this)">
+            <option value="">-- Aucune --</option>
+          </select>
+        </div>
+        <div class="form-field" id="nb-seg-val-wrap" style="display:none">
+          <div class="form-label">Valeur</div>
+          <select class="form-select" id="nb-seg-val"></select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">RF (%)</div>
+          <input class="field-input" id="nb-rf" type="number" step="0.01" value="0">
+        </div>
+        <div class="form-field">
+          <div class="form-label">RFA (%)</div>
+          <input class="field-input" id="nb-rfa" type="number" step="0.01" value="0">
+        </div>
+        <div class="form-field">
+          <div class="form-label">Marge interne (%)</div>
+          <input class="field-input" id="nb-marge" type="number" step="1" value="0">
+        </div>
+        <div class="form-field">
+          <div class="form-label">Reprise echange</div>
+          <select class="form-select" id="nb-reprise">
+            <option value="0">Non</option>
+            <option value="1">Oui</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Conditions livraison</div>
+          <input class="field-input" id="nb-livraison" placeholder="ex: Franco">
+        </div>
+      </div>
+      <div class="field-row" style="margin-top:8px">
+        <div class="field-label">Commentaire</div>
+        <input class="field-input" id="nb-commentaire">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary"
+          onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+        <button class="btn btn-primary"
+          onclick="createBrandSetting(this)">Creer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  onNewBrandCatChange(document.getElementById('nb-type'));
+}
+
+function createBrandSetting(btn) {
+  const marque = (document.getElementById('nb-marque').value || '').trim();
+  if (!marque) { showNotif('Marque obligatoire', 'error'); return; }
+  const segAttrCode  = document.getElementById('nb-seg-attr').value || null;
+  const vSel         = document.getElementById('nb-seg-val');
+  const segAttrValue = segAttrCode && vSel ? vSel.value : null;
+  brandSettings.push({
+    marque,
+    fournisseurCode:     document.getElementById('nb-sup').value,
+    type:                document.getElementById('nb-type').value,
+    segAttrCode,
+    segAttrValue,
+    rf:                  parseFloat(document.getElementById('nb-rf').value) / 100 || 0,
+    rfa:                 parseFloat(document.getElementById('nb-rfa').value) / 100 || 0,
+    margeInterne:        parseFloat(document.getElementById('nb-marge').value) / 100 || 0,
+    repriseEchange:      document.getElementById('nb-reprise').value === '1',
+    conditionsLivraison: document.getElementById('nb-livraison').value.trim(),
+    commentaire:         document.getElementById('nb-commentaire').value.trim(),
+  });
+  btn.closest('.modal-overlay').remove();
+  renderSuppliersPage();
+  showNotif('Condition "' + marque + '" creee');
 }
 
 function filterSuppliersTable() {
