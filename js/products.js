@@ -603,34 +603,169 @@ function toggleSelectProduct(id, cb) {
 function renderCompareBar() {
   const container = document.getElementById('compare-bar-container');
   if (!container) return;
-  if (selectedProductIds.length < 1) { container.innerHTML = ''; compareMode = false; return; }
+  if (!selectedProductIds.length) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = `
+    <div class="compare-bar">
+      <span style="font-size:13px;font-weight:600;color:#1a2332">
+        ${selectedProductIds.length} produit(s) selectionne(s)
+      </span>
+      <div style="position:relative;display:inline-block">
+        <button class="btn btn-primary" id="bulk-actions-btn"
+          onclick="toggleBulkActionsMenu(event)">
+          Actions &#9663;
+        </button>
+        <div id="bulk-actions-menu" style="display:none;position:absolute;top:100%;left:0;
+          margin-top:4px;background:#fff;border:1px solid #e0e8f0;border-radius:8px;
+          box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:500;min-width:220px;padding:6px 0">
+          <div class="bulk-menu-item" onclick="openBulkEditModal();closeBulkActionsMenu()">
+            &#9998; Modifier un attribut
+          </div>
+          <div class="bulk-menu-item" onclick="startCompare();closeBulkActionsMenu()">
+            &#128269; Comparer les produits
+          </div>
+          <div class="bulk-menu-item bulk-menu-item-danger"
+            onclick="bulkDelete();closeBulkActionsMenu()">
+            &#128465; Supprimer la selection
+          </div>
+          <div style="border-top:1px solid #f0f4f8;margin:4px 0"></div>
+          <div class="bulk-menu-item" onclick="clearSelection();closeBulkActionsMenu()">
+            &#10005; Deselectionner tout
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
 
-  const massActions = selectedProductIds.length >= 1 ? `
-    <div style="display:flex;gap:8px;align-items:center">
-      <select id="mass-action-select" class="filter-select" style="font-size:12px;padding:5px 10px">
-        <option value="">-- Action groupee --</option>
-        <option value="delete">Supprimer la selection</option>
-        <option value="export">Exporter la selection</option>
-      </select>
-      <button class="btn btn-primary" style="font-size:12px;padding:6px 14px"
-        onclick="applyMassAction()">Appliquer</button>
-    </div>` : '';
+function toggleBulkActionsMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('bulk-actions-menu');
+  if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    setTimeout(() => {
+      document.addEventListener('click', closeBulkActionsMenu, { once: true });
+    }, 0);
+  }
+}
 
-  container.innerHTML = `<div class="compare-bar">
-    <span>${selectedProductIds.length} produit${selectedProductIds.length > 1 ? 's' : ''} selectionne${selectedProductIds.length > 1 ? 's' : ''}</span>
-    <div style="display:flex;gap:10px;align-items:center">
-      ${massActions}
-      ${selectedProductIds.length >= 2
-        ? compareMode
-          ? `<button class="btn btn-secondary" style="font-size:12px;padding:6px 14px"
-               onclick="exitCompare()">Quitter la comparaison</button>`
-          : `<button class="btn btn-primary" style="font-size:12px;padding:6px 14px"
-               onclick="enterCompare()">Comparer</button>`
-        : ''}
-      <button class="btn btn-secondary" style="font-size:12px;padding:6px 14px"
-        onclick="clearSelection()">Effacer</button>
-    </div>
-  </div>`;
+function closeBulkActionsMenu() {
+  const menu = document.getElementById('bulk-actions-menu');
+  if (menu) menu.style.display = 'none';
+}
+
+function startCompare() {
+  if (selectedProductIds.length < 2) {
+    showNotif('Selectionnez au moins 2 produits pour comparer', 'warn');
+    return;
+  }
+  compareMode = true;
+  if (currentView !== 'detail') {
+    const catFilter = (document.getElementById('filter-cat') || {}).value || '';
+    if (!catFilter) {
+      showNotif('Selectionnez une categorie pour activer la vue detaillee', 'warn');
+      return;
+    }
+    switchView('detail');
+  } else {
+    renderProductsTable();
+  }
+  showNotif('Mode comparaison actif — differences surlignees en jaune');
+}
+
+function openBulkEditModal() {
+  if (!selectedProductIds.length) return;
+
+  const cats = [...new Set(selectedProductIds.map(id => {
+    const p = products.find(x => x.id === id);
+    return p ? p.cat : null;
+  }).filter(Boolean))];
+
+  const commonGroupIds = cats.reduce((acc, catName, idx) => {
+    const cat = getCatByName(catName);
+    if (!cat) return acc;
+    return idx === 0 ? [...cat.groupIds] : acc.filter(gid => cat.groupIds.includes(gid));
+  }, []);
+
+  const availableAttrs = commonGroupIds
+    .flatMap(gid => { const g = getGroupById(gid); return g ? g.attrIds : []; })
+    .map(aid => getAttrById(aid))
+    .filter(a => a && !a.calc);
+
+  const attrOptions = availableAttrs.map(a =>
+    `<option value="${a.id}">${a.name}</option>`).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-title">
+        Modifier un attribut — ${selectedProductIds.length} produit(s)
+      </div>
+      <div class="field-row">
+        <div class="field-label">Attribut a modifier</div>
+        <select class="form-select" id="bulk-attr-select"
+          onchange="onBulkAttrChange(this)">
+          <option value="">-- Choisir --</option>
+          ${attrOptions}
+        </select>
+      </div>
+      <div id="bulk-value-wrap" style="margin-top:12px"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary"
+          onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+        <button class="btn btn-primary"
+          onclick="applyBulkEdit(this)">Appliquer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function onBulkAttrChange(sel) {
+  const wrap = document.getElementById('bulk-value-wrap');
+  if (!wrap) return;
+  const attr = attributes.find(a => a.id === parseInt(sel.value));
+  if (!attr) { wrap.innerHTML = ''; return; }
+  let input = '';
+  if (attr.type === 'Simple select') {
+    const opts = (attr.options || []).map(o => `<option>${o}</option>`).join('');
+    input = `<select class="form-select" id="bulk-attr-value">
+      <option value="">-- Choisir --</option>${opts}</select>`;
+  } else if (attr.type === 'Oui / Non') {
+    input = `<select class="form-select" id="bulk-attr-value">
+      <option value="">-- Choisir --</option>
+      <option>Oui</option><option>Non</option></select>`;
+  } else if (attr.type === 'Nombre' || attr.type === 'Nombre decimal') {
+    input = `<input class="field-input" id="bulk-attr-value" type="number">`;
+  } else {
+    input = `<input class="field-input" id="bulk-attr-value" placeholder="Nouvelle valeur">`;
+  }
+  wrap.innerHTML = `<div class="field-row">
+    <div class="field-label">Nouvelle valeur</div>${input}</div>`;
+}
+
+function applyBulkEdit(btn) {
+  const attrSel = document.getElementById('bulk-attr-select');
+  const valEl   = document.getElementById('bulk-attr-value');
+  if (!attrSel || !attrSel.value || !valEl) {
+    showNotif('Choisissez un attribut et une valeur', 'warn'); return;
+  }
+  const attr  = attributes.find(a => a.id === parseInt(attrSel.value));
+  const value = valEl.value;
+  if (!attr) return;
+  const now = new Date().toLocaleDateString('fr-FR') + ' ' +
+    new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  selectedProductIds.forEach(id => {
+    const p = products.find(x => x.id === id);
+    if (p) { p.fields[attr.code] = value; p.maj = now; }
+  });
+  btn.closest('.modal-overlay').remove();
+  renderProductsTable();
+  showNotif(selectedProductIds.length + ' produit(s) mis a jour : ' + attr.name);
 }
 
 function applyMassAction() {
@@ -941,13 +1076,36 @@ function renderProductHeader(p, cat) {
 }
 
 function getBrandInfoForProduct(p) {
-  if (!p.fields.fournisseur_code || !p.fields.marque) return null;
-  const b = brandSettings.find(x => x.fournisseurCode === p.fields.fournisseur_code && x.marque === p.fields.marque);
-  if (!b) return null;
-  const sup = suppliers.find(s => s.code === b.fournisseurCode);
-  return { ...b, sup: sup ? sup.name : b.fournisseurCode };
-}
+  const marque = p.fields.marque || '';
+  const fCode  = p.fields.fournisseur_code || '';
+  if (!marque && !fCode) return null;
 
+  // Chercher d'abord une ligne avec segmentation correspondante
+  const withSeg = brandSettings.filter(b =>
+    b.marque === marque &&
+    (b.fournisseurCode === fCode || !fCode) &&
+    b.segAttrCode &&
+    p.fields[b.segAttrCode] === b.segAttrValue
+  );
+  if (withSeg.length) {
+    const b = withSeg[0];
+    return { ...b, sup: (suppliers.find(s => s.code === b.fournisseurCode) || {}).name || b.fournisseurCode };
+  }
+
+  // Sinon chercher une ligne sans segmentation
+  const noSeg = brandSettings.filter(b =>
+    b.marque === marque &&
+    (b.fournisseurCode === fCode || !fCode) &&
+    !b.segAttrCode
+  );
+
+  // Compatibilite avec l'ancien champ "type" = categorie du produit
+  const exact = noSeg.find(b => b.type === p.cat);
+  const fallback = noSeg[0];
+  const b = exact || fallback;
+  if (!b) return null;
+  return { ...b, sup: (suppliers.find(s => s.code === b.fournisseurCode) || {}).name || b.fournisseurCode };
+}
 function calcActiveGlobal(p) {
   const f = p.fields;
   return ((f.active_o2 || '').toLowerCase() === 'oui' || (f.active_lissac || '').toLowerCase() === 'oui') ? 'Actif' : 'Inactif';
