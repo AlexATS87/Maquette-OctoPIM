@@ -228,27 +228,39 @@ let brandSettings = [
 function evalFormula(formula, fields) {
   if (!formula || !formula.startsWith('=')) return '';
   let expr = formula.slice(1).trim();
+
+  // Fonction SI
   if (expr.toUpperCase().startsWith('SI(')) {
     const inner = expr.slice(3, expr.lastIndexOf(')'));
     return evalCondition(inner, fields) ? 'Oui' : 'Non';
   }
+
+  // Remplacer les références [code] par leurs valeurs
   expr = expr.replace(/\[([^\]]+)\]/g, (match, code) => {
     const val = fields[code];
-    if (val === undefined || val === null || val === '') return '0';
+    if (val === undefined || val === null || val === '') return '""';
     const n = parseFloat(val);
-    return isNaN(n) ? `"${val}"` : String(n);
+    return isNaN(n) ? `"${String(val).replace(/"/g, '\\"')}"` : String(n);
   });
-  if (expr.includes('"')) {
-    try {
-      const parts = expr.split('+').map(p => p.trim().replace(/^"|"$/g, ''));
-      return parts.filter(p => p !== '0' && p !== '').join(' ');
-    } catch(e) { return ''; }
-  }
+
+  // Remplacer les guillemets doubles littéraux par des guillemets JS
+  // Syntaxe supportée : "texte" dans la formule
   try {
     const result = Function('"use strict";return (' + expr + ')')();
-    if (isNaN(result) || !isFinite(result)) return '';
-    return parseFloat(result.toFixed(4)).toString();
-  } catch(e) { return ''; }
+    if (result === null || result === undefined) return '';
+    if (typeof result === 'number') {
+      if (!isFinite(result) || isNaN(result)) return '';
+      return parseFloat(result.toFixed(4)).toString();
+    }
+    // Résultat texte : nettoyer les "0" parasites issus de champs vides
+    const str = String(result)
+      .replace(/\s*\b0\b\s*/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return str === '0' ? '' : str;
+  } catch(e) {
+    return '';
+  }
 }
 
 function evalCondition(expr, fields) {
@@ -266,21 +278,20 @@ function evalCondition(expr, fields) {
 
 function computeCalcFields(product) {
   const f = product.fields;
-  attributes.filter(a => a.calc && a.formula && a.formula.startsWith('=')).forEach(attr => {
-    f[attr.code] = evalFormula(attr.formula, f);
-  });
-  const pa = parseFloat(f.pa_interne) || 0;
-  const rem = parseFloat(f.remise) || 0;
-  const rfa = parseFloat(f.rfa) || 0;
-  const pv  = parseFloat(f.prix_vente) || 0;
-  f.pa_opticien  = pa > 0 ? (pa * (1 - rem / 100)).toFixed(2) : '';
-  f.marge_interne    = pa > 0 ? (pa * (1 - rem / 100) * (1 + rfa / 100)).toFixed(2) : '';
-  const paOpt    = parseFloat(f.pa_opticien) || 0;
-  f.prix_final   = paOpt > 0 ? (paOpt * 2).toFixed(2) : '';
-  const pf       = parseFloat(f.prix_final) || 0;
-  f.taux_marque  = pf > 0 ? ((pf - paOpt) / pf * 100).toFixed(1) : '';
-  f.nom_marketing = [f.marque, f.ref_monture, f.couleur].filter(Boolean).join(' ') || '';
-  f.prix_tva     = pv > 0 ? (pv * 1.055).toFixed(2) : '';
+  // Passe 1 : attributs calculés simples (sans dépendance entre eux)
+  attributes
+    .filter(a => a.calc && a.formula && a.formula.startsWith('='))
+    .forEach(attr => {
+      const result = evalFormula(attr.formula, f);
+      if (result !== '') f[attr.code] = result;
+    });
+  // Passe 2 : re-passer une fois pour les formules qui dépendent d'autres champs calculés
+  attributes
+    .filter(a => a.calc && a.formula && a.formula.startsWith('='))
+    .forEach(attr => {
+      const result = evalFormula(attr.formula, f);
+      if (result !== '') f[attr.code] = result;
+    });
   return f;
 }
 
