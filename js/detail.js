@@ -100,33 +100,38 @@ function renderProductHeader(p, cat) {
       </div>
     </div>`;
 }
+
 function getBrandInfoForProduct(p) {
   if (!p.fields.marque) return null;
-  const fCode = p.fields.fournisseur_code || '';
+  const fCode  = p.fields.fournisseur_code || '';
+  const marque = p.fields.marque;
 
-  // Chercher avec segmentation correspondante en priorité
-  const withSeg = brandSettings.filter(b =>
-    b.marque === p.fields.marque &&
-    (!fCode || b.fournisseurCode === fCode) &&
-    b.segAttrCode &&
-    p.fields[b.segAttrCode] === b.segAttrValue
+  // Filtrer les candidats par marque + fournisseur
+  const candidates = brandSettings.filter(b =>
+    b.marque === marque && (!fCode || b.fournisseurCode === fCode)
+  );
+  if (!candidates.length) return null;
+
+  // Priorité 1 : ligne avec segmentation dont la valeur correspond au produit
+  const withSeg = candidates.filter(b =>
+    b.segAttrCode && p.fields[b.segAttrCode] === b.segAttrValue
   );
   if (withSeg.length) {
-    const b = withSeg[0];
+    const b   = withSeg[0];
     const sup = suppliers.find(s => s.code === b.fournisseurCode);
     return { ...b, sup: sup ? sup.name : b.fournisseurCode };
   }
 
-  // Sinon sans segmentation, correspondance exacte catégorie
-  const noSeg = brandSettings.filter(b =>
-    b.marque === p.fields.marque &&
-    (!fCode || b.fournisseurCode === fCode) &&
-    !b.segAttrCode
-  );
-  const exact    = noSeg.find(b => b.type === p.cat);
-  const fallback = noSeg[0];
-  const b        = exact || fallback;
-  if (!b) return null;
+  // Priorité 2 : ligne sans segmentation correspondant à la catégorie
+  const noSeg = candidates.filter(b => !b.segAttrCode);
+  const exact = noSeg.find(b => b.type === p.cat) || noSeg[0];
+  if (exact) {
+    const sup = suppliers.find(s => s.code === exact.fournisseurCode);
+    return { ...exact, sup: sup ? sup.name : exact.fournisseurCode };
+  }
+
+  // Priorité 3 : premier candidat disponible
+  const b   = candidates[0];
   const sup = suppliers.find(s => s.code === b.fournisseurCode);
   return { ...b, sup: sup ? sup.name : b.fournisseurCode };
 }
