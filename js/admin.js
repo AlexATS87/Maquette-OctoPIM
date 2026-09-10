@@ -605,7 +605,7 @@ function saveAttributeEdit() {
   showNotif('Attribut "' + newName + '" mis a jour');
 }
 
-function createAttribute() {
+function createNewAttribute() {
   const nameEl    = document.getElementById('new-attr-name');
   const codeEl    = document.getElementById('new-attr-code');
   const typeEl    = document.getElementById('new-attr-type');
