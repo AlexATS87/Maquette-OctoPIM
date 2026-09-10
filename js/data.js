@@ -235,16 +235,15 @@ function evalFormula(formula, fields) {
     return evalCondition(inner, fields) ? 'Oui' : 'Non';
   }
 
-  // Remplacer les références [code] par leurs valeurs
+  // Remplacer [code] par la valeur du champ
   expr = expr.replace(/\[([^\]]+)\]/g, (match, code) => {
     const val = fields[code];
     if (val === undefined || val === null || val === '') return '""';
     const n = parseFloat(val);
-    return isNaN(n) ? `"${String(val).replace(/"/g, '\\"')}"` : String(n);
+    if (!isNaN(n) && String(val).trim() !== '') return String(n);
+    return '"' + String(val).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
   });
 
-  // Remplacer les guillemets doubles littéraux par des guillemets JS
-  // Syntaxe supportée : "texte" dans la formule
   try {
     const result = Function('"use strict";return (' + expr + ')')();
     if (result === null || result === undefined) return '';
@@ -252,11 +251,8 @@ function evalFormula(formula, fields) {
       if (!isFinite(result) || isNaN(result)) return '';
       return parseFloat(result.toFixed(4)).toString();
     }
-    // Résultat texte : nettoyer les "0" parasites issus de champs vides
-    const str = String(result)
-      .replace(/\s*\b0\b\s*/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const str = String(result).trim();
+    // Ne retourner vide que si le résultat est strictement "0" seul
     return str === '0' ? '' : str;
   } catch(e) {
     return '';
@@ -278,20 +274,16 @@ function evalCondition(expr, fields) {
 
 function computeCalcFields(product) {
   const f = product.fields;
-  // Passe 1 : attributs calculés simples (sans dépendance entre eux)
-  attributes
-    .filter(a => a.calc && a.formula && a.formula.startsWith('='))
-    .forEach(attr => {
+  const calcAttrs = attributes.filter(a =>
+    (a.calc || a.formula) && a.formula && a.formula.startsWith('=')
+  );
+  // Deux passes pour gérer les dépendances entre champs calculés
+  for (let pass = 0; pass < 2; pass++) {
+    calcAttrs.forEach(attr => {
       const result = evalFormula(attr.formula, f);
       if (result !== '') f[attr.code] = result;
     });
-  // Passe 2 : re-passer une fois pour les formules qui dépendent d'autres champs calculés
-  attributes
-    .filter(a => a.calc && a.formula && a.formula.startsWith('='))
-    .forEach(attr => {
-      const result = evalFormula(attr.formula, f);
-      if (result !== '') f[attr.code] = result;
-    });
+  }
   return f;
 }
 
