@@ -1028,6 +1028,7 @@ function renderSuppliersPage() {
   brandSettings.forEach((b, i) => {
     const sup = suppliers.find(s => s.code === b.fournisseurCode);
     const cat = categories.find(c => c.name === b.type);
+
     const typeBadge = cat
       ? `<span class="badge" style="background:${cat.color}22;color:${cat.color};
            border:1px solid ${cat.color}55;padding:2px 8px;border-radius:4px;
@@ -1036,11 +1037,12 @@ function renderSuppliersPage() {
 
     const segAttr = b.segAttrCode
       ? attributes.find(a => a.code === b.segAttrCode) : null;
-    const segLabel = segAttr
-      ? `<div style="font-size:11px;color:#607080;margin-top:2px">
-           ${segAttr.name} = <strong>${b.segAttrValue || '—'}</strong>
-         </div>`
-      : '';
+    const segCell = segAttr
+      ? `<span style="font-size:12px;color:#1a2332">
+           ${segAttr.name} =
+           <strong>${b.segAttrValue || '—'}</strong>
+         </span>`
+      : '<span style="color:#a0b0c0;font-size:12px">—</span>';
 
     const marge = typeof b.margeInterne === 'number'
       ? (b.margeInterne * 100).toFixed(0) + '%' : '—';
@@ -1048,7 +1050,8 @@ function renderSuppliersPage() {
     rows += `<tr>
       <td style="font-weight:600">${sup ? sup.name : b.fournisseurCode}</td>
       <td>${b.marque}</td>
-      <td>${typeBadge}${segLabel}</td>
+      <td>${typeBadge}</td>
+      <td>${segCell}</td>
       <td>${b.rf > 0 ? (b.rf * 100).toFixed(2) + '%' : '—'}</td>
       <td>${b.rfa > 0 ? (b.rfa * 100).toFixed(2) + '%' : '—'}</td>
       <td><strong style="color:#1565c0">${marge}</strong></td>
@@ -1057,7 +1060,8 @@ function renderSuppliersPage() {
         : '<span class="badge-active-off">Non</span>'}</td>
       <td>
         <div class="td-actions">
-          <button class="action-btn" onclick="editBrandSetting(${i})">Modifier</button>
+          <button class="action-btn"
+            onclick="editBrandSetting(${i})">Modifier</button>
           <button class="action-btn-danger"
             onclick="confirmDelete('brand',${i},'${b.marque.replace(/'/g,"\\'")}')">
             Suppr.
@@ -1082,9 +1086,15 @@ function renderSuppliersPage() {
       <table>
         <thead>
           <tr>
-            <th>Fournisseur</th><th>Marque</th><th>Type / Segmentation</th>
-            <th>RF</th><th>RFA</th><th>Marge interne</th>
-            <th>Reprise echange</th><th>Actions</th>
+            <th>Fournisseur</th>
+            <th>Marque</th>
+            <th>Categorie</th>
+            <th>Segmentation</th>
+            <th>RF</th>
+            <th>RFA</th>
+            <th>Marge interne</th>
+            <th>Reprise echange</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
