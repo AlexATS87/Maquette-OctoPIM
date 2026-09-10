@@ -608,30 +608,54 @@ function renderCompareBar() {
     return;
   }
   container.innerHTML = `
-    <div class="compare-bar">
-      <span style="font-size:13px;font-weight:600;color:#1a2332">
+    <div class="compare-bar" style="display:flex;align-items:center;
+      justify-content:space-between;background:#1565c0;color:#fff;
+      padding:10px 16px;border-radius:8px;margin-bottom:10px;gap:12px">
+      <span style="font-size:13px;font-weight:600">
         ${selectedProductIds.length} produit(s) selectionne(s)
       </span>
-      <div style="position:relative;display:inline-block">
-        <button class="btn btn-primary" id="bulk-actions-btn"
+      <div style="position:relative">
+        <button class="btn" id="bulk-actions-btn"
+          style="background:#fff;color:#1565c0;font-weight:700;
+            border:none;padding:7px 18px;border-radius:6px;cursor:pointer;
+            display:flex;align-items:center;gap:6px"
           onclick="toggleBulkActionsMenu(event)">
-          Actions &#9663;
+          Actions
+          <span style="font-size:10px">&#9660;</span>
         </button>
-        <div id="bulk-actions-menu" style="display:none;position:absolute;top:100%;left:0;
-          margin-top:4px;background:#fff;border:1px solid #e0e8f0;border-radius:8px;
-          box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:500;min-width:220px;padding:6px 0">
-          <div class="bulk-menu-item" onclick="openBulkEditModal();closeBulkActionsMenu()">
+        <div id="bulk-actions-menu"
+          style="display:none;position:absolute;top:calc(100% + 6px);right:0;
+            background:#fff;border:1px solid #e0e8f0;border-radius:8px;
+            box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;
+            min-width:230px;padding:6px 0;white-space:nowrap">
+          <div onclick="openBulkEditModal();closeBulkActionsMenu()"
+            style="padding:9px 16px;font-size:13px;color:#1a2332;cursor:pointer;
+              display:flex;align-items:center;gap:8px"
+            onmouseover="this.style.background='#f0f4f8'"
+            onmouseout="this.style.background=''">
             &#9998; Modifier un attribut
           </div>
-          <div class="bulk-menu-item" onclick="startCompare();closeBulkActionsMenu()">
+          <div onclick="startCompare();closeBulkActionsMenu()"
+            style="padding:9px 16px;font-size:13px;color:#1a2332;cursor:pointer;
+              display:flex;align-items:center;gap:8px"
+            onmouseover="this.style.background='#f0f4f8'"
+            onmouseout="this.style.background=''">
             &#128269; Comparer les produits
           </div>
-          <div class="bulk-menu-item bulk-menu-item-danger"
-            onclick="bulkDelete();closeBulkActionsMenu()">
+          <div style="border-top:1px solid #f0f4f8;margin:4px 0"></div>
+          <div onclick="bulkDelete();closeBulkActionsMenu()"
+            style="padding:9px 16px;font-size:13px;color:#ef5350;cursor:pointer;
+              display:flex;align-items:center;gap:8px"
+            onmouseover="this.style.background='#fff5f5'"
+            onmouseout="this.style.background=''">
             &#128465; Supprimer la selection
           </div>
           <div style="border-top:1px solid #f0f4f8;margin:4px 0"></div>
-          <div class="bulk-menu-item" onclick="clearSelection();closeBulkActionsMenu()">
+          <div onclick="clearSelection();closeBulkActionsMenu()"
+            style="padding:9px 16px;font-size:13px;color:#607080;cursor:pointer;
+              display:flex;align-items:center;gap:8px"
+            onmouseover="this.style.background='#f0f4f8'"
+            onmouseout="this.style.background=''">
             &#10005; Deselectionner tout
           </div>
         </div>
@@ -639,6 +663,23 @@ function renderCompareBar() {
     </div>`;
 }
 
+function toggleBulkActionsMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('bulk-actions-menu');
+  if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    setTimeout(() => {
+      document.addEventListener('click', closeBulkActionsMenu, { once: true });
+    }, 0);
+  }
+}
+
+function closeBulkActionsMenu() {
+  const menu = document.getElementById('bulk-actions-menu');
+  if (menu) menu.style.display = 'none';
+}
 function toggleBulkActionsMenu(e) {
   e.stopPropagation();
   const menu = document.getElementById('bulk-actions-menu');
