@@ -37,7 +37,7 @@ let syntheseItems = [
 let attrGroups = [
   { id:1,  name:'Informations generales',      code:'infos_generales',       system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[1,2,3,4,5,53] },
   { id:2,  name:'Visuels',                     code:'visuels',               system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[54,55,56,57,58] },
-  { id:3,  name:'Marque',                      code:'marque',                system:false, isSynthGroup:false, isBrandGroup:true,  attrIds:[6] },
+  { id:3,  name:'Conditions commerciales',                      code:'conditions_commerciales',                system:false, isSynthGroup:false, isBrandGroup:true,  attrIds:[6] },
   { id:4,  name:'Caracteristiques monture',    code:'caract_monture',        system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[7,8,9,10,11,12,13,14,15,16,17] },
   { id:5,  name:'Tarification monture',        code:'tarif_monture',         system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[18,19,20,21,22,23,24,25] },
   { id:6,  name:'SEO monture',                 code:'seo_monture',           system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[26,27,28,29] },
@@ -63,7 +63,7 @@ let attributes = [
     formula:'=SI([active_o2]==VRAI OU [active_lissac]==VRAI OU [active_audio2000]==VRAI)',
     formulaLabel:'Actif si au moins un canal est active (O2, Lissac, Audio 2000)',
     mask:'', showInSynth:false, clickToOpen:false },
-  { id:6,  name:'Marque',           code:'marque',           type:'Simple select',   groupId:3,  required:true,  calc:false, formula:'', mask:'', showInSynth:false, clickToOpen:false,
+  { id:6,  name:'Conditions commerciales',           code:'conditions_commerciales',           type:'Simple select',   groupId:3,  required:true,  calc:false, formula:'', mask:'', showInSynth:false, clickToOpen:false,
     options:['Vogue','Ray-Ban','Oakley','Alcon','Bausch & Lomb','Essilor','Carrera','Boss','Lacoste','Calvin Klein','Gucci','Chloe','Prada','Versace','Emporio Armani','Michael Kors','Dolce&Gabbana','Persol','Burberry','Moncler','Jimmy Choo','Polo Ralph Lauren','Ralph Lauren','Swarovski','Police','Diesel','Guess','Adidas','Karl Lagerfeld','Nike','Longchamp','Esprit','Elle','Julbo','Morgan','Rip Curl','Mauboussin','Cebe','Bolle'] },
   { id:7,  name:'Reference monture',   code:'ref_monture',   type:'Texte',           groupId:4,  required:true,  calc:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:8,  name:'Nom marketing',       code:'nom_marketing', type:'Texte calcule',   groupId:4,  required:false, calc:true,
