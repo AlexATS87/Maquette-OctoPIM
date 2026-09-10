@@ -1381,7 +1381,7 @@ function openCreateBrandModal() {
       <div class="modal-footer">
         <button class="btn btn-secondary"
           onclick="this.closest('.modal-overlay').remove()">Annuler</button>
-        <button class="btn btn-primary"
+        <button class="btn btn-primary"  
           onclick="createBrandSetting(this)">Creer</button>
       </div>
     </div>`;
@@ -1390,19 +1390,43 @@ function openCreateBrandModal() {
 }
 
 function createBrandSetting(btn) {
-  const marque = (document.getElementById('nb-marque').value || '').trim();
+  const marque        = (document.getElementById('nb-marque').value || '').trim();
+  const fournisseurCode = document.getElementById('nb-sup').value;
+  const type          = document.getElementById('nb-type').value;
+  const segAttrCode   = document.getElementById('nb-seg-attr').value || null;
+  const vSel          = document.getElementById('nb-seg-val');
+  const segAttrValue  = segAttrCode && vSel ? vSel.value : null;
+
   if (!marque) { showNotif('Marque obligatoire', 'error'); return; }
-  const segAttrCode  = document.getElementById('nb-seg-attr').value || null;
-  const vSel         = document.getElementById('nb-seg-val');
-  const segAttrValue = segAttrCode && vSel ? vSel.value : null;
+
+  // Controle doublon
+  const exists = brandSettings.some(b =>
+    b.fournisseurCode === fournisseurCode &&
+    b.marque          === marque &&
+    b.type            === type &&
+    (b.segAttrCode    || null) === segAttrCode &&
+    (b.segAttrValue   || null) === segAttrValue
+  );
+  if (exists) {
+    const segLabel = segAttrCode
+      ? ` / ${(attributes.find(a => a.code === segAttrCode) || {}).name || segAttrCode} = ${segAttrValue}`
+      : '';
+    const supName = (suppliers.find(s => s.code === fournisseurCode) || {}).name || fournisseurCode;
+    showNotif(
+      `Une condition existe deja : ${supName} — ${marque} — ${type}${segLabel}`,
+      'error'
+    );
+    return;
+  }
+
   brandSettings.push({
     marque,
-    fournisseurCode:     document.getElementById('nb-sup').value,
-    type:                document.getElementById('nb-type').value,
+    fournisseurCode,
+    type,
     segAttrCode,
     segAttrValue,
-    rf:                  parseFloat(document.getElementById('nb-rf').value) / 100 || 0,
-    rfa:                 parseFloat(document.getElementById('nb-rfa').value) / 100 || 0,
+    rf:                  parseFloat(document.getElementById('nb-rf').value)    / 100 || 0,
+    rfa:                 parseFloat(document.getElementById('nb-rfa').value)   / 100 || 0,
     margeInterne:        parseFloat(document.getElementById('nb-marge').value) / 100 || 0,
     repriseEchange:      document.getElementById('nb-reprise').value === '1',
     conditionsLivraison: document.getElementById('nb-livraison').value.trim(),
