@@ -645,19 +645,31 @@ function refreshCalcFields(productId){
 // ============================================================
 // EVENEMENTS CHAMPS
 // ============================================================
-function onFieldChange(productId,el,fieldKey){
-  const p=products.find(x=>x.id===productId);if(!p)return;
-  const oldVal=p.fields[fieldKey]!==undefined?p.fields[fieldKey]:'';
-  const newVal=el.value;
-  p.fields[fieldKey]=newVal;
-  const attr=attributes.find(a=>a.code===fieldKey);
-  addPendingChange(p,attr?attr.name:fieldKey,oldVal,newVal);
-  productDirty=true;
-  if(fieldKey==='nom'){const t=document.querySelector('.product-title');if(t)t.textContent=newVal;}
+function onFieldChange(productId, el, fieldKey) {
+  const p = products.find(x => x.id === productId);
+  if (!p) return;
+  const oldVal = p.fields[fieldKey] !== undefined ? p.fields[fieldKey] : '';
+  const newVal = el.value;
+  p.fields[fieldKey] = newVal;
+  const attr = attributes.find(a => a.code === fieldKey);
+  addPendingChange(p, attr ? attr.name : fieldKey, oldVal, newVal);
+  productDirty = true;
+  if (fieldKey === 'nom') {
+    const t = document.querySelector('.product-title');
+    if (t) t.textContent = newVal;
+  }
   computeCalcFields(p);
   updateDetailCompletion(p);
-  renderProductHeader(p,getCatByName(p.cat));
+  renderProductHeader(p, getCatByName(p.cat));
+
+  // Si le champ modifié est un attribut de segmentation utilisé dans brandSettings,
+  // rafraîchir le panneau conditions commerciales
+  const isSegAttr = brandSettings.some(b => b.segAttrCode === fieldKey);
+  if (isSegAttr) {
+    refreshBrandInfoPanel(p);
+  }
 }
+
 function onMultiSelectChange(productId,el,fieldKey){
   const p=products.find(x=>x.id===productId);if(!p)return;
   const oldVal=p.fields[fieldKey]||'';
