@@ -57,11 +57,11 @@ function renderProductHeader(p, cat) {
   const etatVisuel   = calcEtatVisuel(p);
   const brandInfo    = getBrandInfoForProduct(p);
 
-  const margeHtml = brandInfo && typeof brandInfo.margeInterne === 'number'
+  const margeHtml = brandInfo && typeof brandInfo.remiseEnseigne === 'number'
     ? `<span style="font-size:12px;color:#607080">
          ${brandInfo.sup} / ${brandInfo.marque} —
-         Marge interne : <strong style="color:#1565c0">
-           ${(brandInfo.margeInterne * 100).toFixed(0)}%
+         Remise enseigne : <strong style="color:#1565c0">
+           ${(brandInfo.remiseEnseigne * 100).toFixed(0)}%
          </strong>
        </span>`
     : '';
@@ -443,16 +443,16 @@ function renderBrandInfoPanel(brandInfo) {
         Selectionnez un fournisseur et une marque pour afficher les conditions.
       </div>`;
   }
-  const marge = typeof brandInfo.margeInterne === 'number'
+  const marge = typeof brandInfo.remiseEnseigne === 'number'
     ? `<strong style="color:#1565c0;font-size:14px">
-         ${(brandInfo.margeInterne * 100).toFixed(0)}%
+         ${(brandInfo.remiseEnseigne * 100).toFixed(0)}%
        </strong>`
     : '—';
   const rows = [
     { label: 'Fournisseur',          val: brandInfo.sup || '—' },
     { label: 'RF',                   val: brandInfo.rf > 0 ? (brandInfo.rf * 100).toFixed(2) + '%' : '—' },
     { label: 'RFA',                  val: brandInfo.rfa > 0 ? (brandInfo.rfa * 100).toFixed(2) + '%' : '—' },
-    { label: 'Marge interne',        val: marge },
+    { label: 'Remise enseigne',        val: marge },
     { label: 'Reprise echange',      val: brandInfo.repriseEchange
         ? '<span class="badge-active-on">Oui</span>'
         : '<span class="badge-active-off">Non</span>' },
