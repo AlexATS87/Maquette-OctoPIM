@@ -159,87 +159,6 @@ function addSyntheseAction() {
   showNotif('Action "' + label + '" ajoutee');
 }
 
-function renderSyntheseAttrSelect() {
-  const sel = document.getElementById('synth-add-attr-select');
-  if (!sel) return;
-  const usedCodes = syntheseItems.filter(i => i.kind === 'attr').map(i => i.code);
-  // Attributs standards + champs virtuels
-  const virtualFields = [
-    { code: 'cat',        name: 'Categorie'      },
-    { code: 'createdAt',  name: 'Date creation'  },
-    { code: 'maj',        name: 'Derniere MAJ'   },
-    { code: 'miseEnLigne',name: 'Mise en ligne'  },
-    { code: 'completion', name: 'Completion'     },
-    { code: 'visuel_face',name: 'Visuel'         },
-  ];
-  sel.innerHTML = '<option value="">-- Choisir un attribut --</option>';
-  // Champs virtuels
-  virtualFields.forEach(f => {
-    if (!usedCodes.includes(f.code))
-      sel.innerHTML += `<option value="${f.code}" data-label="${f.name}">${f.name} (champ systeme)</option>`;
-  });
-  // Attributs réels
-  attributes.filter(a => !a.calc && !usedCodes.includes(a.code)).forEach(a => {
-    sel.innerHTML += `<option value="${a.code}" data-label="${a.name}">${a.name}</option>`;
-  });
-}
-
-function renderSyntheseItemsList() {
-  const list = document.getElementById('synthese-items-list');
-  if (!list) return;
-  list.innerHTML = '';
-  syntheseItems.forEach((item, idx) => {
-    const div = document.createElement('div');
-    div.className = 'cat-group-order-item';
-    div.dataset.idx = idx;
-    div.draggable = true;
-    div.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('text/plain', String(idx));
-      div.classList.add('dragging');
-    });
-    div.addEventListener('dragend', () => div.classList.remove('dragging'));
-    div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
-    div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
-    div.addEventListener('drop', e => {
-      e.preventDefault();
-      div.classList.remove('drag-over');
-      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
-      const toIdx   = parseInt(div.dataset.idx);
-      if (fromIdx === toIdx) return;
-      const [moved] = syntheseItems.splice(fromIdx, 1);
-      syntheseItems.splice(toIdx, 0, moved);
-      renderSyntheseItemsList();
-      renderProductsTable();
-    });
-
-    const kindBadge = item.kind === 'action'
-      ? `<span class="attr-group-badge-system" style="background:#fce4ec;color:#880e4f;margin-left:8px">Action</span>`
-      : `<span class="attr-group-badge-system" style="background:#e3f2fd;color:#1565c0;margin-left:8px">Attribut</span>`;
-
-    div.innerHTML = `
-      <span class="drag-handle">&#9776;</span>
-      <span style="font-size:13px;flex:1">${item.label}</span>
-      <span style="font-size:11px;color:#a0b0c0;font-family:monospace;margin-right:8px">${item.code}</span>
-      ${kindBadge}
-      <button class="action-btn-danger"
-        style="margin-left:12px;font-size:11px;padding:3px 8px"
-        onclick="removeSyntheseItem(${idx})">Retirer</button>`;
-    list.appendChild(div);
-  });
-
-  if (!syntheseItems.length) {
-    list.innerHTML = '<div style="font-size:13px;color:#a0b0c0;padding:16px;text-align:center">Aucun element dans la synthese.</div>';
-  }
-}
-
-function removeSyntheseItem(idx) {
-  syntheseItems.splice(idx, 1);
-  renderSyntheseItemsList();
-  renderSyntheseAttrSelect();
-  renderProductsTable();
-  showNotif('Element retire de la synthese');
-}
-
 // ============================================================
 // ADMIN — CATEGORIES
 // ============================================================
@@ -877,7 +796,7 @@ function renderBrandInfoPanel(brandInfo) {
     { label: 'Fournisseur',          val: brandInfo.sup },
     { label: 'RF',                   val: brandInfo.rf > 0 ? (brandInfo.rf * 100).toFixed(2) + '%' : '—' },
     { label: 'RFA',                  val: brandInfo.rfa > 0 ? (brandInfo.rfa * 100).toFixed(2) + '%' : '—' },
-    { label: 'Marge interne',        val: `<strong style="color:#1565c0;font-size:14px">${(brandInfo.margeInterne * 100).toFixed(0)}%</strong>` },
+    { label: 'Remise enseigne',        val: `<strong style="color:#1565c0;font-size:14px">${(brandInfo.remiseEnseigne * 100).toFixed(0)}%</strong>` },
     { label: 'Reprise echange',      val: brandInfo.repriseEchange ? '<span class="badge-active-on">Oui</span>' : '<span class="badge-active-off">Non</span>' },
     { label: 'Conditions livraison', val: brandInfo.conditionsLivraison || '—' },
     { label: 'Commentaire',          val: brandInfo.commentaire ? `<span style="font-size:12px;color:#607080">${brandInfo.commentaire}</span>` : '—' },
@@ -1044,8 +963,8 @@ function renderSuppliersPage() {
          </span>`
       : '<span style="color:#a0b0c0;font-size:12px">—</span>';
 
-    const marge = typeof b.margeInterne === 'number'
-      ? (b.margeInterne * 100).toFixed(0) + '%' : '—';
+    const marge = typeof b.remiseEnseigne === 'number'
+      ? (b.remiseEnseigne * 100).toFixed(0) + '%' : '—';
 
     rows += `<tr>
       <td style="font-weight:600">${sup ? sup.name : b.fournisseurCode}</td>
@@ -1092,7 +1011,7 @@ function renderSuppliersPage() {
             <th>Segmentation</th>
             <th>RF</th>
             <th>RFA</th>
-            <th>Marge interne</th>
+            <th>Remise enseigne</th>
             <th>Reprise echange</th>
             <th>Actions</th>
           </tr>
@@ -1125,7 +1044,7 @@ function renderSuppliersTable(filter) {
       <td style="text-align:right">${b.rf > 0 ? (b.rf * 100).toFixed(2) + '%' : '—'}</td>
       <td style="text-align:right">${b.rfa > 0 ? (b.rfa * 100).toFixed(2) + '%' : '—'}</td>
       <td style="text-align:right;font-weight:600;color:#1565c0">
-        ${b.remiseAts > 0 ? (b.remiseAts * 100).toFixed(0) + '%' : '—'}
+        ${b.remiseEnseigne > 0 ? (b.remiseEnseigne * 100).toFixed(0) + '%' : '—'}
       </td>
       <td style="text-align:center">${repriseLabel}</td>
       <td style="font-size:12px;color:#607080;white-space:nowrap">${b.conditionsLivraison || '—'}</td>
@@ -1204,9 +1123,9 @@ function editBrandSetting(i) {
             value="${((b.rfa || 0) * 100).toFixed(2)}">
         </div>
         <div class="form-field">
-          <div class="form-label">Marge interne (%)</div>
+          <div class="form-label">Remise enseigne %</div>
           <input class="field-input" id="eb-marge" type="number" step="1"
-            value="${((b.margeInterne || 0) * 100).toFixed(0)}">
+            value="${((b.remiseEnseigne || 0) * 100).toFixed(0)}">
         </div>
         <div class="form-field">
           <div class="form-label">Reprise echange</div>
@@ -1246,7 +1165,7 @@ function saveBrandSetting(i, btn) {
   b.segAttrValue        = b.segAttrCode && vSel ? vSel.value : null;
   b.rf                  = parseFloat(document.getElementById('eb-rf').value) / 100 || 0;
   b.rfa                 = parseFloat(document.getElementById('eb-rfa').value) / 100 || 0;
-  b.margeInterne        = parseFloat(document.getElementById('eb-marge').value) / 100 || 0;
+  b.remiseEnseigne        = parseFloat(document.getElementById('eb-marge').value) / 100 || 0;
   b.repriseEchange      = document.getElementById('eb-reprise').value === '1';
   b.conditionsLivraison = document.getElementById('eb-livraison').value.trim();
   b.commentaire         = document.getElementById('eb-commentaire').value.trim();
@@ -1359,7 +1278,7 @@ function openCreateBrandModal() {
           <input class="field-input" id="nb-rfa" type="number" step="0.01" value="0">
         </div>
         <div class="form-field">
-          <div class="form-label">Marge interne (%)</div>
+          <div class="form-label">Remise enseigne %</div>
           <input class="field-input" id="nb-marge" type="number" step="1" value="0">
         </div>
         <div class="form-field">
@@ -1427,7 +1346,7 @@ function createBrandSetting(btn) {
     segAttrValue,
     rf:                  parseFloat(document.getElementById('nb-rf').value)    / 100 || 0,
     rfa:                 parseFloat(document.getElementById('nb-rfa').value)   / 100 || 0,
-    margeInterne:        parseFloat(document.getElementById('nb-marge').value) / 100 || 0,
+    remiseEnseigne:        parseFloat(document.getElementById('nb-marge').value) / 100 || 0,
     repriseEchange:      document.getElementById('nb-reprise').value === '1',
     conditionsLivraison: document.getElementById('nb-livraison').value.trim(),
     commentaire:         document.getElementById('nb-commentaire').value.trim(),
@@ -1446,7 +1365,7 @@ function openBrandEditor(idx) {
   editingBrandIdx = idx;
   const isNew = idx === -1;
   const b = isNew
-    ? { fournisseurCode: '', marque: '', type: '', rf: 0, rfa: 0, remiseAts: 0,
+    ? { fournisseurCode: '', marque: '', type: '', rf: 0, rfa: 0, remiseEnseigne: 0,
         repriseEchange: false, conditionsLivraison: 'Franco', commentaire: '' }
     : brandSettings[idx];
   const existing = document.getElementById('brand-editor-overlay');
@@ -1492,9 +1411,9 @@ function openBrandEditor(idx) {
             value="${(b.rfa * 100).toFixed(2)}">
         </div>
         <div class="form-field">
-          <div class="form-label">Remise ATS %</div>
-          <input class="field-input" type="number" step="0.01" id="be-remise-ats"
-            value="${(b.remiseAts * 100).toFixed(2)}">
+          <div class="form-label">Remise enseigne %</div>
+          <input class="field-input" type="number" step="0.01" id="be-remise-enseigne"
+            value="${(b.remiseEnseigne * 100).toFixed(2)}">
         </div>
         <div class="form-field">
           <div class="form-label">Reprise echange</div>
@@ -1532,7 +1451,7 @@ function saveBrandEditor() {
     type:               document.getElementById('be-type').value,
     rf:                 parseFloat(document.getElementById('be-rf').value || 0) / 100,
     rfa:                parseFloat(document.getElementById('be-rfa').value || 0) / 100,
-    remiseAts:          parseFloat(document.getElementById('be-remise-ats').value || 0) / 100,
+    remiseEnseigne:          parseFloat(document.getElementById('be-remise-enseigne').value || 0) / 100,
     repriseEchange:     document.getElementById('be-reprise').value === '1',
     conditionsLivraison:document.getElementById('be-conditions').value.trim(),
     commentaire:        document.getElementById('be-commentaire').value.trim(),
