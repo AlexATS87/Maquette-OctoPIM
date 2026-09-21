@@ -1149,7 +1149,7 @@ function getBrandInfoForProduct(p) {
 }
 function calcActiveGlobal(p) {
   const f = p.fields;
-  return ((f.active_o2 || '').toLowerCase() === 'oui' || (f.active_lissac || '').toLowerCase() === 'oui') ? 'Actif' : 'Inactif';
+  return ((f.active_o || '').toLowerCase() === 'oui' || (f.active_l || '').toLowerCase() === 'oui') ? 'Actif' : 'Inactif';
 }
 
 function calcEtatVisuel(p) {
@@ -1338,6 +1338,32 @@ function renderTabGeneral(p) {
         <div class="field-label">Derniere MAJ</div>
         <input class="field-input" style="background:#f0f4f8;color:#a0b0c0"
           value="${p.maj || ''}" readonly>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-group-title">Canaux de diffusion</div>
+      <div class="field-row">
+        <div class="field-label">Actif canal O</div>
+        <select class="field-input form-select"
+          onchange="onFieldChange(${p.id},this,'active_o');refreshCalcFields(${p.id})">
+          <option value="">-- Choisir --</option>
+          <option${p.fields.active_o === 'Oui' ? ' selected' : ''}>Oui</option>
+          <option${p.fields.active_o === 'Non' ? ' selected' : ''}>Non</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Actif canal L</div>
+        <select class="field-input form-select"
+          onchange="onFieldChange(${p.id},this,'active_l');refreshCalcFields(${p.id})">
+          <option value="">-- Choisir --</option>
+          <option${p.fields.active_l === 'Oui' ? ' selected' : ''}>Oui</option>
+          <option${p.fields.active_l === 'Non' ? ' selected' : ''}>Non</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Active (calcule)</div>
+        <input class="field-input" style="background:#f0f4f8;color:#a0b0c0"
+          data-calc="active_global" value="${p.fields.active_global || ''}" readonly>
       </div>
     </div>
   </div>`;
