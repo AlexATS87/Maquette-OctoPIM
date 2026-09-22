@@ -10,6 +10,16 @@ let sortState = {};
 // ============================================================
 // FILTRE COLONNE (style Excel)
 // ============================================================
+function getListColValue(p, code) {
+  if (!p) return '';
+  if (code === 'cat') return String(p.cat || '').trim();
+  if (code === 'completion') return String(calcCompletion(p));
+  if (code === 'createdAt' || code === 'created_at') return String(p.createdAt || '').trim();
+  if (code === 'maj' || code === 'updated_at') return String(p.maj || '').trim();
+  const v = p.fields && p.fields[code] !== undefined ? p.fields[code] : p[code];
+  return v == null ? '' : String(v).trim();
+}
+
 function getColUniqueValues(code) {
   const vals = new Set();
   const searchVal = (document.getElementById('products-search') || {}).value || '';
@@ -23,14 +33,12 @@ function getColUniqueValues(code) {
     for (const c in colFilters) {
       if (c === code) continue;
       const allowed = colFilters[c];
-      const val = (p.fields[c] || p[c] || '').toString().trim();
-      if (!allowed.has(val)) return false;
+      if (!allowed.has(getListColValue(p, c))) return false;
     }
     return true;
   }).forEach(p => {
-    const v = p.fields[code] !== undefined ? p.fields[code] : p[code];
-    if (v !== undefined && v !== null && v.toString().trim() !== '')
-      vals.add(v.toString().trim());
+    const v = getListColValue(p, code);
+    if (v) vals.add(v);
   });
   return [...vals].sort((a, b) => a.localeCompare(b, 'fr'));
 }
@@ -188,8 +196,7 @@ function passesColFilters(product) {
   computeCalcFields(product);
   for (const code in colFilters) {
     const allowed = colFilters[code];
-    const val = (product.fields[code] !== undefined ? product.fields[code] : product[code] || '').toString().trim();
-    if (!allowed.has(val)) return false;
+    if (!allowed.has(getListColValue(product, code))) return false;
   }
   return true;
 }
@@ -334,7 +341,7 @@ function renderSynthHeader(thead) {
       tr.appendChild(th);
     } else {
       // Colonne attribut
-      if (item.code === 'cat' || isVisualCode(item.code)) {
+      if (isVisualCode(item.code)) {
         const th = document.createElement('th');
         th.textContent = item.label;
         tr.appendChild(th);
@@ -460,7 +467,7 @@ function renderDetailHeader(thead) {
     } else {
       const th = document.createElement('th');
       th.rowSpan = 2;
-      if (item.code === 'cat' || isVisualCode(item.code)) {
+      if (isVisualCode(item.code)) {
         th.textContent = item.label;
       } else {
         th.appendChild(makeSortFilterTh(item.label, item.code));
@@ -948,8 +955,8 @@ function sortTableByCode(code) {
       va = calcCompletion(pa); vb = calcCompletion(pb);
       return dir === 'asc' ? va - vb : vb - va;
     }
-    va = pa.fields[code] !== undefined ? pa.fields[code] : (pa[code] || '');
-    vb = pb.fields[code] !== undefined ? pb.fields[code] : (pb[code] || '');
+    va = getListColValue(pa, code);
+    vb = getListColValue(pb, code);
     const na = parseFloat(va), nb = parseFloat(vb);
     if (!isNaN(na) && !isNaN(nb)) return dir === 'asc' ? na - nb : nb - na;
     return dir === 'asc'
