@@ -15,6 +15,7 @@ function getColUniqueValues(code) {
   const searchVal = (document.getElementById('products-search') || {}).value || '';
   const catFilter = (document.getElementById('filter-cat') || {}).value || '';
   products.filter(p => {
+    if (!canCat(p.cat, 'r')) return false;
     if (catFilter && p.cat !== catFilter) return false;
     computeCalcFields(p);
     const allText = Object.values(p.fields).join(' ').toLowerCase() + ' ' + (p.cat || '').toLowerCase();
@@ -207,6 +208,7 @@ function renderProductsTable() {
   const catFilter = (document.getElementById('filter-cat') || {}).value || '';
 
   let filtered = products.filter(p => {
+    if (!canCat(p.cat, 'r')) return false;
     if (!(!catFilter || p.cat === catFilter)) return false;
     computeCalcFields(p);
     const allText = Object.values(p.fields).join(' ').toLowerCase() + ' ' + (p.cat || '').toLowerCase();
@@ -332,8 +334,7 @@ function renderSynthHeader(thead) {
       tr.appendChild(th);
     } else {
       // Colonne attribut
-      const noSortCodes = ['visuel_face', 'cat'];
-      if (noSortCodes.includes(item.code)) {
+      if (item.code === 'cat' || isVisualCode(item.code)) {
         const th = document.createElement('th');
         th.textContent = item.label;
         tr.appendChild(th);
@@ -368,10 +369,12 @@ function renderSynthRows(tbody, filtered) {
     syntheseItems.forEach(item => {
       if (item.kind === 'action' && item.code === 'delete') {
         cells += `<td>
-          <button class="action-btn-danger"
+          ${canDeleteProduct(p)
+            ? `<button class="action-btn-danger"
             onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g, "\\'")}')">
             Suppr.
-          </button>
+          </button>`
+            : ''}
         </td>`;
       } else if (item.kind === 'attr') {
         cells += renderSynthCell(p, item, comp);
@@ -386,45 +389,36 @@ function renderSynthRows(tbody, filtered) {
 function renderSynthCell(p, item, comp) {
   const code = item.code;
 
-  if (code === 'visuel_face') {
-    return `<td style="padding:6px 10px">${visualThumb(p, 40)}</td>`;
+  if (isVisualCode(code)) {
+    return `<td style="padding:6px 10px">${visualThumb(p, 40, code)}</td>`;
   }
+
+  let inner, style = 'white-space:nowrap';
   if (code === 'cat') {
-    return `<td><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></td>`;
-  }
-  if (code === 'completion') {
-    return `<td>
-      <div class="inline-bar">
+    inner = `<span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span>`;
+    style = '';
+  } else if (code === 'completion') {
+    inner = `<div class="inline-bar">
         <div class="inline-bar-bg">
           <div class="inline-bar-fill"
             style="width:${comp}%;background:${getCompletionColor(comp)}"></div>
         </div>
         <span style="font-size:12px;color:#607080">${comp}%</span>
-      </div>
-    </td>`;
-  }
-  if (code === 'createdAt' || code === 'maj') {
-    return `<td style="white-space:nowrap">${p[code] || '—'}</td>`;
-  }
-  if (code === 'miseEnLigne') {
-    return `<td style="white-space:nowrap">${p.fields.miseEnLigne || '—'}</td>`;
+      </div>`;
+    style = '';
+  } else {
+    inner = getSynthValue(p, code) || '—';
   }
 
-  const val = p.fields[code] !== undefined ? p.fields[code] : '—';
-
-  // Premier attribut non systeme = cliquable
-  const systemCodes = ['visuel_face','cat','completion','createdAt','maj','miseEnLigne'];
-  const firstAttr   = syntheseItems.find(x =>
-    x.kind === 'attr' && !systemCodes.includes(x.code)
-  );
-  if (firstAttr && code === firstAttr.code) {
+  // Premiere information de la synthese = colonne cliquable vers la fiche
+  if (isSynthTitleCode(code)) {
     return `<td class="td-name">
       <span class="product-link"
-        onclick="openProductDetail(${p.id})">${val || '—'}</span>
+        onclick="openProductDetail(${p.id})">${inner}</span>
     </td>`;
   }
 
-  return `<td style="white-space:nowrap">${val || '—'}</td>`;
+  return `<td style="${style}">${inner}</td>`;
 }
 
 // ============================================================
@@ -464,10 +458,9 @@ function renderDetailHeader(thead) {
       th.textContent = item.label;
       row1.appendChild(th);
     } else {
-      const noSort = ['visuel_face', 'cat'];
       const th = document.createElement('th');
       th.rowSpan = 2;
-      if (noSort.includes(item.code)) {
+      if (item.code === 'cat' || isVisualCode(item.code)) {
         th.textContent = item.label;
       } else {
         th.appendChild(makeSortFilterTh(item.label, item.code));
@@ -545,10 +538,12 @@ function renderDetailRows(tbody, filtered) {
     syntheseItems.forEach(item => {
       if (item.kind === 'action' && item.code === 'delete') {
         cells += `<td>
-          <button class="action-btn-danger"
+          ${canDeleteProduct(p)
+            ? `<button class="action-btn-danger"
             onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g,"\\'")}')">
             Suppr.
-          </button>
+          </button>`
+            : ''}
         </td>`;
       } else if (item.kind === 'attr') {
         cells += renderSynthCell(p, item, comp);
@@ -559,11 +554,10 @@ function renderDetailRows(tbody, filtered) {
     visibleGroups.forEach(g => {
       const color = getGroupColor(g);
       g.attrIds.map(id => getAttrById(id)).filter(Boolean).forEach(attr => {
-        const val  = p.fields[attr.code] !== undefined && p.fields[attr.code] !== ''
-          ? p.fields[attr.code] : '—';
+        const val  = formatAttrListValue(p, attr);
         let isDiff = false;
         if (compareMode && allValues[attr.code])
-          isDiff = new Set(allValues[attr.code].map(v => v.toString().trim())).size > 1;
+          isDiff = new Set(allValues[attr.code].map(v => String(v == null ? '' : v).trim())).size > 1;
         cells += `<td style="white-space:nowrap;font-size:12px;
           background:${isDiff ? '#fff9c4' : color.bg + '55'}">${val}</td>`;
       });
@@ -628,13 +622,16 @@ function renderCompareBar() {
             background:#fff;border:1px solid #e0e8f0;border-radius:8px;
             box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;
             min-width:230px;padding:6px 0;white-space:nowrap">
-          <div onclick="openBulkEditModal();closeBulkActionsMenu()"
+          ${selectedProductIds.some(id => {
+            const p = products.find(x => x.id === id);
+            return p && canEditProduct(p);
+          }) ? `<div onclick="openBulkEditModal();closeBulkActionsMenu()"
             style="padding:9px 16px;font-size:13px;color:#1a2332;cursor:pointer;
               display:flex;align-items:center;gap:8px"
             onmouseover="this.style.background='#f0f4f8'"
             onmouseout="this.style.background=''">
             &#9998; Modifier un attribut
-          </div>
+          </div>` : ''}
           <div onclick="startCompare();closeBulkActionsMenu()"
             style="padding:9px 16px;font-size:13px;color:#1a2332;cursor:pointer;
               display:flex;align-items:center;gap:8px"
@@ -642,14 +639,24 @@ function renderCompareBar() {
             onmouseout="this.style.background=''">
             &#128269; Comparer les produits
           </div>
+          <div onclick="bulkExport();closeBulkActionsMenu()"
+            style="padding:9px 16px;font-size:13px;color:#1a2332;cursor:pointer;
+              display:flex;align-items:center;gap:8px"
+            onmouseover="this.style.background='#f0f4f8'"
+            onmouseout="this.style.background=''">
+            &#128229; Exporter la selection
+          </div>
           <div style="border-top:1px solid #f0f4f8;margin:4px 0"></div>
-          <div onclick="bulkDelete();closeBulkActionsMenu()"
+          ${selectedProductIds.some(id => {
+            const p = products.find(x => x.id === id);
+            return p && canDeleteProduct(p);
+          }) ? `<div onclick="bulkDelete();closeBulkActionsMenu()"
             style="padding:9px 16px;font-size:13px;color:#ef5350;cursor:pointer;
               display:flex;align-items:center;gap:8px"
             onmouseover="this.style.background='#fff5f5'"
             onmouseout="this.style.background=''">
             &#128465; Supprimer la selection
-          </div>
+          </div>` : ''}
           <div style="border-top:1px solid #f0f4f8;margin:4px 0"></div>
           <div onclick="clearSelection();closeBulkActionsMenu()"
             style="padding:9px 16px;font-size:13px;color:#607080;cursor:pointer;
@@ -781,7 +788,7 @@ function onBulkAttrChange(sel) {
       <option value="">-- Choisir --</option>
       <option>Oui</option><option>Non</option></select>`;
   } else if (attr.type === 'Nombre' || attr.type === 'Nombre decimal') {
-    input = `<input class="field-input" id="bulk-attr-value" type="number">`;
+    input = `<input class="field-input" id="bulk-attr-value" type="number" onwheel="event.preventDefault();this.blur()">`;
   } else {
     input = `<input class="field-input" id="bulk-attr-value" placeholder="Nouvelle valeur">`;
   }
@@ -802,28 +809,38 @@ function applyBulkEdit(btn) {
     new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
   selectedProductIds.forEach(id => {
     const p = products.find(x => x.id === id);
-    if (p) { p.fields[attr.code] = value; p.maj = now; }
+    if (p && canEditProduct(p)) { p.fields[attr.code] = value; p.maj = now; }
   });
   btn.closest('.modal-overlay').remove();
   renderProductsTable();
   showNotif(selectedProductIds.length + ' produit(s) mis a jour : ' + attr.name);
 }
 
-function applyMassAction() {
-  const sel = document.getElementById('mass-action-select');
-  if (!sel || !sel.value) { showNotif('Veuillez choisir une action'); return; }
-  if (sel.value === 'delete') {
-    if (!selectedProductIds.length) return;
-    pendingDelete = { type: 'mass', ids: [...selectedProductIds] };
-    document.getElementById('confirm-delete-text').textContent =
-      `Supprimer ${selectedProductIds.length} produit${selectedProductIds.length > 1 ? 's' : ''} ?`;
-    document.getElementById('confirm-delete-btn').onclick = executeMassDelete;
-    openModal('modal-confirm-delete');
-  } else if (sel.value === 'export') {
-    captureExportSnapshot();
-    showPage('exports', document.querySelector('.nav-item[onclick*="exports"]'));
-    showNotif('Selection exportable : ' + selectedProductIds.length + ' produits');
+// Actions groupees de la barre de selection
+function bulkDelete() {
+  if (!selectedProductIds.length) return;
+  const ids = selectedProductIds.filter(id => {
+    const p = products.find(x => x.id === id);
+    return p && canDeleteProduct(p);
+  });
+  if (!ids.length) {
+    showNotif('Aucun produit selectionne ne peut etre supprime', 'warn');
+    return;
   }
+  pendingDelete = { type: 'mass', ids };
+  document.getElementById('confirm-delete-text').textContent =
+    `Supprimer ${ids.length} produit${ids.length > 1 ? 's' : ''} ?`;
+  document.getElementById('confirm-delete-btn').onclick = executeMassDelete;
+  openModal('modal-confirm-delete');
+}
+
+// La page Exports coche « Exporter uniquement la selection » des qu'une
+// selection est active, et runExport filtre sur selectedProductIds.
+function bulkExport() {
+  if (!selectedProductIds.length) return;
+  captureExportSnapshot();
+  showPage('exports', document.querySelector('.nav-item[data-nav="exports"]'));
+  showNotif('Export prepare sur ' + selectedProductIds.length + ' produit(s) selectionne(s)');
 }
 
 function executeMassDelete() {
@@ -977,6 +994,10 @@ function toggleGroupFilter(groupId) {
 // CREATION PRODUIT — ETAPE 1 (modale)
 // ============================================================
 function createProduct() {
+  if (!getWritableCategories().length) {
+    showNotif('Aucune categorie accessible en modification', 'warn');
+    return;
+  }
   const sapEl  = document.getElementById('np-sap');
   const eanEl  = document.getElementById('np-ean');
   const nameEl = document.getElementById('np-name');
@@ -998,6 +1019,10 @@ function createProduct() {
   if (!ean)  { document.getElementById('np-ean').classList.add('field-error');  document.getElementById('err-np-ean').classList.add('show');  valid = false; }
   if (!name) { document.getElementById('np-name').classList.add('field-error'); document.getElementById('err-np-name').classList.add('show'); valid = false; }
   if (!cat)  { document.getElementById('np-cat').classList.add('field-error');  document.getElementById('err-np-cat').classList.add('show');  valid = false; }
+  if (cat && !canCat(cat, 'w')) {
+    showNotif('Creation non autorisee sur cette categorie', 'warn');
+    return;
+  }
   if (!valid) return;
 
   const today = todayStr();
@@ -1032,6 +1057,10 @@ function openProductDetail(id) {
   currentProductId = id;
   const p = products.find(x => x.id === id);
   if (!p) return;
+  if (!requirePerm(canCat(p.cat, 'r'), 'Produit non accessible')) {
+    currentProductId = null;
+    return;
+  }
   if (!p.history)        p.history = [];
   if (!p.pendingChanges) p.pendingChanges = [];
   computeCalcFields(p);
@@ -1041,6 +1070,7 @@ function openProductDetail(id) {
   renderProductTabs(p, cat);
   updateDetailCompletion(p);
   showPage('product-detail', null);
+  applyAccessControl();
 }
 
 // ============================================================
@@ -1077,41 +1107,54 @@ function cancelLeaveUnsaved() {
 // ============================================================
 // HEADER PRODUIT
 // ============================================================
-function renderProductHeader(p, cat) {
-  const headerLeft = document.getElementById('product-header-left');
-  if (!headerLeft) return;
-  const nom          = p.fields.nom || '—';
-  const activeGlobal = calcActiveGlobal(p);
-  const etatVisuel   = calcEtatVisuel(p);
-  const brandInfo    = getBrandInfoForProduct(p);
+// Une info du bloc resume, pilotee par un element de syntheseItems
+function summaryChip(p, item) {
+  const code = item.code;
+  if (code === 'cat')
+    return `<span><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></span>`;
+  if (code === 'completion') {
+    const c = calcCompletion(p);
+    return `<span>${item.label} : <strong style="color:${getCompletionColor(c)}">${c}%</strong></span>`;
+  }
+  return `<span>${item.label} : ${getSynthValue(p, code) || '—'}</span>`;
+}
 
-  headerLeft.innerHTML = `<div style="display:flex;align-items:flex-start;gap:16px">
-    <div onclick="triggerVisualUpload(${p.id},'visuel_face')"
+// Vignette du bloc resume : attribut Image configure dans la vue synthese
+function summaryVisual(p) {
+  const visual = getSynthVisualItem();
+  if (!visual) return '';
+  const src = p.fields[visual.code];
+  return `<div onclick="triggerVisualUpload(${p.id},'${visual.code}')"
       style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;overflow:hidden;
              cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-             background:#f8fafc;" title="Cliquer pour modifier le visuel face">
-      ${p.fields.visuel_face
-        ? `<img src="${p.fields.visuel_face}" style="width:100%;height:100%;object-fit:cover;">`
+             background:#f8fafc;" title="Cliquer pour modifier : ${visual.label}">
+      ${src
+        ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;">`
         : `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#c0d0e0">
              <span style="font-size:28px">&#128247;</span>
              <span style="font-size:10px">Ajouter</span>
            </div>`}
-    </div>
+    </div>`;
+}
+
+function renderProductHeader(p, cat) {
+  const headerLeft = document.getElementById('product-header-left');
+  if (!headerLeft) return;
+
+  // Memes champs et meme ordre que la vue synthese, hors actions.
+  // La premiere information sert de titre, l'attribut Image sert de vignette.
+  const titleItem = getSynthTitleItem();
+  const title     = titleItem ? (getSynthValue(p, titleItem.code) || '—') : (p.fields.nom || '—');
+  const metaHtml  = syntheseItems
+    .filter(i => i.kind === 'attr' && i !== titleItem && !isVisualCode(i.code))
+    .map(i => summaryChip(p, i))
+    .join('');
+
+  headerLeft.innerHTML = `<div style="display:flex;align-items:flex-start;gap:16px">
+    ${summaryVisual(p)}
     <div style="flex:1">
-      <div class="product-title">${nom}</div>
-      <div class="product-meta">
-        <span>SAP : ${p.fields.sap || '—'}</span>
-        <span>EAN : ${p.fields.ean || '—'}</span>
-        <span><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></span>
-        <span><span class="${activeGlobal === 'Actif' ? 'badge-active-on' : 'badge-active-off'}">${activeGlobal}</span></span>
-        <span><span class="${etatVisuel === 'Oui' ? 'badge-etat-ok' : 'badge-etat-ko'}">Visuels : ${etatVisuel}</span></span>
-        ${brandInfo
-          ? `<span style="font-size:12px;color:#607080">${brandInfo.sup} / ${brandInfo.marque} —
-               Remise enseigne : <strong style="color:#1565c0">${(brandInfo.remiseEnseigne * 100).toFixed(0)}%</strong>
-             </span>`
-          : ''}
-        <span style="color:#a0b0c0">Cree le ${p.createdAt || '—'}</span>
-      </div>
+      <div class="product-title">${title}</div>
+      <div class="product-meta">${metaHtml}</div>
     </div>
   </div>`;
 }
@@ -1147,11 +1190,6 @@ function getBrandInfoForProduct(p) {
   if (!b) return null;
   return { ...b, sup: (suppliers.find(s => s.code === b.fournisseurCode) || {}).name || b.fournisseurCode };
 }
-function calcActiveGlobal(p) {
-  const f = p.fields;
-  return ((f.active_o || '').toLowerCase() === 'oui' || (f.active_l || '').toLowerCase() === 'oui') ? 'Actif' : 'Inactif';
-}
-
 function calcEtatVisuel(p) {
   return (p.fields.visuel_face && p.fields.visuel_tq && p.fields.visuel_profil) ? 'Oui' : 'Non';
 }
@@ -1238,7 +1276,6 @@ function renderProductTabs(p, cat) {
     content.id        = 'tab-group-' + g.id;
 
     if (g._isHist)              content.innerHTML = renderTabHistory(p);
-    else if (g.code === 'infos_generales') content.innerHTML = renderTabGeneral(p);
     else if (g.code === 'visuels')         content.innerHTML = renderTabVisuels(p);
     else if (g.isBrandGroup)               content.innerHTML = renderTabMarque(p, g);
     else                                   content.innerHTML = renderTabAttrGroup(p, g);
@@ -1290,93 +1327,6 @@ function flushPendingChanges(p) {
     if (c.old !== c.new) p.history.push({ ts, user: 'J. Doe', field: c.field, old: c.old, new: c.new });
   });
   p.pendingChanges = [];
-}
-
-// ============================================================
-// ONGLET INFOS GENERALES
-// ============================================================
-function renderTabGeneral(p) {
-  return `<div class="fields-grid">
-    <div class="field-group">
-      <div class="field-group-title">Identification</div>
-      <div class="field-row">
-        <div class="field-label">Code SAP <span class="field-required">*</span></div>
-        <input class="field-input" id="fi-sap-${p.id}" value="${p.fields.sap || ''}"
-          oninput="onFieldChange(${p.id},this,'sap')">
-      </div>
-      <div class="field-row">
-        <div class="field-label">Code EAN <span class="field-required">*</span></div>
-        <input class="field-input" id="fi-ean-${p.id}" value="${p.fields.ean || ''}"
-          oninput="onFieldChange(${p.id},this,'ean')">
-      </div>
-      <div class="field-row">
-        <div class="field-label">Nom produit <span class="field-required">*</span></div>
-        <input class="field-input" value="${p.fields.nom || ''}"
-          oninput="onFieldChange(${p.id},this,'nom')">
-      </div>
-      <div class="field-row">
-        <div class="field-label">Categorie</div>
-        <select class="field-input form-select" onchange="onCatChange(${p.id},this)">
-          ${categories.map(c => `<option${c.name === p.cat ? ' selected' : ''}>${c.name}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div class="field-group">
-      <div class="field-group-title">Dates</div>
-      <div class="field-row">
-        <div class="field-label">Date de creation</div>
-        <input class="field-input" style="background:#f0f4f8;color:#a0b0c0"
-          value="${p.createdAt || ''}" readonly>
-      </div>
-      <div class="field-row">
-        <div class="field-label">Date de mise en ligne</div>
-        <input class="field-input" style="font-family:monospace"
-          value="${p.fields.miseEnLigne || ''}" placeholder="jj/mm/aaaa" maxlength="10"
-          oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'miseEnLigne')">
-      </div>
-      <div class="field-row">
-        <div class="field-label">Derniere MAJ</div>
-        <input class="field-input" style="background:#f0f4f8;color:#a0b0c0"
-          value="${p.maj || ''}" readonly>
-      </div>
-    </div>
-    <div class="field-group">
-      <div class="field-group-title">Canaux de diffusion</div>
-      <div class="field-row">
-        <div class="field-label">Actif canal O</div>
-        <select class="field-input form-select"
-          onchange="onFieldChange(${p.id},this,'active_o');refreshCalcFields(${p.id})">
-          <option value="">-- Choisir --</option>
-          <option${p.fields.active_o === 'Oui' ? ' selected' : ''}>Oui</option>
-          <option${p.fields.active_o === 'Non' ? ' selected' : ''}>Non</option>
-        </select>
-      </div>
-      <div class="field-row">
-        <div class="field-label">Actif canal L</div>
-        <select class="field-input form-select"
-          onchange="onFieldChange(${p.id},this,'active_l');refreshCalcFields(${p.id})">
-          <option value="">-- Choisir --</option>
-          <option${p.fields.active_l === 'Oui' ? ' selected' : ''}>Oui</option>
-          <option${p.fields.active_l === 'Non' ? ' selected' : ''}>Non</option>
-        </select>
-      </div>
-      <div class="field-row">
-        <div class="field-label">Active (calcule)</div>
-        <input class="field-input" style="background:#f0f4f8;color:#a0b0c0"
-          data-calc="active_global" value="${p.fields.active_global || ''}" readonly>
-      </div>
-    </div>
-  </div>`;
-}
-
-// Applique les masques de saisie après rendu de l'onglet général
-function applyGeneralMasks(p) {
-  const sapEl = document.getElementById('fi-sap-' + p.id);
-  const eanEl = document.getElementById('fi-ean-' + p.id);
-  const sapAttr = attributes.find(a => a.code === 'sap');
-  const eanAttr = attributes.find(a => a.code === 'ean');
-  if (sapEl && sapAttr && sapAttr.mask) applyInputMask(sapEl, sapAttr.mask);
-  if (eanEl && eanAttr && eanAttr.mask) applyInputMask(eanEl, eanAttr.mask);
 }
 
 function onDateMaskInput(el) {
@@ -1435,43 +1385,48 @@ function matchBrandType(brandType, catName) {
 function renderTabMarque(p, g) {
   computeCalcFields(p);
   const catName = p.cat;
-  const eligibleSupCodes = [...new Set(
-    brandSettings.filter(b => !b.type || matchBrandType(b.type, catName)).map(b => b.fournisseurCode)
-  )];
-  const eligibleSuppliers = suppliers.filter(s => eligibleSupCodes.includes(s.code));
-  const supOptions = eligibleSuppliers.map(s =>
-    `<option value="${s.code}"${p.fields.fournisseur_code === s.code ? ' selected' : ''}>${s.name} (${s.code})</option>`
-  ).join('');
+  const eligibleSuppliers = suppliersForProduct(p);
   const currentSup = p.fields.fournisseur_code || '';
-  const availableMarques = [...new Set(
-    brandSettings
-      .filter(b => (!currentSup || b.fournisseurCode === currentSup) && (!b.type || matchBrandType(b.type, catName)))
-      .map(b => b.marque)
-  )].sort();
-  const marqueOptions = availableMarques.map(m =>
-    `<option${p.fields.marque === m ? ' selected' : ''}>${m}</option>`
-  ).join('');
+  const availableMarques = marquesForProduct(p);
   const brandInfo = getBrandInfoForProduct(p);
+  const segBits = [...new Set(
+    brandSettings.filter(b => b.segAttrCode && (!b.type || matchBrandType(b.type, catName)))
+      .map(b => b.segAttrCode)
+  )].map(code => {
+    const a = attributes.find(x => x.code === code);
+    const val = p.fields[code];
+    return (a ? a.name : code) + (val ? ' = ' + val : ' (non renseigne)');
+  });
+  const filterHint = ['categorie : ' + catName].concat(segBits).join(', ');
 
   return `<div class="fields-grid">
     <div class="field-group">
       <div class="field-group-title">Couple Fournisseur / Marque</div>
       <div style="font-size:12px;color:#a0b0c0;margin-bottom:12px">
-        Filtre sur la categorie : <strong style="color:#607080">${catName}</strong>
+        Listes filtrees sur <strong style="color:#607080">${filterHint}</strong>.
+        Fournisseur puis marque, ou marque puis fournisseur.
       </div>
       <div class="field-row">
         <div class="field-label">Fournisseur</div>
-        <select class="field-input form-select" id="detail-fournisseur-${p.id}"
-          onchange="onFournisseurChange(${p.id},this)">
-          <option value="">-- Choisir --</option>${supOptions}
-        </select>
+        ${autocompleteInput(
+          'detail-fournisseur-' + p.id,
+          'dl-sup-' + p.id,
+          supplierNameByCode(currentSup),
+          eligibleSuppliers.map(s => s.name),
+          'onFournisseurChange(' + p.id + ',this)',
+          'Rechercher un fournisseur'
+        )}
       </div>
       <div class="field-row">
         <div class="field-label">Marque <span class="field-required">*</span></div>
-        <select class="field-input form-select" id="detail-marque-${p.id}"
-          onchange="onMarqueChange(${p.id},this)">
-          <option value="">-- Choisir --</option>${marqueOptions}
-        </select>
+        ${autocompleteInput(
+          'detail-marque-' + p.id,
+          'dl-marque-' + p.id,
+          p.fields.marque || '',
+          availableMarques,
+          'onMarqueChange(' + p.id + ',this)',
+          'Rechercher une marque'
+        )}
       </div>
     </div>
     <div class="field-group" id="brand-info-panel-${p.id}">
@@ -1487,21 +1442,16 @@ function renderBrandInfoPanel(brandInfo) {
         Selectionnez un fournisseur et une marque pour afficher les conditions.
       </div>`;
   }
-  const rows = [
-    { label: 'Fournisseur',          val: brandInfo.sup },
-    { label: 'RF',                   val: brandInfo.rf > 0 ? (brandInfo.rf * 100).toFixed(2) + '%' : '—' },
-    { label: 'RFA',                  val: brandInfo.rfa > 0 ? (brandInfo.rfa * 100).toFixed(2) + '%' : '—' },
-    { label: 'Remise enseigne',           val: `<strong style="color:#1565c0;font-size:14px">${(brandInfo.remiseEnseigne * 100).toFixed(0)}%</strong>` },
-    { label: 'Reprise echange',      val: brandInfo.repriseEchange ? '<span class="badge-active-on">Oui</span>' : '<span class="badge-active-off">Non</span>' },
-    { label: 'Conditions livraison', val: brandInfo.conditionsLivraison || '—' },
-    { label: 'Commentaire',          val: brandInfo.commentaire ? `<span style="font-size:12px;color:#607080">${brandInfo.commentaire}</span>` : '—' },
-  ];
-  let html = `<div class="field-group-title">Conditions — ${brandInfo.marque}</div>`;
+  const skip = new Set(['fournisseur_code', 'marque', 'cat', 'segmentation']);
+  const rows = getConditionAttrs()
+    .filter(a => !skip.has(a.code))
+    .map(a => ({ label: a.name, val: getBrandSettingAttrValue(brandInfo, a) || '—' }));
+  let html = `<div class="field-group-title">Conditions — ${escapeHtml(brandInfo.marque || '')}</div>`;
   rows.forEach(r => {
-    html += `<div class="field-row" style="display:flex;justify-content:space-between;align-items:center;
-      padding:5px 0;border-bottom:1px solid #f0f4f8">
-      <div class="field-label" style="margin:0;flex:1">${r.label}</div>
-      <div style="font-size:13px;color:#1a2332;text-align:right">${r.val}</div>
+    html += `<div class="field-row" style="display:flex;justify-content:space-between;
+      align-items:center;padding:5px 0;border-bottom:1px solid #f0f4f8">
+      <div class="field-label" style="margin:0;flex:1">${escapeHtml(r.label)}</div>
+      <div style="font-size:13px;color:#1a2332;text-align:right">${escapeHtml(r.val)}</div>
     </div>`;
   });
   return html;
@@ -1510,23 +1460,23 @@ function renderBrandInfoPanel(brandInfo) {
 function onFournisseurChange(productId, el) {
   const p = products.find(x => x.id === productId);
   if (!p) return;
-  const oldVal = p.fields.fournisseur_code || '';
-  p.fields.fournisseur_code = el.value;
-  addPendingChange(p, 'Fournisseur', oldVal, el.value);
-  productDirty = true;
-  const catName      = p.cat;
-  const marqueSelect = document.getElementById('detail-marque-' + productId);
-  if (marqueSelect) {
-    const available = [...new Set(
-      brandSettings
-        .filter(b => (!el.value || b.fournisseurCode === el.value) && (!b.type || matchBrandType(b.type, catName)))
-        .map(b => b.marque)
-    )].sort();
-    marqueSelect.innerHTML = '<option value="">-- Choisir --</option>' +
-      available.map(m => `<option${p.fields.marque === m ? ' selected' : ''}>${m}</option>`).join('');
+  const code = resolveSupplierCode(el.value);
+  if (code) {
+    const s = suppliers.find(x => x.code === code);
+    if (s && el.value !== s.name) el.value = s.name;
   }
-  const stillValid = brandSettings.some(b => b.fournisseurCode === el.value && b.marque === p.fields.marque);
-  if (!stillValid) p.fields.marque = '';
+  const oldVal = p.fields.fournisseur_code || '';
+  p.fields.fournisseur_code = code;
+  addPendingChange(p, 'Fournisseur', oldVal, code);
+  productDirty = true;
+  const available = marquesForProduct(p);
+  const marqueInput = document.getElementById('detail-marque-' + productId);
+  if (marqueInput && p.fields.marque && !available.includes(p.fields.marque)) {
+    addPendingChange(p, 'Marque', p.fields.marque, '');
+    p.fields.marque = '';
+    marqueInput.value = '';
+  }
+  refreshBrandCoupleLists(p);
   refreshBrandInfoPanel(p);
   renderProductHeader(p, getCatByName(p.cat));
 }
@@ -1538,8 +1488,30 @@ function onMarqueChange(productId, el) {
   p.fields.marque = el.value;
   addPendingChange(p, 'Marque', oldVal, el.value);
   productDirty = true;
+  const availableSups = suppliersForProduct(p);
+  const currentCode = p.fields.fournisseur_code;
+  if (currentCode && !availableSups.some(s => s.code === currentCode)) {
+    addPendingChange(p, 'Fournisseur', currentCode, '');
+    p.fields.fournisseur_code = '';
+    const supInput = document.getElementById('detail-fournisseur-' + productId);
+    if (supInput) supInput.value = '';
+  }
+  refreshBrandCoupleLists(p);
   refreshBrandInfoPanel(p);
   renderProductHeader(p, getCatByName(p.cat));
+}
+
+function refreshBrandCoupleLists(p) {
+  const supDl = document.getElementById('dl-sup-' + p.id);
+  const marDl = document.getElementById('dl-marque-' + p.id);
+  if (supDl) {
+    const names = suppliersForProduct(p).map(s => s.name);
+    supDl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">`).join('');
+  }
+  if (marDl) {
+    const marques = marquesForProduct(p);
+    marDl.innerHTML = marques.map(m => `<option value="${escapeHtml(m)}">`).join('');
+  }
 }
 
 function refreshBrandInfoPanel(p) {
@@ -1557,11 +1529,16 @@ function renderTabAttrGroup(p, g) {
     return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
   computeCalcFields(p);
   let html = '<div class="fields-grid"><div class="field-group">';
+  if (g.code === 'infos_generales') html += `<div class="field-group-title">${g.name}</div>`;
   attrs.forEach(a => {
-    const val = p.fields[a.code] !== undefined ? p.fields[a.code] : '';
+    const val = getAttrFieldValue(p, a);
     let input = '';
 
-    if (a.type === 'Image') {
+    if (a.code === 'cat') {
+      input = categorieSelectHtml(p);
+    } else if (a.code === 'completion') {
+      input = `<input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${calcCompletion(p)}%" readonly>`;
+    } else if (a.type === 'Image') {
       const hasImg = !!val;
       input = `<div class="image-attr-slot" data-visuel-code="${a.code}" style="max-width:200px">
         ${hasImg
@@ -1578,14 +1555,7 @@ function renderTabAttrGroup(p, g) {
         </div>
       </div>`;
     } else if (a.calc) {
-      input = `<div style="position:relative">
-        <input class="field-input" style="background:#fffde7;color:#795548;padding-right:32px"
-          value="${val}" readonly data-calc="${a.code}">
-        <div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
-          width:18px;height:18px;border-radius:50%;background:#ffd54f;color:#5d4037;
-          font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;
-          cursor:help" title="${a.formulaLabel || 'Champ calcule'}">&#9654;</div>
-      </div>`;
+      input = calcFieldInput(p, a, val);
     } else if (a.readonly) {
       input = `<input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${val}" readonly>`;
     } else if (a.type === 'Simple select') {
@@ -1606,11 +1576,9 @@ function renderTabAttrGroup(p, g) {
         <option${val === 'Non' ? ' selected' : ''}>Non</option>
       </select>`;
     } else if (a.type === 'Texte long') {
-      input = `<textarea class="field-input" rows="3"
-        oninput="onFieldChange(${p.id},this,'${a.code}')">${val}</textarea>`;
+      input = longTextInput(p, a, val);
     } else if (a.type === 'Nombre' || a.type === 'Nombre decimal') {
-      input = `<input class="field-input" type="number" value="${val}"
-        oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
+      input = numberInput(p, a, val);
     } else if (a.type === 'Date') {
       input = `<input class="field-input" style="font-family:monospace" value="${val}"
         placeholder="jj/mm/aaaa" maxlength="10"
@@ -1623,7 +1591,7 @@ function renderTabAttrGroup(p, g) {
     }
 
     html += `<div class="field-row">
-      <div class="field-label">${a.name}${a.required ? ' <span class="field-required">*</span>' : ''}</div>
+      <div class="field-label">${attrLabelHtml(a)}</div>
       ${input}
     </div>`;
   });
@@ -1651,6 +1619,7 @@ function refreshCalcFields(productId) {
   if (!p) return;
   computeCalcFields(p);
   document.querySelectorAll('[data-calc]').forEach(el => {
+    if (el === document.activeElement) return; // ne pas perturber une saisie forcee en cours
     const code = el.getAttribute('data-calc');
     if (p.fields[code] !== undefined) el.value = p.fields[code];
   });
@@ -1713,9 +1682,12 @@ function updateDetailCompletion(p) {
   const subEl = document.getElementById('detail-completion-sub');
   if (pctEl) { pctEl.textContent = comp + '%'; pctEl.style.color = color; }
   if (barEl) { barEl.style.width = comp + '%'; barEl.style.background = color; }
-  const attrs = getAttrsForCat(p.cat).filter(a => !a.calc && !a.readonly && a.required);
-  const total  = attrs.length + 1;
-  const filled = Math.round(comp * total / 100);
+  const attrs  = getCompletionAttrs(p);
+  const total  = attrs.length;
+  const filled = attrs.filter(a => {
+    const v = p.fields[a.code];
+    return v !== undefined && v !== null && String(v).trim() !== '';
+  }).length;
   if (subEl) subEl.textContent = `${filled} / ${total} champs renseignes`;
 }
 

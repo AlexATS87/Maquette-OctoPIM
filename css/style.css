@@ -305,6 +305,19 @@ input, select, textarea { font-family: inherit; }
 
 .field-required { color: #ef5350; font-size: 12px; }
 
+.completion-mark {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, #fff 36%, transparent 38%),
+    conic-gradient(#1565c0 0 270deg, #bbdefb 0);
+  border: 1.5px solid #90caf9;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
 .field-error-msg {
   font-size: 11px;
   color: #ef5350;
@@ -318,6 +331,10 @@ input, select, textarea { font-family: inherit; }
 }
 
 .field-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
   font-size: 12px;
   font-weight: 600;
   color: #607080;
@@ -607,6 +624,47 @@ tr.row-selected td { background: #e3f2fd !important; }
   font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.system-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: #90a4ae;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.system-lock-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.table-container > table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.help-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: #e8eef5;
+  color: #1565c0;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+  vertical-align: middle;
 }
 
 /* ============================================================
@@ -1202,7 +1260,10 @@ tr.row-selected td { background: #e3f2fd !important; }
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
 }
-.perm-icon-btn:hover { background: #f0f4f8; }
+.perm-icon-btn[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
 .perm-icon-btn.active-read   { background: #e3f2fd; border-color: #90caf9; }
 .perm-icon-btn.active-write  { background: #e8f5e9; border-color: #a5d6a7; }
 .perm-icon-btn.active-delete { background: #fce4ec; border-color: #ef9a9a; }
@@ -1475,4 +1536,200 @@ tr.row-selected td { background: #e3f2fd !important; }
 .import-action-radio.selected {
   border-color: #1565c0;
   background: #e3f2fd;
+}
+
+/* ============================================================
+   COMPTE — DROPDOWN PROFIL + LOGIN
+   ============================================================ */
+.account-menu {
+  position: relative;
+}
+
+.account-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  padding: 4px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.account-menu-trigger:hover { background: #f0f4f8; }
+
+.account-menu-text { text-align: right; }
+
+.account-menu-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a2332;
+}
+
+.account-menu-role {
+  font-size: 11px;
+  color: #a0b0c0;
+}
+
+.account-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1565c0;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 260px;
+  background: #fff;
+  border: 1px solid #e0e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+  z-index: 200;
+  padding: 6px 0;
+}
+
+.account-dropdown-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a0b0c0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 14px 4px;
+}
+
+.account-dropdown-sep {
+  border-top: 1px solid #f0f4f8;
+  margin: 6px 0;
+}
+
+.account-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #1a2332;
+  cursor: pointer;
+}
+
+.account-dropdown-item:hover { background: #f0f4f8; }
+
+.account-dropdown-item.is-active { background: #e3f2fd; }
+
+.account-dropdown-item.is-danger { color: #c62828; }
+
+.account-dropdown-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.account-dropdown-name {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  color: #1a2332;
+}
+
+.account-dropdown-meta {
+  display: block;
+  font-size: 11px;
+  color: #a0b0c0;
+}
+
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0f1724ee;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-overlay[hidden] { display: none !important; }
+
+.login-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #7c3aed;
+  letter-spacing: -0.4px;
+}
+
+.login-sub {
+  font-size: 13px;
+  color: #607080;
+  margin-bottom: 18px;
+}
+
+.login-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e8ecf0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.login-user-btn:hover {
+  border-color: #90caf9;
+  background: #f0f8ff;
+}
+
+#page-product-detail.sheet-readonly .image-attr-preview,
+#page-product-detail.sheet-readonly .image-attr-placeholder {
+  pointer-events: none;
+  cursor: default;
+}
+
+#page-product-detail.sheet-readonly .action-btn {
+  display: none;
 }

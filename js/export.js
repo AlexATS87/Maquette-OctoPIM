@@ -90,11 +90,12 @@ function renderExportPage() {
           </div>
           <div style="font-size:12px;color:#607080;margin-bottom:10px">
             Colonnes issues du groupe Synthese, dans l'ordre configure.
+            En-tetes = <strong>codes techniques</strong> pour le re-import.
             Les colonnes "Action" (ex : Supprimer) sont exclues de l'export.
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
             ${synthCols.map(c =>
-              `<span class="attr-chip" style="background:#e3f2fd;color:#1565c0;font-size:11px">${c.label}</span>`
+              `<span class="attr-chip" style="background:#e3f2fd;color:#1565c0;font-size:11px">${c.code}</span>`
             ).join('')}
           </div>
         </div>
@@ -115,7 +116,7 @@ function renderExportPage() {
           ${catFilter && detailCols.length > 0
             ? `<div style="display:flex;flex-wrap:wrap;gap:6px">
                  ${detailCols.map(c =>
-                   `<span class="attr-chip" style="background:#f3e5f5;color:#6a1b9a;font-size:11px">${c.label}</span>`
+                   `<span class="attr-chip" style="background:#f3e5f5;color:#6a1b9a;font-size:11px">${c.code}</span>`
                  ).join('')}
                </div>`
             : ''}
@@ -162,11 +163,17 @@ function renderExportPage() {
 // COLONNES SYNTHESE POUR EXPORT
 // Actions exclues, attributs dans l'ordre de syntheseItems
 // ============================================================
+function exportTechCode(code) {
+  if (code === 'createdAt') return 'created_at';
+  if (code === 'maj') return 'updated_at';
+  return code;
+}
+
 function getSyntheseExportCols() {
   const cols = [];
   exportSnapshot.syntheseItems.forEach(item => {
     if (item.kind === 'action') return; // exclure les actions
-    cols.push({ code: item.code, label: item.label });
+    cols.push({ code: exportTechCode(item.code), label: item.label, src: item.code });
   });
   return cols;
 }
@@ -182,11 +189,6 @@ function getDetailExportCols(catName) {
   cat.groupIds.forEach(gid => {
     const g = getGroupById(gid);
     if (!g || g.code === 'visuels') return;
-    if (g.isBrandGroup) {
-      cols.push({ code: 'fournisseur_code', label: 'Fournisseur' });
-      cols.push({ code: 'marque',           label: 'Marque'      });
-      return;
-    }
     g.attrIds.forEach(aid => {
       const a = getAttrById(aid);
       if (!a) return;
@@ -204,6 +206,7 @@ function getFilteredProductsFromSnapshot() {
   const catFilter = snap.catFilter  || '';
   const searchVal = snap.searchVal  || '';
   return products.filter(p => {
+    if (!canCat(p.cat, 'r')) return false;
     if (catFilter && p.cat !== catFilter) return false;
     computeCalcFields(p);
     const allText = Object.values(p.fields).join(' ').toLowerCase() + ' ' + (p.cat || '').toLowerCase();
@@ -254,15 +257,15 @@ function runExport() {
     return true;
   });
 
-  const synthHeader = synthCols.map(c => c.label);
+  const synthHeader = synthCols.map(c => c.code);
   const synthRows   = prods.map(p => synthCols.map(c => {
-    if (c.code === 'cat')        return p.cat || '';
-    if (c.code === 'createdAt')  return p.createdAt || '';
-    if (c.code === 'maj')        return p.maj || '';
-    if (c.code === 'miseEnLigne')return p.fields.miseEnLigne || '';
-    if (c.code === 'completion') return calcCompletion(p) + '%';
-    if (c.code === 'visuel_face')return inclImages ? (p.fields.visuel_face ? '(image)' : '') : '';
-    const val = p.fields[c.code];
+    const attr = attributes.find(a => a.code === c.code);
+    if (c.code === 'visuel_face' && !inclImages) return '';
+    if (attr) {
+      const val = getAttrFieldValue(p, attr);
+      return val !== undefined && val !== null ? String(val) : '';
+    }
+    const val = p.fields[c.src || c.code];
     return val !== undefined && val !== null ? String(val) : '';
   }));
 
@@ -279,9 +282,10 @@ function runExport() {
       return true;
     });
     if (detailCols.length > 0) {
-      const detailHeader = detailCols.map(c => c.label);
+      const detailHeader = detailCols.map(c => c.code);
       const detailRows   = prods.map(p => detailCols.map(c => {
-        const val = p.fields[c.code];
+        const attr = attributes.find(a => a.code === c.code);
+        const val  = attr ? getAttrFieldValue(p, attr) : p.fields[c.code];
         return val !== undefined && val !== null ? String(val) : '';
       }));
       const detailData = [detailHeader, ...detailRows];

@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
   <title>OctoPIM</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=15">
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -21,24 +23,24 @@
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section-label">Principal</div>
-      <div class="nav-item active" onclick="showPage('dashboard', this)">
+      <div class="nav-item active" data-nav="dashboard" onclick="showPage('dashboard', this)">
         <span class="nav-item-icon">&#127968;</span>
         <span>Tableau de bord</span>
       </div>
-      <div class="nav-item" onclick="showPage('products', this)">
+      <div class="nav-item" data-nav="products" onclick="showPage('products', this)">
         <span class="nav-item-icon">&#128230;</span>
         <span>Produits</span>
       </div>
-      <div class="nav-item" onclick="showPage('imports', this)">
+      <div class="nav-item" data-nav="imports" onclick="showPage('imports', this)">
         <span class="nav-item-icon">&#128229;</span>
         <span>Imports</span>
       </div>
-      <div class="nav-item" onclick="showPage('exports', this)">
+      <div class="nav-item" data-nav="exports" onclick="showPage('exports', this)">
         <span class="nav-item-icon">&#128228;</span>
         <span>Exports</span>
       </div>
       <div class="nav-section-label">Configuration</div>
-      <div class="nav-item" onclick="showPage('admin', this)">
+      <div class="nav-item" data-nav="admin" onclick="showPage('admin', this)">
         <span class="nav-item-icon">&#9881;</span>
         <span>Administration</span>
       </div>
@@ -51,15 +53,25 @@
     <div class="topbar">
       <div class="topbar-title" id="topbar-title">Tableau de bord</div>
       <div class="topbar-actions">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="text-align:right">
-            <div style="font-size:13px;font-weight:600;color:#1a2332">J. Doe</div>
-            <div style="font-size:11px;color:#a0b0c0">Admin Systeme</div>
+        <div class="account-menu" id="account-menu">
+          <button type="button" class="account-menu-trigger" onclick="toggleAccountMenu(event)">
+            <div class="account-menu-text">
+              <div class="account-menu-name" id="account-name">J. Doe</div>
+              <div class="account-menu-role" id="account-role">Admin Systeme</div>
+            </div>
+            <div class="account-avatar" id="account-avatar" title="Compte">JD</div>
+          </button>
+          <div class="account-dropdown" id="account-dropdown" hidden>
+            <button type="button" class="account-dropdown-item" onclick="openPreferencesFromMenu()">
+              Preferences d'affichage
+            </button>
+            <div class="account-dropdown-label">Changer d'utilisateur</div>
+            <div id="account-switch-list"></div>
+            <div class="account-dropdown-sep"></div>
+            <button type="button" class="account-dropdown-item is-danger" onclick="logoutUser()">
+              Deconnexion
+            </button>
           </div>
-          <div style="width:36px;height:36px;border-radius:50%;background:#1565c0;
-            color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;
-            justify-content:center;flex-shrink:0;cursor:pointer"
-            title="J. Doe — Admin Systeme">JD</div>
         </div>
       </div>
     </div>
@@ -199,7 +211,7 @@
             <button id="btn-view-detail" class="view-toggle-btn"
               onclick="switchView('detail')">Detaillee</button>
           </div>
-          <button class="btn btn-primary"
+          <button class="btn btn-primary" id="btn-new-product"
             onclick="openModal('modal-create-product')">
             + Nouveau produit
           </button>
@@ -230,10 +242,10 @@
               document.querySelector('.nav-item[onclick*=\'products\']'))">
             &larr; Retour a la liste
           </button>
-          <button class="btn btn-primary" onclick="saveProduct()">
+          <button class="btn btn-primary" id="btn-save-product" onclick="saveProduct()">
             &#10003; Enregistrer
           </button>
-          <span style="font-size:11px;color:#a0b0c0">Ctrl+S</span>
+          <span id="btn-save-hint" style="font-size:11px;color:#a0b0c0">Ctrl+S</span>
         </div>
         <div style="background:#fff;border-radius:12px;padding:20px;
           box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:16px">
@@ -261,50 +273,53 @@
       <!-- IMPORTS -->
       <div class="page" id="page-imports"></div>
 
+      <!-- PREFERENCES UTILISATEUR -->
+      <div class="page" id="page-user-prefs"></div>
+
       <!-- ADMINISTRATION -->
       <div class="page" id="page-admin">
         <div style="font-size:18px;font-weight:700;color:#1a2332;margin-bottom:20px">
           Administration
         </div>
         <div class="admin-grid">
-          <div class="admin-card" onclick="showPage('admin-categories',null)">
+          <div class="admin-card" data-mod="mod_categories" onclick="showPage('admin-categories',null)">
             <div class="admin-card-icon">&#127991;</div>
             <div class="admin-card-title">Categories</div>
             <div class="admin-card-sub">Gerer les categories produit</div>
             <div class="admin-card-count" id="admin-count-cats">—</div>
           </div>
-          <div class="admin-card" onclick="showPage('admin-groups',null)">
+          <div class="admin-card" data-mod="mod_groups" onclick="showPage('admin-groups',null)">
             <div class="admin-card-icon">&#128193;</div>
             <div class="admin-card-title">Groupes d'attributs</div>
             <div class="admin-card-sub">Organiser les attributs par groupe</div>
             <div class="admin-card-count" id="admin-count-groups">—</div>
           </div>
-          <div class="admin-card" onclick="showPage('admin-attributes',null)">
+          <div class="admin-card" data-mod="mod_attributes" onclick="showPage('admin-attributes',null)">
             <div class="admin-card-icon">&#9741;</div>
             <div class="admin-card-title">Attributs</div>
             <div class="admin-card-sub">Creer et configurer les attributs</div>
             <div class="admin-card-count" id="admin-count-attrs">—</div>
           </div>
-          <div class="admin-card" onclick="showPage('admin-synthese',null)">
+          <div class="admin-card" data-mod="mod_synthese" onclick="showPage('admin-synthese',null)">
             <div class="admin-card-icon">&#9783;</div>
             <div class="admin-card-title">Groupe Synthese</div>
             <div class="admin-card-sub">Configurer les colonnes de la vue synthese</div>
           </div>
-          <div class="admin-card" onclick="showPage('admin-suppliers',null)">
+          <div class="admin-card" data-mod="mod_conditions" onclick="showPage('admin-suppliers',null)">
             <div class="admin-card-icon">&#127970;</div>
             <div class="admin-card-title">Conditions commerciales</div>
             <div class="admin-card-sub">Conditions commerciales par marque</div>
             <div class="admin-card-count" id="admin-count-suppliers">—</div>
           </div>
-          <div class="admin-card" onclick="showPage('admin-roles',null)">
+          <div class="admin-card" data-mod="mod_roles" onclick="showPage('admin-roles',null)">
             <div class="admin-card-icon">&#128100;</div>
             <div class="admin-card-title">Roles & Permissions</div>
             <div class="admin-card-sub">Gerer les acces utilisateurs</div>
             <div class="admin-card-count" id="admin-count-roles">—</div>
           </div>
-          <div class="admin-card" onclick="showPage('admin-prefs',null)">
+          <div class="admin-card" data-mod="mod_prefs" onclick="showPage('admin-prefs',null)">
             <div class="admin-card-icon">&#9881;</div>
-            <div class="admin-card-title">Preferences</div>
+            <div class="admin-card-title">Preferences application</div>
             <div class="admin-card-sub">Pagination, seuils, options globales</div>
           </div>
         </div>
@@ -315,7 +330,7 @@
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
             onclick="showPage('admin',null)">&larr; Administration</button>
-          <button class="btn btn-primary"
+          <button class="btn btn-primary" id="btn-new-category"
             onclick="openModal('modal-create-category')">+ Nouvelle categorie</button>
         </div>
         <div class="table-container">
@@ -384,7 +399,7 @@
             placeholder="Rechercher un attribut..."
             oninput="renderAttrsTable()"
             style="max-width:260px">
-          <button class="btn btn-primary"
+          <button class="btn btn-primary" id="btn-new-attr"
             onclick="openModal('modal-create-attr')">+ Nouvel attribut</button>
         </div>
         <div class="table-container">
@@ -438,11 +453,53 @@
               <option value="0">Non</option>
             </select>
           </div>
+          <div class="field-row">
+            <div class="field-label">Compte dans la completion</div>
+            <select class="form-select" id="ea-completion">
+              <option value="1">Oui</option>
+              <option value="0">Non</option>
+            </select>
+          </div>
           <div class="field-row" id="ea-formula-wrap">
             <div class="field-label">Formule</div>
             <input class="field-input" id="ea-formula"
-              placeholder="ex: =[marque]+[ref_monture]"
+              placeholder="ex: CONCAT(nom, &quot; - &quot;, sap)"
               style="font-family:monospace">
+          </div>
+          <div id="ea-formula-help" style="display:none"></div>
+          <div class="field-row">
+            <div class="field-label">Texte d'aide (tooltip)</div>
+            <input class="field-input" id="ea-helptext"
+              placeholder="Affiche un ? a cote du libelle sur la fiche produit">
+          </div>
+          <div class="field-row" id="ea-maxlength-wrap" style="display:none">
+            <div class="field-label">Longueur maximale</div>
+            <input class="field-input" id="ea-maxlength" type="number" min="0"
+              placeholder="ex: 500 (vide = illimite)" onwheel="event.preventDefault();this.blur()">
+          </div>
+          <div id="ea-number-wrap" style="display:none">
+            <div class="field-row">
+              <div class="field-label">Incrementation</div>
+              <select class="field-input form-select" id="ea-step-enabled">
+                <option value="0">Non, saisie libre sans fleches</option>
+                <option value="1">Oui, avec fleches d'increment</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Pas d'incrementation</div>
+              <input class="field-input" id="ea-step" type="number"
+                placeholder="ex: 1 ou 0.5" onwheel="event.preventDefault();this.blur()">
+            </div>
+            <div class="field-row">
+              <div class="field-label">Valeur minimale</div>
+              <input class="field-input" id="ea-min" type="number"
+                placeholder="vide = pas de minimum" onwheel="event.preventDefault();this.blur()">
+            </div>
+            <div class="field-row">
+              <div class="field-label">Valeur maximale</div>
+              <input class="field-input" id="ea-max" type="number"
+                placeholder="vide = pas de maximum" onwheel="event.preventDefault();this.blur()">
+            </div>
           </div>
           <div class="field-row">
             <div class="field-label">Masque de saisie</div>
@@ -450,6 +507,7 @@
               placeholder="ex: A999999999999"
               style="font-family:monospace">
           </div>
+          <div id="ea-mask-help" style="display:none"></div>
           <div class="field-row" id="ea-options-wrap" style="display:none">
             <div class="field-label">Options (une par ligne)</div>
             <textarea class="field-input" id="ea-options"
@@ -469,7 +527,7 @@
         <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
             onclick="showPage('admin',null)">&larr; Administration</button>
-          <button class="btn btn-primary"
+          <button class="btn btn-primary" id="btn-new-group"
             onclick="openModal('modal-create-group')">+ Nouveau groupe</button>
         </div>
         <div id="attr-groups-list"></div>
@@ -502,13 +560,17 @@
             </div>
           </div>
           <div class="field-group">
-            <div class="field-group-title">Attributs du groupe</div>
+            <div class="field-group-title">Attributs du groupe
+              <span style="font-size:12px;font-weight:400;color:#a0b0c0">
+                (glisser pour reordonner)
+              </span>
+            </div>
             <input type="text" class="search-input"
               placeholder="Rechercher un attribut..."
               oninput="filterGroupAttrToggles(this.value)"
               style="width:100%;margin-bottom:10px">
             <div id="group-attr-toggle-list"
-              style="max-height:360px;overflow-y:auto"></div>
+              style="max-height:480px;overflow-y:auto"></div>
           </div>
         </div>
       </div>
@@ -564,10 +626,10 @@
       <div class="field-error-msg" id="err-np-sap">Code SAP obligatoire.</div>
     </div>
     <div class="field-row">
-      <div class="field-label">Code EAN *</div>
+      <div class="field-label">Code EAN/GTIN *</div>
       <input class="field-input" id="np-ean"
         placeholder="ex: 08056262500675" style="font-family:monospace">
-      <div class="field-error-msg" id="err-np-ean">Code EAN obligatoire.</div>
+      <div class="field-error-msg" id="err-np-ean">Code EAN/GTIN obligatoire.</div>
     </div>
     <div class="field-row">
       <div class="field-label">Nom produit *</div>
@@ -665,16 +727,59 @@
         </select>
       </div>
       <div class="form-field">
+        <div class="form-label">Compte dans la completion</div>
+        <select class="form-select" id="new-attr-completion">
+          <option value="1">Oui</option>
+          <option value="0">Non</option>
+        </select>
+      </div>
+      <div class="form-field">
         <div class="form-label">Masque de saisie</div>
         <input class="field-input" id="new-attr-mask"
           placeholder="ex: A999999999999" style="font-family:monospace">
       </div>
+      <div class="form-field" id="new-attr-maxlength-wrap" style="display:none">
+        <div class="form-label">Longueur maximale</div>
+        <input class="field-input" id="new-attr-maxlength" type="number" min="0"
+          placeholder="ex: 500 (vide = illimite)" onwheel="event.preventDefault();this.blur()">
+      </div>
     </div>
+    <div class="form-grid" id="new-attr-number-wrap" style="display:none">
+      <div class="form-field">
+        <div class="form-label">Incrementation</div>
+        <select class="field-input form-select" id="new-attr-step-enabled">
+          <option value="0">Non, saisie libre sans fleches</option>
+          <option value="1">Oui, avec fleches d'increment</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Pas d'incrementation</div>
+        <input class="field-input" id="new-attr-step" type="number"
+          placeholder="ex: 1 ou 0.5" onwheel="event.preventDefault();this.blur()">
+      </div>
+      <div class="form-field">
+        <div class="form-label">Valeur minimale</div>
+        <input class="field-input" id="new-attr-min" type="number"
+          placeholder="vide = pas de minimum" onwheel="event.preventDefault();this.blur()">
+      </div>
+      <div class="form-field">
+        <div class="form-label">Valeur maximale</div>
+        <input class="field-input" id="new-attr-max" type="number"
+          placeholder="vide = pas de maximum" onwheel="event.preventDefault();this.blur()">
+      </div>
+    </div>
+    <div id="new-attr-mask-help" style="display:none"></div>
     <div class="field-row" style="margin-top:14px" id="new-attr-formula-wrap">
       <div class="field-label">Formule</div>
       <input class="field-input" id="new-attr-formula"
-        placeholder="ex: =[marque]+[ref_monture]"
+        placeholder="ex: CONCAT(nom, &quot; - &quot;, sap)"
         style="font-family:monospace">
+    </div>
+    <div id="new-attr-formula-help" style="display:none"></div>
+    <div class="field-row" style="margin-top:14px">
+      <div class="field-label">Texte d'aide (tooltip)</div>
+      <input class="field-input" id="new-attr-helptext"
+        placeholder="Affiche un ? a cote du libelle sur la fiche produit">
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary"
@@ -733,7 +838,8 @@
     <div class="field-row">
       <div class="field-label">Seuil (%)</div>
       <input type="number" class="field-input" id="seuil-input"
-        min="0" max="100" step="5" style="width:120px">
+        min="0" max="100" step="5" style="width:120px"
+        onwheel="event.preventDefault();this.blur()">
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary"
@@ -744,34 +850,29 @@
   </div>
 </div>
 
+<div class="login-overlay" id="login-overlay" hidden>
+  <div class="login-card">
+    <div class="login-brand">
+      <span style="font-size:36px">&#129425;</span>
+      <div class="login-title">OctoPIM</div>
+    </div>
+    <div class="login-sub">Choisissez un compte pour vous connecter</div>
+    <div id="login-user-list" class="login-user-list"></div>
+  </div>
+</div>
+
 <!-- SCRIPTS -->
-<script src="js/data.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/products.js"></script>
-<script src="js/admin.js"></script>
-<script src="js/detail.js"></script>
-<script src="js/export.js"></script>
-<script src="js/import.js"></script>
+<script src="js/data.js?v=15"></script>
+<script src="js/utils.js?v=15"></script>
+<script src="js/dashboard.js?v=15"></script>
+<script src="js/products.js?v=15"></script>
+<script src="js/admin.js?v=15"></script>
+<script src="js/detail.js?v=15"></script>
+<script src="js/export.js?v=15"></script>
+<script src="js/import.js?v=15"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const npCat = document.getElementById('np-cat');
-    if (npCat) {
-      categories.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.name; opt.textContent = c.name;
-        npCat.appendChild(opt);
-      });
-    }
-    const filterCat = document.getElementById('filter-cat');
-    if (filterCat) {
-      categories.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.name; opt.textContent = c.name;
-        filterCat.appendChild(opt);
-      });
-    }
     const newAttrGroup = document.getElementById('new-attr-group');
     if (newAttrGroup) {
       attrGroups.forEach(g => {
