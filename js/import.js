@@ -9,7 +9,6 @@ let importStep        = 1;       // 1 = config, 2 = apercu, 3 = résultat
 let importParsedRows  = [];      // lignes parsées depuis le fichier
 let importMappedRows  = [];      // lignes après mapping colonnes
 let importAction      = 'add';   // 'add' | 'update' | 'delete'
-let importKeyField    = 'ean';   // champ identifiant : 'ean' | 'sap'
 let importCategory    = '';      // categorie cible
 let importColMapping  = {};      // { colFichier: codeAttribut }
 
@@ -73,9 +72,17 @@ function importStepperHtml(active) {
 // STEP 1 — CONFIGURATION
 // ============================================================
 function renderImportStep1() {
-  const catOptions = categories.map(c =>
+  const writable = getWritableCategories();
+  const deletable = categories.filter(c => canCat(c.id, 'd'));
+  const catOptions = (importAction === 'delete' ? deletable : writable).map(c =>
     `<option value="${c.name}">${c.name}</option>`
   ).join('');
+
+  const actions = [
+    { val: 'add',    label: 'Ajout',        sub: 'Creer les produits du fichier',           icon: '&#10133;', show: writable.length > 0 },
+    { val: 'update', label: 'Modification',  sub: 'Mettre a jour les produits existants',    icon: '&#9999;&#65039;', show: writable.length > 0 },
+    { val: 'delete', label: 'Suppression',   sub: 'Supprimer les produits identifies',       icon: '&#128465;&#65039;', show: deletable.length > 0 },
+  ].filter(a => a.show);
 
   return `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
@@ -87,11 +94,7 @@ function renderImportStep1() {
         <div class="field-row">
           <div class="field-label">Action *</div>
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-            ${[
-              { val: 'add',    label: 'Ajout',        sub: 'Creer les produits du fichier',           icon: '&#10133;' },
-              { val: 'update', label: 'Modification',  sub: 'Mettre a jour les produits existants',    icon: '&#9999;&#65039;' },
-              { val: 'delete', label: 'Suppression',   sub: 'Supprimer les produits identifies',       icon: '&#128465;&#65039;' },
-            ].map(a => `
+            ${actions.map(a => `
               <label class="import-action-radio ${importAction === a.val ? 'selected' : ''}"
                 onclick="selectImportAction('${a.val}')">
                 <input type="radio" name="import-action" value="${a.val}"
@@ -102,14 +105,14 @@ function renderImportStep1() {
                   <div style="font-size:11px;color:#a0b0c0">${a.sub}</div>
                 </div>
               </label>`
-            ).join('')}
+            ).join('') || '<div style="font-size:13px;color:#a0b0c0">Aucune action disponible.</div>'}
           </div>
         </div>
 
         <div class="field-row" style="margin-top:16px">
           <div class="field-label">Categorie cible *</div>
-          <select class="form-select" id="import-cat" onchange="importCategory=this.value">
-            <option value="">-- Toutes categories --</option>
+          <select class="form-select" id="import-cat" onchange="onImportCatChange(this.value)">
+            <option value="">-- Choisir --</option>
             ${catOptions}
           </select>
           <div style="font-size:11px;color:#a0b0c0;margin-top:4px">
@@ -118,18 +121,11 @@ function renderImportStep1() {
         </div>
 
         <div class="field-row">
-          <div class="field-label">Identifiant produit *</div>
-          <select class="form-select" id="import-key"
-            onchange="importKeyField=this.value">
-            <option value="ean" ${importKeyField === 'ean' ? 'selected' : ''}>
-              Code EAN
-            </option>
-            <option value="sap" ${importKeyField === 'sap' ? 'selected' : ''}>
-              Code SAP
-            </option>
-          </select>
-          <div style="font-size:11px;color:#a0b0c0;margin-top:4px">
-            Colonne utilisee pour identifier un produit existant.
+          <div class="field-label">Champs obligatoires</div>
+          <div id="import-required-list">${renderImportRequiredListHtml()}</div>
+          <div style="font-size:11px;color:#a0b0c0;margin-top:6px">
+            Minimum a fournir dans le fichier. Les en-tetes doivent etre les
+            <strong>codes techniques</strong> (ex. ean, nom, cat).
           </div>
         </div>
       </div>
@@ -214,6 +210,68 @@ function selectImportAction(val) {
   document.querySelectorAll('.import-action-radio').forEach(el => {
     el.classList.toggle('selected', el.querySelector('input').value === val);
   });
+}
+
+function onImportCatChange(val) {
+  importCategory = val || '';
+  refreshImportRequiredList();
+}
+
+function getImportTargetAttrs() {
+  return getImportTargetAttrsFor(importCategory);
+}
+
+function getImportTargetAttrsFor(catName) {
+  if (!catName) return attributes.filter(a => !a.calc && !a.readonly && a.code !== 'completion');
+  const cat = getCatByName(catName);
+  if (!cat) return attributes.filter(a => !a.calc && !a.readonly && a.code !== 'completion');
+  const seen = new Set();
+  return cat.groupIds
+    .map(gid => getGroupById(gid))
+    .filter(Boolean)
+    .flatMap(g => g.attrIds.map(id => getAttrById(id)).filter(Boolean))
+    .filter(a => {
+      if (a.calc || a.readonly || a.code === 'completion') return false;
+      if (seen.has(a.code)) return false;
+      seen.add(a.code);
+      return true;
+    });
+}
+
+function getRequiredImportAttrs(catName) {
+  const pool = getImportTargetAttrsFor(catName || importCategory);
+  const req  = pool.filter(a => a.required);
+  const catAttr = attributes.find(a => a.code === 'cat');
+  if (catAttr && catAttr.required && !req.some(a => a.code === 'cat')) req.unshift(catAttr);
+  const seen = new Set();
+  return req.filter(a => {
+    if (seen.has(a.code)) return false;
+    seen.add(a.code);
+    return true;
+  });
+}
+
+function renderImportRequiredListHtml() {
+  const req = getRequiredImportAttrs(importCategory);
+  if (!req.length) {
+    return `<div style="font-size:13px;color:#a0b0c0;margin-top:6px">
+      Aucun champ obligatoire. Choisissez une categorie pour affiner la liste.
+    </div>`;
+  }
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+    ${req.map(a =>
+      `<span class="attr-chip" style="background:#fce4ec;color:#c62828;font-size:11px">
+        <span class="field-required">*</span>
+        <span style="font-family:monospace;font-weight:700">${escapeHtml(a.code)}</span>
+        <span style="opacity:.75;font-weight:400"> — ${escapeHtml(a.name)}</span>
+      </span>`
+    ).join('')}
+  </div>`;
+}
+
+function refreshImportRequiredList() {
+  const box = document.getElementById('import-required-list');
+  if (box) box.innerHTML = renderImportRequiredListHtml();
 }
 
 // ============================================================
@@ -302,7 +360,6 @@ function parseCSV(text) {
 // ============================================================
 function goToImportStep2() {
   importCategory = (document.getElementById('import-cat') || {}).value || '';
-  importKeyField = (document.getElementById('import-key') || {}).value || 'ean';
 
   if (!importParsedRows.length) {
     showNotif('Veuillez charger un fichier avant de continuer', 'error');
@@ -324,16 +381,18 @@ function renderImportStep2() {
   // Mapping auto : si le header du fichier correspond exactement au code ou nom d'un attribut
   importColMapping = {};
   fileHeaders.forEach(h => {
-    const match = targetAttrs.find(a =>
-      a.code === h.toLowerCase().trim() ||
-      a.name.toLowerCase() === h.toLowerCase().trim()
-    );
+    const hNorm = h.toLowerCase().trim();
+    const match = targetAttrs.find(a => a.code.toLowerCase() === hNorm)
+      || targetAttrs.find(a => a.name.toLowerCase() === hNorm);
     if (match) importColMapping[h] = match.code;
   });
 
-  const attrOptions = `<option value="">-- Ignorer --</option>` +
+  const reqCodes = getRequiredImportAttrs(importCategory).map(a => a.code);
+
+  const attrOptionsFor = (selected) =>
+    `<option value="">-- Ignorer --</option>` +
     targetAttrs.map(a =>
-      `<option value="${a.code}">${a.name}</option>`
+      `<option value="${a.code}"${a.code === selected ? ' selected' : ''}>${a.code} — ${a.name}${a.required ? ' *' : ''}</option>`
     ).join('');
 
   return `
@@ -341,7 +400,7 @@ function renderImportStep2() {
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
       ${[
         { label: 'Action',      val: importAction === 'add' ? 'Ajout' : importAction === 'update' ? 'Modification' : 'Suppression' },
-        { label: 'Identifiant', val: importKeyField === 'ean' ? 'Code EAN' : 'Code SAP' },
+        { label: 'Obligatoires', val: reqCodes.length ? reqCodes.join(', ') : '—' },
         { label: 'Categorie',   val: importCategory || 'Toutes' },
         { label: 'Lignes',      val: importParsedRows.length },
       ].map(r => `
@@ -356,8 +415,8 @@ function renderImportStep2() {
     <div class="field-group" style="margin-bottom:20px">
       <div class="field-group-title">Mapping des colonnes</div>
       <div style="font-size:12px;color:#607080;margin-bottom:14px">
-        Associez chaque colonne de votre fichier a un attribut OctoPIM.
-        Les colonnes non mappees seront ignorees.
+        Associez chaque colonne de votre fichier au <strong>code technique</strong> d'un attribut.
+        Les colonnes non mappees seront ignorees. Les champs obligatoires doivent etre mappees.
       </div>
       <div style="display:grid;grid-template-columns:1fr auto 1fr;
         gap:8px;align-items:center;margin-bottom:8px">
@@ -377,10 +436,7 @@ function renderImportStep2() {
           <div style="color:#a0b0c0;font-size:16px">&rarr;</div>
           <select class="form-select" id="map-${h.replace(/\s/g,'_')}"
             onchange="importColMapping['${h}']=this.value">
-            ${attrOptions.replace(
-              `value="${importColMapping[h] || ''}"`,
-              `value="${importColMapping[h] || ''}" selected`
-            )}
+            ${attrOptionsFor(importColMapping[h] || '')}
           </select>
         </div>`
       ).join('')}
@@ -423,17 +479,6 @@ function renderImportStep2() {
     </div>`;
 }
 
-function getImportTargetAttrs() {
-  if (!importCategory) return attributes.filter(a => !a.calc && !a.readonly);
-  const cat = getCatByName(importCategory);
-  if (!cat) return attributes.filter(a => !a.calc && !a.readonly);
-  return cat.groupIds
-    .map(gid => getGroupById(gid))
-    .filter(Boolean)
-    .flatMap(g => g.attrIds.map(id => getAttrById(id)).filter(Boolean))
-    .filter(a => !a.calc && !a.readonly);
-}
-
 function backToImportStep1() {
   importStep = 1;
   const stepper = document.getElementById('import-stepper');
@@ -445,71 +490,154 @@ function backToImportStep1() {
 // ============================================================
 // EXECUTION IMPORT
 // ============================================================
+function importRowHint(fields) {
+  if (fields.ean) return 'ean=' + fields.ean;
+  if (fields.sap) return 'sap=' + fields.sap;
+  if (fields.nom) return 'nom=' + fields.nom;
+  return 'ligne';
+}
+
+function findImportedProduct(fields) {
+  const tryCode = (code) => {
+    const val = (fields[code] || '').toString().trim();
+    if (!val) return null;
+    const attr = attributes.find(a => a.code === code);
+    return products.find(p => String(getAttrFieldValue(p, attr || { code }) || '').trim() === val) || null;
+  };
+  const byEan = tryCode('ean');
+  if (byEan) return byEan;
+  const bySap = tryCode('sap');
+  if (bySap) return bySap;
+  const keys = getRequiredImportAttrs(importCategory)
+    .filter(a => a.code !== 'cat' && (fields[a.code] || '').toString().trim());
+  if (!keys.length) return null;
+  const catHint = (fields.cat || importCategory || '').toString().trim();
+  return products.find(p => {
+    if (catHint && p.cat !== catHint) return false;
+    return keys.every(a =>
+      String(getAttrFieldValue(p, a) || '').trim() === String(fields[a.code]).trim()
+    );
+  }) || null;
+}
+
 function runImport() {
-  const keyAttr = importKeyField; // 'ean' ou 'sap'
+  if (importAction === 'delete' && !categories.some(c => canCat(c.id, 'd'))) {
+    showNotif('Suppression par import non autorisee', 'warn');
+    return;
+  }
+  if ((importAction === 'add' || importAction === 'update') && !getWritableCategories().length) {
+    showNotif('Import non autorise', 'warn');
+    return;
+  }
+  const targetCat = importCategory;
+  if (targetCat) {
+    if (importAction === 'delete' && !canCat(targetCat, 'd')) {
+      showNotif('Suppression non autorisee sur cette categorie', 'warn');
+      return;
+    }
+    if (importAction !== 'delete' && !canCat(targetCat, 'w')) {
+      showNotif('Import non autorise sur cette categorie', 'warn');
+      return;
+    }
+  }
+  const mappedCodes = Object.values(importColMapping).filter(Boolean);
+  const requiredAttrs = getRequiredImportAttrs(importCategory);
+  const missingReq = requiredAttrs.filter(a => !mappedCodes.includes(a.code));
+  if (importAction !== 'delete' && missingReq.length) {
+    showNotif('Champs obligatoires non mappees : ' + missingReq.map(a => a.code).join(', '), 'error');
+    return;
+  }
+  if (importAction === 'delete' && !mappedCodes.includes('ean') && !mappedCodes.includes('sap')) {
+    showNotif('Mappez ean ou sap pour identifier les produits a supprimer', 'error');
+    return;
+  }
+
   let added = 0, updated = 0, deleted = 0, errors = [];
 
   importParsedRows.forEach((row, idx) => {
-    // Recupere la valeur de l'identifiant
-    const keyCol = Object.keys(importColMapping).find(
-      k => importColMapping[k] === keyAttr
-    );
-    const keyVal = keyCol ? (row[keyCol] || '').toString().trim() : '';
-
-    if (!keyVal) {
-      errors.push(`Ligne ${idx + 2} : identifiant manquant`);
-      return;
-    }
-
-    // Cherche le produit existant
-    const existing = products.find(p =>
-      (p.fields[keyAttr] || '').toString().trim() === keyVal
-    );
-
-    if (importAction === 'delete') {
-      if (existing) {
-        products = products.filter(p => p.id !== existing.id);
-        deleted++;
-      } else {
-        errors.push(`Ligne ${idx + 2} : produit introuvable (${keyAttr} = ${keyVal})`);
-      }
-      return;
-    }
-
-    // Construit les champs depuis le mapping
     const fields = {};
     Object.keys(importColMapping).forEach(col => {
       const attrCode = importColMapping[col];
       if (attrCode) fields[attrCode] = (row[col] || '').toString().trim();
     });
 
-    if (importAction === 'add') {
-      if (existing) {
-        errors.push(`Ligne ${idx + 2} : produit deja existant (${keyAttr} = ${keyVal}), ignore`);
+    if (importAction !== 'delete') {
+      const emptyReq = requiredAttrs.filter(a => !(fields[a.code] || '').toString().trim());
+      if (emptyReq.length) {
+        errors.push(`Ligne ${idx + 2} : champs obligatoires manquants (${emptyReq.map(a => a.code).join(', ')})`);
         return;
       }
+    }
+
+    const existing = findImportedProduct(fields);
+    const keyHint  = importRowHint(fields);
+
+    if (importAction === 'delete') {
+      if (existing) {
+        if (!canDeleteProduct(existing)) {
+          errors.push(`Ligne ${idx + 2} : suppression non autorisee (${keyHint})`);
+          return;
+        }
+        products = products.filter(p => p.id !== existing.id);
+        deleted++;
+      } else {
+        errors.push(`Ligne ${idx + 2} : produit introuvable (${keyHint})`);
+      }
+      return;
+    }
+
+    if (importAction === 'add') {
+      if (existing) {
+        errors.push(`Ligne ${idx + 2} : produit deja existant (${keyHint}), ignore`);
+        return;
+      }
+      const catName = fields.cat || importCategory || (getWritableCategories()[0] ? getWritableCategories()[0].name : '');
+      if (!canCat(catName, 'w')) {
+        errors.push(`Ligne ${idx + 2} : creation non autorisee`);
+        return;
+      }
+      const storeFields = {};
+      Object.keys(fields).forEach(code => {
+        const attr = attributes.find(a => a.code === code);
+        if (attrStoresInFields(attr)) storeFields[code] = fields[code];
+      });
       const today = todayStr();
       products.push({
         id: nextProductId++,
-        cat: importCategory || (categories[0] ? categories[0].name : ''),
+        cat: catName,
         createdAt: today,
         maj: nowStr(),
         visualSrc: null,
         visuals: 0,
         history: [],
         pendingChanges: [],
-        fields: { ...fields },
+        fields: storeFields,
       });
       added++;
     } else if (importAction === 'update') {
       if (!existing) {
-        errors.push(`Ligne ${idx + 2} : produit introuvable (${keyAttr} = ${keyVal})`);
+        errors.push(`Ligne ${idx + 2} : produit introuvable (${keyHint})`);
+        return;
+      }
+      if (!canEditProduct(existing)) {
+        errors.push(`Ligne ${idx + 2} : modification non autorisee (${keyHint})`);
         return;
       }
       Object.keys(fields).forEach(code => {
+        const attr = attributes.find(a => a.code === code);
+        if (code === 'cat') {
+          if (existing.cat !== fields.cat) {
+            existing.history.push({
+              ts: nowStr(), user: 'Import', field: 'Categorie',
+              old: existing.cat, new: fields.cat,
+            });
+            existing.cat = fields.cat;
+          }
+          return;
+        }
+        if (!attrStoresInFields(attr)) return;
         const old = existing.fields[code] || '';
         if (old !== fields[code]) {
-          const attr = attributes.find(a => a.code === code);
           existing.history.push({
             ts:    nowStr(),
             user:  'Import',
@@ -611,34 +739,17 @@ function downloadTrame() {
   }
 
   const catName = (document.getElementById('trame-cat') || {}).value || '';
-  const cat     = getCatByName(catName);
+  const req     = getRequiredImportAttrs(catName);
+  const rest    = getImportTargetAttrsFor(catName)
+    .map(a => a.code)
+    .filter(c => !req.some(a => a.code === c));
+  const headers = [...req.map(a => a.code), ...rest];
 
-    // Colonnes de la trame — entetes = code technique
-  const baseHeaders = ['ean', 'sap', 'nom', 'categorie'];
-  let attrHeaders   = [];
-
-  if (cat) {
-    attrHeaders = cat.groupIds
-      .map(gid => getGroupById(gid))
-      .filter(Boolean)
-      .filter(g => g.code !== 'visuels')
-      .flatMap(g => g.attrIds.map(id => getAttrById(id)).filter(Boolean))
-      .filter(a => !a.calc && !a.readonly)
-      .map(a => a.code);
-  } else {
-    attrHeaders = attributes
-      .filter(a => !a.calc && !a.readonly)
-      .map(a => a.code);
-  }
-
-  const headers = [...baseHeaders, ...attrHeaders];
-
-  // Ligne exemple
   const exampleRow = headers.map(h => {
-    if (h === 'ean')       return '08056262500675';
-    if (h === 'sap')       return 'M906342000001';
-    if (h === 'nom')       return 'Exemple produit';
-    if (h === 'categorie') return catName || (categories[0] ? categories[0].name : '');
+    if (h === 'ean') return '08056262500675';
+    if (h === 'sap') return 'M906342000001';
+    if (h === 'nom') return 'Exemple produit';
+    if (h === 'cat') return catName || (categories[0] ? categories[0].name : '');
     return '';
   });
 
@@ -664,19 +775,16 @@ function downloadTrame() {
     ['Categorie cible', catName || 'Toutes'],
     ['Date generation', todayStr()],
     ['', ''],
-    ['REGLES DE REMPLISSAGE', ''],
-    ['EAN',         'Obligatoire — identifiant unique produit (13 chiffres)'],
-    ['SAP',         'Obligatoire — code SAP interne'],
-    ['Nom produit', 'Obligatoire'],
-    ['Categorie',   'Doit correspondre exactement a une categorie existante'],
+    ['CHAMPS OBLIGATOIRES (codes techniques en en-tete)', ''],
+    ...req.map(a => [a.code, 'Obligatoire — ' + a.name]),
     ['', ''],
     ['ACTIONS DISPONIBLES', ''],
-    ['Ajout',       'Creer de nouveaux produits — l\'EAN ou SAP ne doit pas exister'],
-    ['Modification','Mettre a jour des produits existants — l\'EAN ou SAP doit exister'],
-    ['Suppression', 'Supprimer des produits — seul l\'identifiant est necessaire'],
+    ['Ajout',       'Creer de nouveaux produits — matching sur ean puis sap'],
+    ['Modification','Mettre a jour des produits existants — matching sur ean puis sap'],
+    ['Suppression', 'Supprimer des produits — matching sur ean puis sap'],
     ['', ''],
     ['NOTES', ''],
-    ['- Ne pas modifier les en-tetes de colonnes', ''],
+    ['- Ne pas modifier les en-tetes de colonnes (codes techniques)', ''],
     ['- Laisser vide les colonnes non renseignees', ''],
     ['- Encodage UTF-8 pour les fichiers CSV', ''],
   ];

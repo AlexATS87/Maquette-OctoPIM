@@ -12,6 +12,10 @@ function matchBrandType(brandType,catName){
 function openProductDetail(id){
   currentProductId=id;
   const p=products.find(x=>x.id===id);if(!p)return;
+  if(!requirePerm(canCat(p.cat,'r'),'Produit non accessible')){
+    currentProductId=null;
+    return;
+  }
   if(!p.history)p.history=[];
   if(!p.pendingChanges)p.pendingChanges=[];
   computeCalcFields(p);
@@ -21,6 +25,7 @@ function openProductDetail(id){
   renderProductTabs(p,cat);
   updateDetailCompletion(p);
   showPage('product-detail',null);
+  applyAccessControl();
 }
 
 // ============================================================
@@ -49,54 +54,58 @@ function cancelLeaveUnsaved(){
 // ============================================================
 // HEADER PRODUIT
 // ============================================================
+// Une info du bloc resume, pilotee par un element de syntheseItems
+function summaryChip(p, item) {
+  const code = item.code;
+  if (code === 'cat')
+    return `<span><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></span>`;
+  if (code === 'completion') {
+    const c = calcCompletion(p);
+    return `<span>${item.label} : <strong style="color:${getCompletionColor(c)}">${c}%</strong></span>`;
+  }
+  return `<span>${item.label} : ${getSynthValue(p, code) || '—'}</span>`;
+}
+
+// Vignette du bloc resume : attribut Image configure dans la vue synthese
+function summaryVisual(p) {
+  const visual = getSynthVisualItem();
+  if (!visual) return '';
+  const src = p.fields[visual.code];
+  return `
+    <div onclick="triggerVisualUpload(${p.id},'${visual.code}')"
+      style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;
+        overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;
+        justify-content:center;background:#f8fafc;"
+      title="Cliquer pour modifier : ${visual.label}">
+      ${src
+        ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;">`
+        : `<div style="display:flex;flex-direction:column;align-items:center;
+             gap:4px;color:#c0d0e0">
+             <span style="font-size:28px">&#128247;</span>
+             <span style="font-size:10px">Ajouter</span>
+           </div>`}
+    </div>`;
+}
+
 function renderProductHeader(p, cat) {
   const headerLeft = document.getElementById('product-header-left');
   if (!headerLeft) return;
-  const nom          = p.fields.nom || '—';
-  const activeGlobal = calcActiveGlobal(p);
-  const etatVisuel   = calcEtatVisuel(p);
-  const brandInfo    = getBrandInfoForProduct(p);
 
-  const margeHtml = brandInfo && typeof brandInfo.remiseEnseigne === 'number'
-    ? `<span style="font-size:12px;color:#607080">
-         ${brandInfo.sup} / ${brandInfo.marque} —
-         Remise enseigne : <strong style="color:#1565c0">
-           ${(brandInfo.remiseEnseigne * 100).toFixed(0)}%
-         </strong>
-       </span>`
-    : '';
+  // Memes champs et meme ordre que la vue synthese, hors actions.
+  // La premiere information sert de titre, l'attribut Image sert de vignette.
+  const titleItem = getSynthTitleItem();
+  const title     = titleItem ? (getSynthValue(p, titleItem.code) || '—') : (p.fields.nom || '—');
+  const metaHtml  = syntheseItems
+    .filter(i => i.kind === 'attr' && i !== titleItem && !isVisualCode(i.code))
+    .map(i => summaryChip(p, i))
+    .join('');
 
   headerLeft.innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:16px">
-      <div onclick="triggerVisualUpload(${p.id},'visuel_face')"
-        style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;
-          overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;
-          justify-content:center;background:#f8fafc;"
-        title="Cliquer pour modifier le visuel face">
-        ${p.fields.visuel_face
-          ? `<img src="${p.fields.visuel_face}"
-               style="width:100%;height:100%;object-fit:cover;">`
-          : `<div style="display:flex;flex-direction:column;align-items:center;
-               gap:4px;color:#c0d0e0">
-               <span style="font-size:28px">&#128247;</span>
-               <span style="font-size:10px">Ajouter</span>
-             </div>`}
-      </div>
+      ${summaryVisual(p)}
       <div style="flex:1">
-        <div class="product-title">${nom}</div>
-        <div class="product-meta">
-          <span>SAP : ${p.fields.sap || '—'}</span>
-          <span>EAN : ${p.fields.ean || '—'}</span>
-          <span><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></span>
-          <span><span class="${activeGlobal === 'Actif' ? 'badge-active-on' : 'badge-active-off'}">
-            ${activeGlobal}
-          </span></span>
-          <span><span class="${etatVisuel === 'Oui' ? 'badge-etat-ok' : 'badge-etat-ko'}">
-            Visuels : ${etatVisuel}
-          </span></span>
-          ${margeHtml}
-          <span style="color:#a0b0c0">Cree le ${p.createdAt || '—'}</span>
-        </div>
+        <div class="product-title">${title}</div>
+        <div class="product-meta">${metaHtml}</div>
       </div>
     </div>`;
 }
@@ -136,13 +145,6 @@ function getBrandInfoForProduct(p) {
   return { ...b, sup: sup ? sup.name : b.fournisseurCode };
 }
 
-function calcActiveGlobal(p){
-  const f=p.fields;
-  return((f.active_o2||'').toLowerCase()==='oui'||(f.active_lissac||'').toLowerCase()==='oui')?'Actif':'Inactif';
-}
-function calcEtatVisuel(p){
-  return(p.fields.visuel_face&&p.fields.visuel_tq&&p.fields.visuel_profil)?'Oui':'Non';
-}
 function getCatBadgeStyle(catName){
   const cat=getCatByName(catName);
   if(!cat)return'background:#f0f4f8;color:#607080;border:1px solid #e0e8f0;';
@@ -154,6 +156,8 @@ function getCatBadgeStyle(catName){
 // UPLOAD VISUEL
 // ============================================================
 function triggerVisualUpload(productId,attrCode){
+  const p=products.find(x=>x.id===productId);if(!p)return;
+  if(!requirePerm(canEditProduct(p)))return;
   const input=document.createElement('input');input.type='file';input.accept='image/*';
   input.onchange=function(e){
     const file=e.target.files[0];if(!file)return;
@@ -218,12 +222,12 @@ function renderProductTabs(p,cat){
     content.className='tab-content'+(i===0?' active':'');
     content.id='tab-group-'+g.id;
     if(g._isHist)content.innerHTML=renderTabHistory(p);
-    else if(g.code==='infos_generales')content.innerHTML=renderTabGeneral(p);
     else if(g.code==='visuels')content.innerHTML=renderTabVisuels(p);
     else if(g.isBrandGroup)content.innerHTML=renderTabMarque(p,g);
     else content.innerHTML=renderTabAttrGroup(p,g);
     contentsEl.appendChild(content);
   });
+  lockProductSheet(p);
 }
 
 // ============================================================
@@ -258,38 +262,21 @@ function flushPendingChanges(p){
   if(!p.pendingChanges||!p.pendingChanges.length)return;
   const ts=nowStr();
   p.pendingChanges.forEach(c=>{
-    if(c.old!==c.new)p.history.push({ts,user:'J. Doe',field:c.field,old:c.old,new:c.new});
+    if(c.old!==c.new)p.history.push({ts,user:currentUserName(),field:c.field,old:c.old,new:c.new});
   });
   p.pendingChanges=[];
 }
 
 // ============================================================
-// ONGLET INFOS GENERALES
+// INDICATEURS DE LABEL — * si required (+ jauge completion via attrLabelHtml)
 // ============================================================
-function renderTabGeneral(p){
-  return`<div class="fields-grid">
-  <div class="field-group"><div class="field-group-title">Identification</div>
-    <div class="field-row"><div class="field-label">Code SAP <span class="field-required">*</span></div>
-      <input class="field-input" value="${p.fields.sap||''}" oninput="onFieldChange(${p.id},this,'sap')"></div>
-    <div class="field-row"><div class="field-label">Code EAN <span class="field-required">*</span></div>
-      <input class="field-input" value="${p.fields.ean||''}" oninput="onFieldChange(${p.id},this,'ean')"></div>
-    <div class="field-row"><div class="field-label">Nom produit <span class="field-required">*</span></div>
-      <input class="field-input" value="${p.fields.nom||''}" oninput="onFieldChange(${p.id},this,'nom')"></div>
-    <div class="field-row"><div class="field-label">Categorie</div>
-      <select class="field-input form-select" onchange="onCatChange(${p.id},this)">
-        ${categories.map(c=>`<option${c.name===p.cat?' selected':''}>${c.name}</option>`).join('')}
-      </select></div>
-  </div>
-  <div class="field-group"><div class="field-group-title">Dates</div>
-    <div class="field-row"><div class="field-label">Date de creation</div>
-      <input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${p.createdAt||''}" readonly></div>
-    <div class="field-row"><div class="field-label">Date de mise en ligne</div>
-      <input class="field-input" style="font-family:monospace" value="${p.fields.miseEnLigne||''}" placeholder="jj/mm/aaaa" maxlength="10"
-        oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'miseEnLigne')"></div>
-    <div class="field-row"><div class="field-label">Derniere MAJ</div>
-      <input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${p.maj||''}" readonly></div>
-  </div></div>`;
+function attrIndicators(code){
+  const a=attributes.find(x=>x.code===code);
+  if(!a)return'';
+  const req=a.required?' <span class="field-required">*</span>':'';
+  return req+attrHelpTip(a);
 }
+
 function onDateMaskInput(el){
   let v=el.value.replace(/\D/g,'');
   if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);
@@ -350,7 +337,7 @@ function renderTabVisuels(p) {
 }
 
 function renderAttrFieldHtml(p,a,labelOverride){
-  const val=p.fields[a.code]!==undefined?p.fields[a.code]:'';
+  const val=displayFieldVal(p.fields[a.code]);
   const label=labelOverride||a.name;
   let input='';
   if(a.type==='Simple select'){
@@ -372,62 +359,49 @@ function renderAttrFieldHtml(p,a,labelOverride){
 function renderTabMarque(p, g) {
   computeCalcFields(p);
   const catName = p.cat;
-
-  // Tous les fournisseurs qui ont au moins une condition pour cette catégorie
-  const eligibleSupCodes = [...new Set(
-    brandSettings
-      .filter(b => !b.type || b.type === catName)
-      .map(b => b.fournisseurCode)
-  )];
-  const eligibleSuppliers = suppliers.filter(s => eligibleSupCodes.includes(s.code));
-
+  const eligibleSuppliers = suppliersForProduct(p);
   const currentSup    = p.fields.fournisseur_code || '';
   const currentMarque = p.fields.marque || '';
-
-  const supOptions = `<option value="">-- Choisir --</option>` +
-    eligibleSuppliers.map(s =>
-      `<option value="${s.code}" ${s.code === currentSup ? 'selected' : ''}>
-        ${s.name} (${s.code})
-      </option>`
-    ).join('');
-
-  const availableMarques = [...new Set(
-    brandSettings
-      .filter(b =>
-        (!currentSup || b.fournisseurCode === currentSup) &&
-        (!b.type || b.type === catName)
-      )
-      .map(b => b.marque)
-  )].sort();
-
-  const marqueOptions = `<option value="">-- Choisir --</option>` +
-    availableMarques.map(m =>
-      `<option ${m === currentMarque ? 'selected' : ''}>${m}</option>`
-    ).join('');
-
+  const availableMarques = marquesForProduct(p);
   const brandInfo = getBrandInfoForProduct(p);
+  const segBits = [...new Set(
+    brandSettings.filter(b => b.segAttrCode && (!b.type || matchBrandType(b.type, catName)))
+      .map(b => b.segAttrCode)
+  )].map(code => {
+    const a = attributes.find(x => x.code === code);
+    const val = p.fields[code];
+    return (a ? a.name : code) + (val ? ' = ' + val : ' (non renseigne)');
+  });
+  const filterHint = ['categorie : ' + catName].concat(segBits).join(', ');
 
   return `<div class="fields-grid">
     <div class="field-group">
       <div class="field-group-title">Couple Fournisseur / Marque</div>
       <div style="font-size:12px;color:#a0b0c0;margin-bottom:12px">
-        Filtre sur la categorie : <strong style="color:#607080">${catName}</strong>
+        Listes filtrees sur <strong style="color:#607080">${filterHint}</strong>.
+        Fournisseur puis marque, ou marque puis fournisseur.
       </div>
       <div class="field-row">
-        <div class="field-label">Fournisseur</div>
-        <select class="field-input form-select"
-          id="detail-fournisseur-${p.id}"
-          onchange="onFournisseurChange(${p.id},this)">
-          ${supOptions}
-        </select>
+        <div class="field-label">${attrLabelHtml(attributes.find(a => a.code === 'fournisseur_code') || { name: 'Fournisseur' })}</div>
+        ${autocompleteInput(
+          'detail-fournisseur-' + p.id,
+          'dl-sup-' + p.id,
+          supplierNameByCode(currentSup),
+          eligibleSuppliers.map(s => s.name),
+          'onFournisseurChange(' + p.id + ',this)',
+          'Rechercher un fournisseur'
+        )}
       </div>
       <div class="field-row">
-        <div class="field-label">Marque <span class="field-required">*</span></div>
-        <select class="field-input form-select"
-          id="detail-marque-${p.id}"
-          onchange="onMarqueChange(${p.id},this)">
-          ${marqueOptions}
-        </select>
+        <div class="field-label">${attrLabelHtml(attributes.find(a => a.code === 'marque') || { name: 'Marque' })}</div>
+        ${autocompleteInput(
+          'detail-marque-' + p.id,
+          'dl-marque-' + p.id,
+          currentMarque,
+          availableMarques,
+          'onMarqueChange(' + p.id + ',this)',
+          'Rechercher une marque'
+        )}
       </div>
     </div>
     <div class="field-group" id="brand-info-panel-${p.id}">
@@ -443,30 +417,16 @@ function renderBrandInfoPanel(brandInfo) {
         Selectionnez un fournisseur et une marque pour afficher les conditions.
       </div>`;
   }
-  const marge = typeof brandInfo.remiseEnseigne === 'number'
-    ? `<strong style="color:#1565c0;font-size:14px">
-         ${(brandInfo.remiseEnseigne * 100).toFixed(0)}%
-       </strong>`
-    : '—';
-  const rows = [
-    { label: 'Fournisseur',          val: brandInfo.sup || '—' },
-    { label: 'RF',                   val: brandInfo.rf > 0 ? (brandInfo.rf * 100).toFixed(2) + '%' : '—' },
-    { label: 'RFA',                  val: brandInfo.rfa > 0 ? (brandInfo.rfa * 100).toFixed(2) + '%' : '—' },
-    { label: 'Remise enseigne',        val: marge },
-    { label: 'Reprise echange',      val: brandInfo.repriseEchange
-        ? '<span class="badge-active-on">Oui</span>'
-        : '<span class="badge-active-off">Non</span>' },
-    { label: 'Conditions livraison', val: brandInfo.conditionsLivraison || '—' },
-    { label: 'Commentaire',          val: brandInfo.commentaire
-        ? `<span style="font-size:12px;color:#607080">${brandInfo.commentaire}</span>`
-        : '—' },
-  ];
-  let html = `<div class="field-group-title">Conditions — ${brandInfo.marque}</div>`;
+  const skip = new Set(['fournisseur_code', 'marque', 'cat', 'segmentation']);
+  const rows = getConditionAttrs()
+    .filter(a => !skip.has(a.code))
+    .map(a => ({ label: a.name, val: getBrandSettingAttrValue(brandInfo, a) || '—' }));
+  let html = `<div class="field-group-title">Conditions — ${escapeHtml(brandInfo.marque || '')}</div>`;
   rows.forEach(r => {
     html += `<div class="field-row" style="display:flex;justify-content:space-between;
       align-items:center;padding:5px 0;border-bottom:1px solid #f0f4f8">
-      <div class="field-label" style="margin:0;flex:1">${r.label}</div>
-      <div style="font-size:13px;color:#1a2332;text-align:right">${r.val}</div>
+      <div class="field-label" style="margin:0;flex:1">${escapeHtml(r.label)}</div>
+      <div style="font-size:13px;color:#1a2332;text-align:right">${escapeHtml(r.val)}</div>
     </div>`;
   });
   return html;
@@ -474,46 +434,61 @@ function renderBrandInfoPanel(brandInfo) {
 
 function onFournisseurChange(productId, el) {
   const p = products.find(x => x.id === productId);
-  if (!p) return;
+  if (!p || !requirePerm(canEditProduct(p))) return;
+  const code = resolveSupplierCode(el.value);
+  if (code) {
+    const s = suppliers.find(x => x.code === code);
+    if (s && el.value !== s.name) el.value = s.name;
+  }
   const oldVal = p.fields.fournisseur_code || '';
-  p.fields.fournisseur_code = el.value;
-  addPendingChange(p, 'Fournisseur', oldVal, el.value);
+  p.fields.fournisseur_code = code;
+  addPendingChange(p, 'Fournisseur', oldVal, code);
   productDirty = true;
 
-  const catName      = p.cat;
-  const marqueSelect = document.getElementById('detail-marque-' + productId);
-  if (marqueSelect) {
-    const available = [...new Set(
-      brandSettings
-        .filter(b =>
-          (!el.value || b.fournisseurCode === el.value) &&
-          (!b.type || b.type === catName)
-        )
-        .map(b => b.marque)
-    )].sort();
-    marqueSelect.innerHTML = '<option value="">-- Choisir --</option>' +
-      available.map(m =>
-        `<option ${p.fields.marque === m ? 'selected' : ''}>${m}</option>`
-      ).join('');
+  const available = marquesForProduct(p);
+  const marqueInput = document.getElementById('detail-marque-' + productId);
+  if (marqueInput && p.fields.marque && !available.includes(p.fields.marque)) {
+    addPendingChange(p, 'Marque', p.fields.marque, '');
+    p.fields.marque = '';
+    marqueInput.value = '';
   }
 
-  const stillValid = brandSettings.some(b =>
-    b.fournisseurCode === el.value && b.marque === p.fields.marque
-  );
-  if (!stillValid) p.fields.marque = '';
-
+  refreshBrandCoupleLists(p);
   refreshBrandInfoPanel(p);
   renderProductHeader(p, getCatByName(p.cat));
 }
 
 function onMarqueChange(productId,el){
-  const p=products.find(x=>x.id===productId);if(!p)return;
+  const p=products.find(x=>x.id===productId);if(!p||!requirePerm(canEditProduct(p)))return;
   const oldVal=p.fields.marque||'';
   p.fields.marque=el.value;
   addPendingChange(p,'Marque',oldVal,el.value);
   productDirty=true;
+
+  const availableSups = suppliersForProduct(p);
+  const currentCode = p.fields.fournisseur_code;
+  if (currentCode && !availableSups.some(s => s.code === currentCode)) {
+    addPendingChange(p, 'Fournisseur', currentCode, '');
+    p.fields.fournisseur_code = '';
+    const supInput = document.getElementById('detail-fournisseur-' + productId);
+    if (supInput) supInput.value = '';
+  }
+
+  refreshBrandCoupleLists(p);
   refreshBrandInfoPanel(p);
   renderProductHeader(p,getCatByName(p.cat));
+}
+function refreshBrandCoupleLists(p) {
+  const supDl = document.getElementById('dl-sup-' + p.id);
+  const marDl = document.getElementById('dl-marque-' + p.id);
+  if (supDl) {
+    const names = suppliersForProduct(p).map(s => s.name);
+    supDl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">`).join('');
+  }
+  if (marDl) {
+    const marques = marquesForProduct(p);
+    marDl.innerHTML = marques.map(m => `<option value="${escapeHtml(m)}">`).join('');
+  }
 }
 function refreshBrandInfoPanel(p){
   const panel=document.getElementById('brand-info-panel-'+p.id);if(!panel)return;
@@ -532,12 +507,18 @@ function renderTabAttrGroup(p, g) {
 
   computeCalcFields(p);
   let html = '<div class="fields-grid"><div class="field-group">';
+  if (g.code === 'infos_generales') html += `<div class="field-group-title">${g.name}</div>`;
 
   attrs.forEach(a => {
-    const val = p.fields[a.code] !== undefined ? p.fields[a.code] : '';
+    const val = getAttrFieldValue(p, a);
     let input = '';
 
-    if (a.type === 'Image') {
+    if (a.code === 'cat') {
+      input = categorieSelectHtml(p);
+    } else if (a.code === 'completion') {
+      input = `<input class="field-input"
+        style="background:#f0f4f8;color:#a0b0c0" value="${calcCompletion(p)}%" readonly>`;
+    } else if (a.type === 'Image') {
       const hasImg = !!val;
       input = `<div class="image-attr-slot" data-visuel-code="${a.code}"
         style="max-width:200px">
@@ -557,16 +538,7 @@ function renderTabAttrGroup(p, g) {
         </div>
       </div>`;
     } else if (a.calc || (a.formula && !a.readonly)) {
-      input = `<div style="position:relative">
-        <input class="field-input"
-          style="background:#fffde7;color:#795548;padding-right:32px"
-          value="${val}" readonly data-calc="${a.code}">
-        <div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
-          width:18px;height:18px;border-radius:50%;background:#ffd54f;color:#5d4037;
-          font-size:11px;font-weight:700;display:flex;align-items:center;
-          justify-content:center;cursor:help"
-          title="Champ calcule : ${a.formula || ''}">&#9654;</div>
-      </div>`;
+      input = calcFieldInput(p, a, val);
     } else if (a.readonly) {
       input = `<input class="field-input"
         style="background:#f0f4f8;color:#a0b0c0" value="${val}" readonly>`;
@@ -574,7 +546,7 @@ function renderTabAttrGroup(p, g) {
       const opts = (a.options || []).map(o =>
         `<option${o === val ? ' selected' : ''}>${o}</option>`
       ).join('');
-      input = `<select class="field-input form-select"
+      input = `<select class="field-input form-select" data-field-code="${a.code}"
         onchange="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">
         <option value="">-- Choisir --</option>${opts}
       </select>`;
@@ -582,39 +554,37 @@ function renderTabAttrGroup(p, g) {
       const opts = (a.options || []).map(o =>
         `<option${(val || '').includes(o) ? ' selected' : ''}>${o}</option>`
       ).join('');
-      input = `<select class="field-input form-select" multiple
+      input = `<select class="field-input form-select" multiple data-field-code="${a.code}"
         onchange="onMultiSelectChange(${p.id},this,'${a.code}')">${opts}</select>`;
     } else if (a.type === 'Oui / Non') {
-      input = `<select class="field-input form-select"
+      input = `<select class="field-input form-select" data-field-code="${a.code}"
         onchange="onFieldChange(${p.id},this,'${a.code}')">
         <option value="">-- Choisir --</option>
         <option${val === 'Oui' ? ' selected' : ''}>Oui</option>
         <option${val === 'Non' ? ' selected' : ''}>Non</option>
       </select>`;
     } else if (a.type === 'Texte long') {
-      input = `<textarea class="field-input" rows="3"
-        oninput="onFieldChange(${p.id},this,'${a.code}')">${val}</textarea>`;
+      input = longTextInput(p, a, val);
     } else if (a.type === 'Nombre' || a.type === 'Nombre decimal') {
-      input = `<input class="field-input" type="number" value="${val}"
-        oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
+      input = numberInput(p, a, val);
     } else if (a.type === 'Date') {
-      input = `<input class="field-input" style="font-family:monospace"
+      input = `<input class="field-input" style="font-family:monospace" data-field-code="${a.code}"
         value="${val}" placeholder="jj/mm/aaaa" maxlength="10"
         oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'${a.code}')">`;
     } else {
       const maskId = a.mask ? `id="fi-${a.code}-${p.id}"` : '';
-      input = `<input class="field-input" ${maskId} value="${val}"
+      input = `<input class="field-input" ${maskId} value="${val}" data-field-code="${a.code}"
         oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
     }
 
     html += `<div class="field-row">
       <div class="field-label">
-        ${a.name}${a.required ? ' <span class="field-required">*</span>' : ''}
+        ${attrLabelHtml(a)}
         ${a.formula
           ? `<span style="display:inline-flex;align-items:center;justify-content:center;
                width:14px;height:14px;border-radius:50%;background:#ffd54f;color:#5d4037;
                font-size:9px;font-weight:700;margin-left:4px;cursor:help"
-               title="Champ calcule : ${a.formula}">&#9654;</span>`
+               title="Champ calcule">&#9654;</span>`
           : ''}
       </div>
       ${input}
@@ -637,10 +607,65 @@ function renderTabAttrGroup(p, g) {
 // ============================================================
 // CHAMPS CALCULES
 // ============================================================
+// ============================================================
+// MOTEUR DE FORMULES
+// CONCAT(code, " texte ", code) pour les champs texte calcules.
+// Les autres syntaxes (=SI(...), operations sur [code]) restent
+// prises en charge par evalFormula.
+// ============================================================
+function evaluateFormula(formula, fields) {
+  if (!formula || typeof formula !== 'string') return '';
+  const expr = formula.trim().replace(/^=/, '').trim();
+  if (!expr) return '';
+
+  // DATE_MAJ est evenementielle : la valeur est posee par computeCalcFields
+  // au moment ou le champ surveille change, pas recalculee a chaque rendu.
+  if (isEventFormula(expr)) return '';
+
+  const concat = expr.match(/^CONCAT\s*\(([\s\S]*)\)$/i);
+  if (concat) return evalConcat(concat[1], fields || {});
+
+  return evalFormula('=' + expr, fields || {});
+}
+
+// Formule evenementielle : DATE_MAJ(code) horodate le changement du champ cite
+function isEventFormula(formula) {
+  return /^\s*=?\s*DATE_MAJ\s*\(/i.test(formula || '');
+}
+
+function eventFormulaSource(formula) {
+  const m = (formula || '').match(/DATE_MAJ\s*\(\s*\[?([^)\s\]]+)\]?\s*\)/i);
+  return m ? m[1] : null;
+}
+
+// Decoupe les arguments d'un CONCAT en respectant les guillemets,
+// puis remplace chaque code de champ par sa valeur
+function evalConcat(argsStr, fields) {
+  const args = [];
+  let current = '', inStr = false;
+  for (let i = 0; i < argsStr.length; i++) {
+    const c = argsStr[i];
+    if (c === '"')                  { inStr = !inStr; current += c; }
+    else if (c === ',' && !inStr)   { args.push(current); current = ''; }
+    else                            { current += c; }
+  }
+  args.push(current);
+
+  return args.map(raw => {
+    const arg = raw.trim();
+    if (!arg) return '';
+    if (arg.length > 1 && arg.startsWith('"') && arg.endsWith('"'))
+      return arg.slice(1, -1);
+    const val = fields[arg.replace(/^\[/, '').replace(/\]$/, '')];
+    return (val === undefined || val === null) ? '' : String(val);
+  }).join('');
+}
+
 function refreshCalcFields(productId){
   const p=products.find(x=>x.id===productId);if(!p)return;
   computeCalcFields(p);
   document.querySelectorAll('[data-calc]').forEach(el=>{
+    if(el===document.activeElement)return; // ne pas perturber une saisie forcee en cours
     const code=el.getAttribute('data-calc');
     if(p.fields[code]!==undefined)el.value=p.fields[code];
   });
@@ -652,41 +677,47 @@ function refreshCalcFields(productId){
 // ============================================================
 function onFieldChange(productId, el, fieldKey) {
   const p = products.find(x => x.id === productId);
-  if (!p) return;
+  if (!p || !requirePerm(canEditProduct(p))) return;
   const oldVal = p.fields[fieldKey] !== undefined ? p.fields[fieldKey] : '';
   const newVal = el.value;
   p.fields[fieldKey] = newVal;
   const attr = attributes.find(a => a.code === fieldKey);
   addPendingChange(p, attr ? attr.name : fieldKey, oldVal, newVal);
   productDirty = true;
+  if (String(newVal).trim() !== '') el.classList.remove('field-error');
   if (fieldKey === 'nom') {
     const t = document.querySelector('.product-title');
     if (t) t.textContent = newVal;
   }
-  computeCalcFields(p);
-  updateDetailCompletion(p);
+  refreshCalcFields(productId);
   renderProductHeader(p, getCatByName(p.cat));
 
   // Si le champ modifié est un attribut de segmentation utilisé dans brandSettings,
   // rafraîchir le panneau conditions commerciales
   const isSegAttr = brandSettings.some(b => b.segAttrCode === fieldKey);
   if (isSegAttr) {
+    refreshBrandCoupleLists(p);
     refreshBrandInfoPanel(p);
   }
 }
 
 function onMultiSelectChange(productId,el,fieldKey){
-  const p=products.find(x=>x.id===productId);if(!p)return;
+  const p=products.find(x=>x.id===productId);if(!p||!requirePerm(canEditProduct(p)))return;
   const oldVal=p.fields[fieldKey]||'';
   const newVal=Array.from(el.selectedOptions).map(o=>o.value).join(', ');
   p.fields[fieldKey]=newVal;
   const attr=attributes.find(a=>a.code===fieldKey);
   addPendingChange(p,attr?attr.name:fieldKey,oldVal,newVal);
   productDirty=true;
-  updateDetailCompletion(p);
+  refreshCalcFields(productId);
 }
 function onCatChange(productId,el){
-  const p=products.find(x=>x.id===productId);if(!p)return;
+  const p=products.find(x=>x.id===productId);if(!p||!requirePerm(canEditProduct(p)))return;
+  if(!canCat(el.value,'w')){
+    el.value=p.cat;
+    showNotif('Categorie non accessible en modification','warn');
+    return;
+  }
   const oldCat=p.cat;p.cat=el.value;
   addPendingChange(p,'Categorie',oldCat,el.value);
   productDirty=true;
@@ -705,16 +736,41 @@ function updateDetailCompletion(p){
   const subEl=document.getElementById('detail-completion-sub');
   if(pctEl){pctEl.textContent=comp+'%';pctEl.style.color=color;}
   if(barEl){barEl.style.width=comp+'%';barEl.style.background=color;}
-  const attrs=getAttrsForCat(p.cat).filter(a=>!a.calc&&!a.readonly&&a.required);
-  const total=attrs.length+1;const filled=Math.round(comp*total/100);
+  const attrs=getCompletionAttrs(p);
+  const total=attrs.length;
+  const filled=attrs.filter(a=>{
+    const v=p.fields[a.code];
+    return v!==undefined&&v!==null&&String(v).trim()!=='';
+  }).length;
   if(subEl)subEl.textContent=`${filled} / ${total} champs renseignes`;
 }
 
 // ============================================================
 // SAUVEGARDE
 // ============================================================
+// Lit required depuis attributes : aucun code en dur
+function validateRequiredFields(p){
+  document.querySelectorAll('#page-product-detail [data-field-code]')
+    .forEach(el=>el.classList.remove('field-error'));
+  const missing=[];
+  attributes.filter(a=>a.required && !isConditionRowAttr(a)).forEach(a=>{
+    const v=getAttrFieldValue(p,a);
+    if(v!==undefined&&v!==null&&String(v).trim()!=='')return;
+    missing.push(a.name);
+    const el=document.querySelector(`#page-product-detail [data-field-code="${a.code}"]`);
+    if(el)el.classList.add('field-error');
+  });
+  return missing;
+}
+
 function saveProduct(){
   const p=products.find(x=>x.id===currentProductId);if(!p)return;
+  if(!requirePerm(canEditProduct(p),'Enregistrement non autorise'))return;
+  const missing=validateRequiredFields(p);
+  if(missing.length){
+    showNotif('Champs obligatoires manquants : '+missing.join(', '),'error');
+    return;
+  }
   p.maj=nowStr();
   flushPendingChanges(p);
   productDirty=false;

@@ -2,15 +2,21 @@
 // DASHBOARD.JS
 // ============================================================
 
-// Fausses données historiques pour le graphique évolution
-const evolutionData = [
-  { label: 'Fév', value: 4  },
-  { label: 'Mar', value: 5  },
-  { label: 'Avr', value: 6  },
-  { label: 'Mai', value: 7  },
-  { label: 'Jun', value: 9  },
-  { label: 'Jul', value: 11 },
-];
+function buildEvolutionData() {
+  const current = getAccessibleProducts().length;
+  const ratios  = [4 / 11, 5 / 11, 6 / 11, 7 / 11, 9 / 11, 1];
+  const now     = new Date();
+  const data    = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    let label = d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+    label = label.charAt(0).toUpperCase() + label.slice(1);
+    const isLast = i === 0;
+    const value  = isLast ? current : Math.max(0, Math.round(ratios[5 - i] * current));
+    data.push({ label, value });
+  }
+  return data;
+}
 
 // ============================================================
 // POINT D'ENTREE
@@ -37,8 +43,9 @@ function updateTopbarTitle(title) {
 // KPI Total + Donut + Evolution
 // ============================================================
 function renderDashboardKpis() {
-  const total      = products.length;
-  const incomplets = products.filter(p => calcCompletion(p) < seuilCompletion).length;
+  const catalog    = getAccessibleProducts();
+  const total      = catalog.length;
+  const incomplets = catalog.filter(p => calcCompletion(p) < seuilCompletion).length;
 
   const elTotal = document.getElementById('kpi-total');
   if (elTotal) elTotal.textContent = total;
@@ -56,7 +63,7 @@ function renderDashboardKpis() {
 function showIncomplets() {
   _filterIncomplets = true;
   currentPage = 1;
-  const navEl = document.querySelector('.nav-item[onclick*="products"]');
+  const navEl = document.querySelector('.nav-item[data-nav="products"]');
   showPage('products', navEl);
   renderProductsTable();
 }
@@ -86,12 +93,14 @@ function renderDashboardDonut() {
   const legend = document.getElementById('donut-legend');
   if (!svg || !legend) return;
 
-  const total = products.length;
+  const catalog = getAccessibleProducts();
+  const visibleCats = getReadableCategories();
+  const total = catalog.length;
   const counts = {};
-  categories.forEach(c => { counts[c.name] = 0; });
-  products.forEach(p => { if (counts[p.cat] !== undefined) counts[p.cat]++; });
+  visibleCats.forEach(c => { counts[c.name] = 0; });
+  catalog.forEach(p => { if (counts[p.cat] !== undefined) counts[p.cat]++; });
 
-  const data = categories
+  const data = visibleCats
     .map(c => ({ name: c.name, count: counts[c.name] || 0, color: c.color }))
     .filter(d => d.count > 0);
 
@@ -139,14 +148,14 @@ function renderDashboardEvolution() {
   const container = document.getElementById('dashboard-evolution-chart');
   if (!container) return;
 
-  const data   = evolutionData;
+  const data   = buildEvolutionData();
   const W      = container.clientWidth  || 340;
   const H      = 110;
   const padL   = 10;
   const padR   = 10;
   const padT   = 16;
   const padB   = 24;
-  const maxVal = Math.max(...data.map(d => d.value));
+  const maxVal = Math.max(1, ...data.map(d => d.value));
   const barW   = Math.floor((W - padL - padR) / data.length * 0.55);
   const gap    = Math.floor((W - padL - padR) / data.length);
   const chartH = H - padT - padB;
@@ -181,10 +190,19 @@ function renderDashboardEvolution() {
 // ============================================================
 function renderDashboardCompletion() {
   // Taux global
-  const total = products.length;
-  if (!total) return;
+  const catalog = getAccessibleProducts();
+  const total = catalog.length;
+  if (!total) {
+    const elPct = document.getElementById('kpi-completion-global');
+    const elBar = document.getElementById('bar-global');
+    if (elPct) { elPct.textContent = '—'; }
+    if (elBar) { elBar.style.width = '0%'; }
+    const container = document.getElementById('dashboard-completion-cats');
+    if (container) container.innerHTML = '';
+    return;
+  }
   const globalComp = Math.round(
-    products.reduce((sum, p) => sum + calcCompletion(p), 0) / total
+    catalog.reduce((sum, p) => sum + calcCompletion(p), 0) / total
   );
   const globalColor = getCompletionColor(globalComp);
 
@@ -197,8 +215,8 @@ function renderDashboardCompletion() {
   const container = document.getElementById('dashboard-completion-cats');
   if (!container) return;
 
-  const rows = categories.map(cat => {
-    const catProds = products.filter(p => p.cat === cat.name);
+  const rows = getReadableCategories().map(cat => {
+    const catProds = catalog.filter(p => p.cat === cat.name);
     if (!catProds.length) return null;
     const avg   = Math.round(catProds.reduce((s, p) => s + calcCompletion(p), 0) / catProds.length);
     const color = getCompletionColor(avg);
@@ -231,19 +249,40 @@ function renderDashboardSuppliers() {
   const container = document.getElementById('supplier-chart-container');
   if (!container) return;
 
-  // Compte produits par fournisseur et par categorie
+  const catalog = getAccessibleProducts();
+  const totalProds = catalog.length;
   const data = {};
-  products.forEach(p => {
-    const code = p.fields.fournisseur_code || 'Inconnu';
-    const sup  = suppliers.find(s => s.code === code);
-    const name = sup ? sup.name : code;
-    if (!data[name]) data[name] = {};
-    data[name][p.cat] = (data[name][p.cat] || 0) + 1;
+  const ensureRow = (name, code) => {
+    if (!data[name]) data[name] = { code, cats: {}, marques: {} };
+    return data[name];
+  };
+
+  brandSettings.forEach(b => {
+    if (b.type && !canCat(b.type, 'r')) return;
+    const sup = suppliers.find(s => s.code === b.fournisseurCode);
+    const name = sup ? sup.name : (b.fournisseurCode || 'Inconnu');
+    const row = ensureRow(name, b.fournisseurCode);
+    if (b.marque) {
+      if (!row.marques[b.marque]) row.marques[b.marque] = { combos: 0, products: 0 };
+      row.marques[b.marque].combos++;
+    }
+  });
+
+  catalog.forEach(p => {
+    const code = p.fields.fournisseur_code || '';
+    const sup  = code ? suppliers.find(s => s.code === code) : null;
+    const name = code ? (sup ? sup.name : code) : 'Inconnu';
+    const row  = ensureRow(name, code || 'Inconnu');
+    row.cats[p.cat] = (row.cats[p.cat] || 0) + 1;
+    if (p.fields.marque) {
+      if (!row.marques[p.fields.marque]) row.marques[p.fields.marque] = { combos: 0, products: 0 };
+      row.marques[p.fields.marque].products++;
+    }
   });
 
   const supNames = Object.keys(data).sort((a, b) => {
-    const ta = Object.values(data[a]).reduce((s, v) => s + v, 0);
-    const tb = Object.values(data[b]).reduce((s, v) => s + v, 0);
+    const ta = Object.values(data[a].cats).reduce((s, v) => s + v, 0);
+    const tb = Object.values(data[b].cats).reduce((s, v) => s + v, 0);
     return tb - ta;
   });
 
@@ -253,62 +292,81 @@ function renderDashboardSuppliers() {
     return;
   }
 
-  const catNames = categories.map(c => c.name);
+  const catNames = getReadableCategories().map(c => c.name);
   const catColors = {};
   categories.forEach(c => { catColors[c.name] = c.color; });
 
   const W      = container.clientWidth || 500;
   const H      = supNames.length * 36 + 60;
   const padL   = 140;
-  const padR   = 50;
+  const padR   = 90;
   const padT   = 10;
   const barH   = 20;
   const gap    = 36;
-  const maxVal = Math.max(...supNames.map(n =>
-    Object.values(data[n]).reduce((s, v) => s + v, 0)
+  const maxVal = Math.max(1, ...supNames.map(n =>
+    Object.values(data[n].cats).reduce((s, v) => s + v, 0)
   ));
   const chartW = W - padL - padR;
 
-  // Legende categories
-  let legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">';
+  let legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px">';
   catNames.forEach(cat => {
-    if (products.some(p => p.cat === cat)) {
+    if (catalog.some(p => p.cat === cat)) {
       legendHtml += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#607080">
         <span style="width:10px;height:10px;border-radius:2px;background:${catColors[cat]};
           display:inline-block;flex-shrink:0"></span>${cat}
       </div>`;
     }
   });
-  legendHtml += '</div>';
+  legendHtml += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#1565c0">
+    <span style="font-weight:700">%</span> part du catalogue
+  </div></div>`;
 
   let bars = '';
   supNames.forEach((name, i) => {
     const y     = padT + i * gap;
-    const total = Object.values(data[name]).reduce((s, v) => s + v, 0);
+    const total = Object.values(data[name].cats).reduce((s, v) => s + v, 0);
     let x = padL;
+    const code = data[name].code;
+    const pct = totalProds ? Math.round((total / totalProds) * 100) : 0;
+    const marqueLines = Object.keys(data[name].marques).sort().map(m => {
+      const row = data[name].marques[m];
+      const bits = [];
+      if (row.products) bits.push(row.products + ' produit' + (row.products > 1 ? 's' : ''));
+      if (row.combos) bits.push(row.combos + ' condition' + (row.combos > 1 ? 's' : ''));
+      return `${m}${bits.length ? ' : ' + bits.join(', ') : ''}`;
+    }).join('&#10;');
+    const title = `${name} — ${total}/${totalProds} produit${total > 1 ? 's' : ''} (${pct}%)&#10;${marqueLines || 'Aucune combinaison marque/fournisseur'}`;
 
     bars += `<text x="${padL - 8}" y="${y + barH / 2 + 4}"
       text-anchor="end" font-size="12" fill="#607080"
       font-family="Inter,sans-serif">${name}</text>`;
 
-    const sup  = suppliers.find(s => s.name === name);
-    const code = sup ? sup.code : name;
-
     catNames.forEach(cat => {
-      const count = data[name][cat] || 0;
+      const count = data[name].cats[cat] || 0;
       if (!count) return;
-      const bw = Math.round((count / maxVal) * chartW);
+      const bw = Math.max(2, Math.round((count / maxVal) * chartW));
       bars += `<rect x="${x}" y="${y}" width="${bw}" height="${barH}"
         rx="0" fill="${catColors[cat]}" opacity="0.85"
         style="cursor:pointer"
-        onclick="filterBySupplier('${code}')"
-        title="${cat} : ${count}"/>`;
-      x += bw;
+        onclick="filterBySupplier('${code}')">
+        <title>${title}</title>
+      </rect>`;
+      x += Math.max(bw, 2);
     });
+
+    if (!total) {
+      bars += `<rect x="${padL}" y="${y}" width="4" height="${barH}"
+        rx="0" fill="#e0e8f0" opacity="0.9">
+        <title>${title}</title>
+      </rect>`;
+    }
 
     bars += `<text x="${x + 5}" y="${y + barH / 2 + 4}"
       font-size="12" font-weight="700" fill="#1a2332"
-      font-family="Inter,sans-serif">${total}</text>`;
+      font-family="Inter,sans-serif">${total}</text>
+      <text x="${W - 8}" y="${y + barH / 2 + 4}"
+        text-anchor="end" font-size="11" font-weight="700" fill="#1565c0"
+        font-family="Inter,sans-serif">${pct}%</text>`;
   });
 
   container.innerHTML = legendHtml + `
@@ -319,7 +377,7 @@ function renderDashboardSuppliers() {
 }
 
 function filterBySupplier(codeOrName) {
-  const navEl = document.querySelector('.nav-item[onclick*="products"]');
+  const navEl = document.querySelector('.nav-item[data-nav="products"]');
   showPage('products', navEl);
   const filterCat = document.getElementById('filter-cat');
   if (filterCat) filterCat.value = '';
