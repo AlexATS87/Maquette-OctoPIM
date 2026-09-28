@@ -20,6 +20,7 @@ function openProductDetail(id){
   if(!p.pendingChanges)p.pendingChanges=[];
   computeCalcFields(p);
   productDirty=false;
+  updateTopbarTitle('Produit');
   const cat=getCatByName(p.cat);
   renderProductHeader(p,cat);
   renderProductTabs(p,cat);
@@ -316,12 +317,8 @@ function renderTabVisuels(p) {
              <span style="font-size:32px">&#128247;</span>
              <span style="font-size:12px">Cliquer pour ajouter</span>
            </div>`}
-      <div class="image-attr-label">${va.name}</div>
-      <div class="image-attr-badges">
-        ${va.required
-          ? '<span class="visual-badge-required">Obligatoire</span>'
-          : '<span class="visual-badge-optional">Optionnel</span>'}
-      </div>
+      <div class="image-attr-label">${attrLabelHtml(va)}</div>
+      ${va.required ? '<div class="image-attr-badges"><span class="visual-badge-required">Obligatoire</span></div>' : ''}
     </div>`;
   });
 
@@ -362,7 +359,7 @@ function renderTabMarque(p, g) {
   const eligibleSuppliers = suppliersForProduct(p);
   const currentSup    = p.fields.fournisseur_code || '';
   const currentMarque = p.fields.marque || '';
-  const availableMarques = marquesForProduct(p);
+  const availableMarques = currentSup ? marquesForProduct(p) : getMarqueOptions();
   const brandInfo = getBrandInfoForProduct(p);
   const segBits = [...new Set(
     brandSettings.filter(b => b.segAttrCode && (!b.type || matchBrandType(b.type, catName)))
@@ -462,6 +459,7 @@ function onMarqueChange(productId,el){
   const p=products.find(x=>x.id===productId);if(!p||!requirePerm(canEditProduct(p)))return;
   const oldVal=p.fields.marque||'';
   p.fields.marque=el.value;
+  registerMarque(el.value);
   addPendingChange(p,'Marque',oldVal,el.value);
   productDirty=true;
 
@@ -498,6 +496,31 @@ function refreshBrandInfoPanel(p){
 // ============================================================
 // ONGLET GROUPE D'ATTRIBUTS GENERIQUE
 // ============================================================
+function groupCompletionStats(p, g) {
+  const seen = new Set();
+  const list = (g.attrIds || []).map(id => getAttrById(id)).filter(a => {
+    if (!a || a.code === 'completion' || seen.has(a.id)) return false;
+    seen.add(a.id);
+    return a.inCompletion && !a.system && !a.calc && !a.readonly && isAttrShown(p, a);
+  });
+  if (!list.length) return null;
+  const filled = list.filter(a => isCompletionFilled(p, a)).length;
+  return { pct: Math.round(filled / list.length * 100), filled, total: list.length };
+}
+
+function groupCompletionHtml(p, g) {
+  const stats = groupCompletionStats(p, g);
+  if (!stats) return '';
+  const color = getCompletionColor(stats.pct);
+  return `<div class="detail-completion-bar group-completion" id="group-comp-${g.id}">
+    <div class="group-comp-label">Completion</div>
+    <div class="completion-bar-bg">
+      <div class="completion-bar-fill" id="group-comp-bar-${g.id}" style="width:${stats.pct}%;background:${color}"></div>
+    </div>
+    <div id="group-comp-pct-${g.id}" style="font-size:14px;font-weight:700;min-width:44px;text-align:right;color:${color}">${stats.pct}%</div>
+  </div>`;
+}
+
 function renderTabAttrGroup(p, g) {
   // Strictement les attributs du groupe dans l'ordre de attrIds
   const attrs = g.attrIds.map(id => getAttrById(id)).filter(Boolean);
@@ -506,10 +529,12 @@ function renderTabAttrGroup(p, g) {
     return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
 
   computeCalcFields(p);
-  let html = '<div class="fields-grid"><div class="field-group">';
-  if (g.code === 'infos_generales') html += `<div class="field-group-title">${g.name}</div>`;
+  const shown = attrs.filter(a => a.code !== 'completion' && isAttrShown(p, a));
+  let html = '<div class="fields-flow">';
+  html += groupCompletionHtml(p, g);
+  if (g.code === 'infos_generales') html += `<div class="field-group-title field-span">${g.name}</div>`;
 
-  attrs.forEach(a => {
+  shown.forEach(a => {
     const val = getAttrFieldValue(p, a);
     let input = '';
 
@@ -531,11 +556,7 @@ function renderTabAttrGroup(p, g) {
                <span style="font-size:28px">&#128247;</span>
                <span style="font-size:11px">Cliquer pour ajouter</span>
              </div>`}
-        <div class="image-attr-badges">
-          ${a.required
-            ? '<span class="visual-badge-required">Obligatoire</span>'
-            : '<span class="visual-badge-optional">Optionnel</span>'}
-        </div>
+        ${a.required ? '<div class="image-attr-badges"><span class="visual-badge-required">Obligatoire</span></div>' : ''}
       </div>`;
     } else if (a.calc || (a.formula && !a.readonly)) {
       input = calcFieldInput(p, a, val);
@@ -577,7 +598,9 @@ function renderTabAttrGroup(p, g) {
         oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
     }
 
-    html += `<div class="field-row">
+    const wide = a.type === 'Texte long' || a.type === 'Image';
+    const shownRow = isAttrShown(p, a);
+    html += `<div class="field-row${wide ? ' field-span' : ''}" data-attr-row="${a.code}" style="${shownRow ? '' : 'display:none'}">
       <div class="field-label">
         ${attrLabelHtml(a)}
         ${a.formula
@@ -591,7 +614,7 @@ function renderTabAttrGroup(p, g) {
     </div>`;
   });
 
-  html += '</div></div>';
+  html += '</div>';
 
   setTimeout(() => {
     attrs.forEach(a => {
@@ -665,9 +688,10 @@ function refreshCalcFields(productId){
   const p=products.find(x=>x.id===productId);if(!p)return;
   computeCalcFields(p);
   document.querySelectorAll('[data-calc]').forEach(el=>{
-    if(el===document.activeElement)return; // ne pas perturber une saisie forcee en cours
+    if(el===document.activeElement)return;
     const code=el.getAttribute('data-calc');
-    if(p.fields[code]!==undefined)el.value=p.fields[code];
+    const attr=attributes.find(a=>a.code===code);
+    if(p.fields[code]!==undefined)el.value=formatCalcFieldDisplay(attr,p.fields[code]);
   });
   updateDetailCompletion(p);
 }
@@ -679,9 +703,10 @@ function onFieldChange(productId, el, fieldKey) {
   const p = products.find(x => x.id === productId);
   if (!p || !requirePerm(canEditProduct(p))) return;
   const oldVal = p.fields[fieldKey] !== undefined ? p.fields[fieldKey] : '';
-  const newVal = el.value;
-  p.fields[fieldKey] = newVal;
   const attr = attributes.find(a => a.code === fieldKey);
+  let newVal = el.value;
+  if (attr && isPercentAttr(attr)) newVal = percentFromDisplay(el.value);
+  p.fields[fieldKey] = newVal;
   addPendingChange(p, attr ? attr.name : fieldKey, oldVal, newVal);
   productDirty = true;
   if (String(newVal).trim() !== '') el.classList.remove('field-error');
@@ -690,6 +715,7 @@ function onFieldChange(productId, el, fieldKey) {
     if (t) t.textContent = newVal;
   }
   refreshCalcFields(productId);
+  refreshConditionalRows(p);
   renderProductHeader(p, getCatByName(p.cat));
 
   // Si le champ modifié est un attribut de segmentation utilisé dans brandSettings,
@@ -710,6 +736,7 @@ function onMultiSelectChange(productId,el,fieldKey){
   addPendingChange(p,attr?attr.name:fieldKey,oldVal,newVal);
   productDirty=true;
   refreshCalcFields(productId);
+  updateDetailCompletion(p);
 }
 function onCatChange(productId,el){
   const p=products.find(x=>x.id===productId);if(!p||!requirePerm(canEditProduct(p)))return;
@@ -733,16 +760,22 @@ function updateDetailCompletion(p){
   const comp=calcCompletion(p);const color=getCompletionColor(comp);
   const pctEl=document.getElementById('detail-completion-pct');
   const barEl=document.getElementById('detail-completion-bar');
-  const subEl=document.getElementById('detail-completion-sub');
   if(pctEl){pctEl.textContent=comp+'%';pctEl.style.color=color;}
   if(barEl){barEl.style.width=comp+'%';barEl.style.background=color;}
-  const attrs=getCompletionAttrs(p);
-  const total=attrs.length;
-  const filled=attrs.filter(a=>{
-    const v=p.fields[a.code];
-    return v!==undefined&&v!==null&&String(v).trim()!=='';
-  }).length;
-  if(subEl)subEl.textContent=`${filled} / ${total} champs renseignes`;
+  const cat = getCatByName(p.cat);
+  (cat ? cat.groupIds : []).forEach(gid => {
+    const g = getGroupById(gid);
+    const bar = document.getElementById('group-comp-bar-' + gid);
+    const pctNode = document.getElementById('group-comp-pct-' + gid);
+    if (!g || !bar || !pctNode) return;
+    const stats = groupCompletionStats(p, g);
+    if (!stats) return;
+    const c = getCompletionColor(stats.pct);
+    bar.style.width = stats.pct + '%';
+    bar.style.background = c;
+    pctNode.textContent = stats.pct + '%';
+    pctNode.style.color = c;
+  });
 }
 
 // ============================================================

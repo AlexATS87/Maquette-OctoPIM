@@ -41,11 +41,11 @@ let syntheseItems = [
 // GROUPES D'ATTRIBUTS
 // ============================================================
 let attrGroups = [
-  { id:1,  name:'Informations generales',      code:'infos_generales',       system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[1,2,3,78,4,5,77,66,67,59,68,60,61,79] },
-  { id:2,  name:'Visuels',                     code:'visuels',               system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[54,55,56,57,58] },
-  { id:3,  name:'Conditions commerciales',     code:'conditions_commerciales', system:true, isSynthGroup:false, isBrandGroup:true,  attrIds:[69,70,78,80,62,21,63,64,65,17] },
-  { id:4,  name:'Caracteristiques monture',    code:'caract_monture',        system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[7,8,9,10,11,12,13,71,14,15,16,17] },
-  { id:5,  name:'Tarification monture',        code:'tarif_monture',         system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[18,19,20,21,22,23,24,25] },
+  { id:1,  name:'Informations generales',      code:'infos_generales',       system:false, isSynthGroup:false, isBrandGroup:false, audienceRoleIds:[], attrIds:[1,2,3,78,4,5,77,66,67,59,68,60,61] },
+  { id:3,  name:'Conditions commerciales',     code:'conditions_commerciales', system:true, isSynthGroup:false, isBrandGroup:true,  audienceRoleIds:[2,4], attrIds:[69,70,78,80,62,21,63,64,65,17] },
+  { id:4,  name:'Caracteristiques monture',    code:'caract_monture',        system:false, isSynthGroup:false, isBrandGroup:false, audienceRoleIds:[5], attrIds:[7,8,9,10,11,12,13,71,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,14,15,16,17] },
+  { id:5,  name:'Tarification monture',        code:'tarif_monture',         system:false, isSynthGroup:false, isBrandGroup:false, audienceRoleIds:[2,4], attrIds:[18,19,20,21,22,23,24,25] },
+  { id:2,  name:'Visuels',                     code:'visuels',               system:false, isSynthGroup:false, isBrandGroup:false, audienceRoleIds:[], attrIds:[54,55,56,57,58] },
   { id:6,  name:'SEO monture',                 code:'seo_monture',           system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[26,27,28,29] },
   { id:7,  name:'Caracteristiques lentille',   code:'caract_lentille',       system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[30,31,72,34,35,36,37,38,32,39,73,40,41,33] },
   { id:8,  name:'Tarification lentille',       code:'tarif_lentille',        system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[42,43] },
@@ -53,6 +53,7 @@ let attrGroups = [
   { id:10, name:'SEO lentille',                code:'seo_lentille',          system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[47,48,49,50] },
   { id:11, name:'Caracteristiques accessoire', code:'caract_accessoire',     system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[51,52] },
   { id:12, name:'Caracteristiques PEL',        code:'caract_pel',            system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[74,30,70,75,76,45,44] },
+  { id:13, name:'IWI',                         code:'iwi',                   system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[99,100] },
 ];
 
 // ============================================================
@@ -82,13 +83,11 @@ let attributes = [
     options:['Actif','Inactif','Ecoulement de stock','En cours','Arrêté'] },
   { id:77, name:'Date de mise en ligne', code:'miseEnLigne', type:'Date', groupId:1, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:true, clickToOpen:false },
   { id:61, name:'Code e-commerce',    code:'code_ecommerce',    type:'Texte',         groupId:1, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:69, name:'Code fournisseur',    code:'fournisseur_code',    type:'Texte',         groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, system:true },
-  { id:70, name:'Marque',              code:'marque',              type:'Texte',         groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, system:true },
+  { id:69, name:'Code fournisseur',    code:'fournisseur_code',    type:'Texte',         groupId:3,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false, system:true },
+  { id:70, name:'Marque',              code:'marque',              type:'Simple select', groupId:3,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false, system:true, options:[] },
   { id:80, name:'Segmentation',        code:'segmentation',        type:'Texte',         groupId:3,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false, system:true },
-  { id:6,  name:'Conditions commerciales',           code:'conditions_commerciales',           type:'Simple select',   groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false,
-    options:['Vogue','Ray-Ban','Oakley','Alcon','Bausch & Lomb','Essilor','Carrera','Boss','Lacoste','Calvin Klein','Gucci','Chloe','Prada','Versace','Emporio Armani','Michael Kors','Dolce&Gabbana','Persol','Burberry','Moncler','Jimmy Choo','Polo Ralph Lauren','Ralph Lauren','Swarovski','Police','Diesel','Guess','Adidas','Karl Lagerfeld','Nike','Longchamp','Esprit','Elle','Julbo','Morgan','Rip Curl','Mauboussin','Cebe','Bolle'] },
-  { id:62, name:'RF',                  code:'rf',                  type:'Nombre',    groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, isConditionCommerciale:true },
-  { id:63, name:'Remise interne',      code:'remiseEnseigne',      type:'Nombre',    groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', stepEnabled:true, step:0.5, min:0, max:100, showInSynth:false, clickToOpen:false, isConditionCommerciale:true, displayFormat:'percent' },
+  { id:62, name:'RF',                  code:'rf',                  type:'Nombre',    groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', stepEnabled:true, step:0.005, min:0, max:1, showInSynth:false, clickToOpen:false, isConditionCommerciale:true, displayFormat:'percent' },
+  { id:63, name:'Remise interne',      code:'remiseEnseigne',      type:'Nombre',    groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', stepEnabled:true, step:0.005, min:0, max:1, showInSynth:false, clickToOpen:false, isConditionCommerciale:true, displayFormat:'percent' },
   { id:64, name:'Reprise échange',     code:'repriseEchange',      type:'Oui / Non', groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, isConditionCommerciale:true },
   { id:65, name:'Conditions de livraison', code:'conditionsLivraison', type:'Texte', groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, isConditionCommerciale:true },
   { id:7,  name:'Reference monture',   code:'ref_monture',   type:'Texte',           groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
@@ -97,7 +96,7 @@ let attributes = [
     mask:'', showInSynth:false, clickToOpen:false },
   { id:9,  name:'Cible',               code:'cible',         type:'Simple select',   groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Homme','Femme','Mixte','Enfant','Junior'] },
   { id:10, name:'Optique / Solaire',   code:'optique_solaire',type:'Simple select',  groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Optique','Solaire'] },
-  { id:11, name:'Matiere',             code:'matiere',       type:'Simple select',   groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Acetate','Metal','Titane','Plastique','Bois','Carbone'] },
+  { id:11, name:'Matiere',             code:'matiere',       type:'Simple select',   groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Acetate','Metal','Métal','Titane','Plastique','Bois','Carbone'] },
   { id:12, name:'Cerclage',            code:'cerclage',      type:'Simple select',   groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Cercle','Semi-cercle','Sans cerclage','Nylor'] },
   { id:13, name:'Couleur',             code:'couleur',       type:'Texte',           groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:71, name:'Largeur des verres',  code:'largeur_verres', type:'Nombre',         groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
@@ -105,26 +104,26 @@ let attributes = [
     formula:'=SI([largeur_verres]>=56,"Adulte L",SI([largeur_verres]>=51,"Adulte M",SI([largeur_verres]>=49,"Adulte S",SI([largeur_verres]>=47,"Adolescent",SI([largeur_verres]>=44,"Enfant",SI([largeur_verres]>=40,"Bébé",""))))))',
     formulaLabel:'Adulte L (56+), Adulte M (51-55), Adulte S (49-50), Adolescent (47-48), Enfant (44-46), Bébé (40-43)',
     mask:'', showInSynth:false, clickToOpen:false },
-  { id:15, name:'Forme de la monture', code:'forme',         type:'Simple select',   groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Ronde','Carree','Rectangulaire','Ovale','Papillon','Aviateur','Clubmaster'] },
+  { id:15, name:'Forme de la monture', code:'forme',         type:'Simple select',   groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Ronde','Carree','Rectangulaire','Ovale','Papillon','Aviateur','Clubmaster','rondes/ovales/pantos','carrées','rectangles','Masque','pilotes/aviator'] },
   { id:16, name:'Code douanier',       code:'code_douanier', type:'Texte',           groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'99999999', showInSynth:false, clickToOpen:false },
-  { id:17, name:'Commentaire',         code:'commentaire',   type:'Texte long',      groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', maxLength:500, showInSynth:false, clickToOpen:false, isConditionCommerciale:true },
+  { id:17, name:'Commentaire',         code:'commentaire',   type:'Texte long',      groupId:4,  required:false, calc:false, inCompletion:false, formula:'', mask:'', maxLength:500, showInSynth:false, clickToOpen:false, isConditionCommerciale:true },
   { id:18, name:'Prix catalogue',      code:'prix_catalogue',type:'Nombre',          groupId:5,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:19, name:'PA interne',          code:'pa_interne',        type:'Nombre',          groupId:5,  required:false, calc:true, inCompletion:false,
-    formula:'=[prix_catalogue]*(1-[remiseEnseigne]/100)', formulaLabel:'Prix catalogue x (1 - Remise interne/100)',
+    formula:'=[prix_catalogue]*(1-[remiseEnseigne])', formulaLabel:'Prix catalogue x (1 - Remise interne)',
     mask:'', showInSynth:false, clickToOpen:false },
-  { id:20, name:'Remise sur facture',  code:'remise',        type:'Nombre',          groupId:5,  required:false, calc:false, inCompletion:true, formula:'', mask:'', stepEnabled:true, step:1, min:0, max:100, showInSynth:false, clickToOpen:false },
-  { id:21, name:'RFA',                 code:'rfa',           type:'Nombre',          groupId:5,  required:false, calc:false, inCompletion:true, formula:'', mask:'', stepEnabled:true, step:0.5, min:0, max:100, showInSynth:false, clickToOpen:false, isConditionCommerciale:true },
+  { id:20, name:'Remise sur facture',  code:'remise',        type:'Nombre',          groupId:5,  required:false, calc:false, inCompletion:true, formula:'', mask:'', stepEnabled:true, step:0.01, min:0, max:1, showInSynth:false, clickToOpen:false, displayFormat:'percent' },
+  { id:21, name:'RFA',                 code:'rfa',           type:'Nombre',          groupId:5,  required:false, calc:false, inCompletion:true, formula:'', mask:'', stepEnabled:true, step:0.005, min:0, max:1, showInSynth:false, clickToOpen:false, isConditionCommerciale:true, displayFormat:'percent' },
   { id:22, name:'marge interne',           code:'marge_interne',     type:'Nombre',  groupId:5,  required:false, calc:true, inCompletion:false,
-    formula:'=[pa_interne]*(1-[remise]/100)*(1+[rfa]/100)', formulaLabel:'pa interne x (1 - Remise/100) x (1 + RFA/100)',
+    formula:'=[pa_interne]*(1-[remise])*(1+[rfa])', formulaLabel:'pa interne x (1 - Remise) x (1 + RFA)',
     mask:'', showInSynth:false, clickToOpen:false },
   { id:23, name:'PA opticien',         code:'pa_opticien',   type:'Nombre',  groupId:5,  required:false, calc:true, inCompletion:false,
-    formula:'=[pa_interne]*(1-[remise]/100)', formulaLabel:'pa interne x (1 - Remise/100)',
+    formula:'=[pa_interne]*(1-[remise])', formulaLabel:'pa interne x (1 - Remise)',
     mask:'', showInSynth:false, clickToOpen:false },
   { id:24, name:'Prix final arrondi',  code:'prix_final',    type:'Nombre',  groupId:5,  required:false, calc:true, inCompletion:false,
     formula:'=[pa_opticien]*2', formulaLabel:'PA opticien x 2',
     mask:'', showInSynth:false, clickToOpen:false },
   { id:25, name:'Taux de marque',      code:'taux_marque',   type:'Nombre',  groupId:5,  required:false, calc:true, inCompletion:false,
-    formula:'=([prix_final]-[pa_opticien])/[prix_final]*100', formulaLabel:'(Prix final - PA opticien) / Prix final x 100',
+    formula:'=([prix_final]-[pa_opticien])/[prix_final]', formulaLabel:'(Prix final - PA opticien) / Prix final', displayFormat:'percent',
     mask:'', showInSynth:false, clickToOpen:false },
   { id:26, name:'Titre SEO O',      code:'seo_titre_o',  type:'Texte', groupId:6,  required:false, calc:true, inCompletion:false,
     formula:'CONCAT(nom, " | Optic 2000")', formulaLabel:'Nom produit | Optic 2000',
@@ -180,11 +179,30 @@ let attributes = [
     mask:'', showInSynth:false, clickToOpen:false },
   { id:51, name:'Type de produit',     code:'type_produit_acc', type:'Texte',        groupId:11, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:52, name:'Coefficient',         code:'coefficient',   type:'Nombre',          groupId:11, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:54, name:'Vue de face',         code:'visuel_face',   type:'Image',           groupId:2,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:55, name:'Vue 3/4',             code:'visuel_tq',     type:'Image',           groupId:2,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:56, name:'Vue de profil',       code:'visuel_profil', type:'Image',           groupId:2,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:57, name:'Visuel ambiance',     code:'visuel_ambiance', type:'Image',         groupId:2,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:58, name:'Visuel fournisseur',  code:'visuel_fournisseur', type:'Image',      groupId:2,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:54, name:'Vue de face',         code:'visuel_face',   type:'Image',           groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:55, name:'Vue 3/4',             code:'visuel_tq',     type:'Image',           groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:56, name:'Vue de profil',       code:'visuel_profil', type:'Image',           groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:57, name:'Visuel ambiance',     code:'visuel_ambiance', type:'Image',         groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:58, name:'Visuel fournisseur',  code:'visuel_fournisseur', type:'Image',      groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:82, name:'Hauteur des verres',  code:'hauteur_verres', type:'Nombre', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:83, name:'Taille du nez',       code:'taille_nez',     type:'Nombre', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:84, name:'Largeur de la face',  code:'largeur_face',   type:'Nombre', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:85, name:'Taille des branches', code:'taille_branches', type:'Nombre', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:86, name:'Branches flex',       code:'branches_flex',  type:'Oui / Non', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:87, name:'Branches antiderapantes', code:'branches_antiderapantes', type:'Oui / Non', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:88, name:'Teinte des verres',   code:'teinte_verres',  type:'Texte', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:89, name:'Pola',                code:'pola',           type:'Oui / Non', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:90, name:'Miroir',              code:'miroir',         type:'Oui / Non', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:91, name:'Degrade',             code:'degrade',        type:'Oui / Non', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:92, name:'Adaptable a la vue',  code:'adaptable_vue',  type:'Oui / Non', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:93, name:'Style',               code:'style',          type:'Texte', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:94, name:'Pays d origine',      code:'pays_origine',   type:'Texte', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:95, name:'Adaptable verres progressifs', code:'adaptable_progressifs', type:'Oui / Non', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:96, name:'Code couleur',        code:'code_couleur',   type:'Texte', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:97, name:'Profil de caractere', code:'profil_caractere', type:'Texte', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:98, name:'Groupe de marchandise', code:'groupe_marchandise', type:'Texte', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:99, name:'Code fabricant',      code:'code_fabricant', type:'Texte', groupId:13, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:100, name:'Nom du fabricant',   code:'nom_fabricant',  type:'Texte', groupId:13, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
 ];
 
 // ============================================================
@@ -278,6 +296,21 @@ let brandSettings = [
   { marque:'Banana Moon',       fournisseurCode:'R01285', type:'Montures', segAttrCode:'optique_solaire', segAttrValue:'Optique', rf:0.08,   rfa:0,      remiseEnseigne:0.40, repriseEchange:true,  conditionsLivraison:'Franco',                                    commentaire:'RF ET RFA 2021 MAJ PAR NC' },
   { marque:'FRENCH RETRO',      fournisseurCode:'R01785', type:'Montures', segAttrCode:'optique_solaire', segAttrValue:'Optique', rf:0,      rfa:0,      remiseEnseigne:0.30, repriseEchange:true,  conditionsLivraison:'Franco - regroupement reassorts 1x/semaine', commentaire:'RF ET RFA 2021 MAJ PAR NC' },
 ];
+
+const IWI_BRAND_CODES = {
+  'Esprit': '43',
+  'Saint Laurent': 'SLX',
+  'MontBlanc': 'MMM',
+  'Julbo': 'JUL',
+};
+brandSettings.forEach(b => {
+  if (!b.iwiCode && IWI_BRAND_CODES[b.marque]) b.iwiCode = IWI_BRAND_CODES[b.marque];
+});
+
+const IWI_EXPORT_CONSTANTS = {
+  codeDistributeur: 'ATS',
+  nomDistributeur: 'Audioptic Trade Services',
+};
 
 // ============================================================
 // MOTEUR DE FORMULES
@@ -401,7 +434,7 @@ function applyBrandConditionFields(product) {
   if (!b) return;
   const f = product.fields;
   if (b.remiseEnseigne !== undefined && b.remiseEnseigne !== null && b.remiseEnseigne !== '') {
-    f.remiseEnseigne = String(parseFloat((Number(b.remiseEnseigne) * 100).toFixed(4)));
+    f.remiseEnseigne = String(b.remiseEnseigne);
   }
 }
 
@@ -457,6 +490,14 @@ function computeCalcFields(product) {
 // chaque rendu. Les formules DATE_MAJ font exception : leur valeur est
 // l'information elle-même. Toute clé d'attribut absente est posée à ''.
 // ============================================================
+function coercePercentStored(v) {
+  if (v === undefined || v === null || String(v).trim() === '') return '';
+  const n = parseFloat(String(v).replace('%', '').replace(',', '.'));
+  if (isNaN(n)) return '';
+  const unit = Math.abs(n) > 1 ? n / 100 : n;
+  return String(parseFloat(Math.max(0, Math.min(1, unit)).toFixed(6)));
+}
+
 function normalizeProducts() {
   let corriges = 0;
   products.forEach(p => {
@@ -472,6 +513,9 @@ function normalizeProducts() {
       } else if (!(a.code in p.fields)) {
         p.fields[a.code] = '';
         corrige = true;
+      } else if (a.displayFormat === 'percent' && p.fields[a.code] !== '') {
+        const c = coercePercentStored(p.fields[a.code]);
+        if (String(p.fields[a.code]) !== c) { p.fields[a.code] = c; corrige = true; }
       }
     });
     if (corrige) corriges++;
@@ -529,7 +573,7 @@ function validateMask(value, mask) {
 // CATEGORIES
 // ============================================================
 let categories = [
-  { id:1, name:'Montures',    code:'monture',    color:'#4fc3f7', groupIds:[1,2,3,4,5,6]   },
+  { id:1, name:'Montures',    code:'monture',    color:'#4fc3f7', groupIds:[1,2,3,4,5,6,13] },
   { id:2, name:'Lentilles',   code:'lentille',   color:'#66bb6a', groupIds:[1,2,7,8] },
   { id:3, name:'Accessoires', code:'accessoire', color:'#ffa726', groupIds:[1,2,11]         },
   { id:4, name:'PEL',         code:'pel',        color:'#ef5350', groupIds:[1,2,12,8]          },
@@ -598,10 +642,11 @@ function grantPermsForNewCategory(cat) {
 }
 
 let roles = [
-  { id:1, name:'Admin Systeme', okta:'OctoPIM_Admin_Systeme', mode:'Manuel',      perms: defaultPermsForRole(1) },
-  { id:2, name:'Admin Achats',  okta:'OctoPIM_Admin_Achats',  mode:'Manuel',      perms: defaultPermsForRole(2) },
+  { id:1, name:'Admin Systeme', okta:'OctoPIM_Admin_Systeme', mode:'Manuel', perms: defaultPermsForRole(1) },
+  { id:2, name:'Admin Achats',  okta:'OctoPIM_Admin_Achats',  mode:'Manuel', perms: defaultPermsForRole(2) },
   { id:3, name:'Consultation',  okta:'OctoPIM_Consultation',  mode:'Automatique', perms: defaultPermsForRole(3) },
   { id:4, name:'Users Achats',  okta:'OctoPIM_Users_Achats',  mode:'Automatique', perms: defaultPermsForRole(4) },
+  { id:5, name:'Referencement', okta:'OctoPIM_Referencement', mode:'Manuel', perms: defaultPermsForRole(2) },
 ];
 
 let users = [
@@ -609,6 +654,7 @@ let users = [
   { id:2, name:'A. Martin',  initials:'AM', roleId:2, color:'#2e7d32' },
   { id:3, name:'C. Leroy',   initials:'CL', roleId:3, color:'#6a1b9a' },
   { id:4, name:'U. Bernard', initials:'UB', roleId:4, color:'#e65100' },
+  { id:5, name:'L. Petit',   initials:'LP', roleId:5, color:'#00838f' },
 ];
 
 let currentUserId = 1;
@@ -626,7 +672,7 @@ let products = [
     fields:{ sap:'M906342000001', ean:'08056262500675', nom:'Monture Vogue VO4279S', miseEnLigne:'15/03/2025',
              marque:'Vogue', fournisseur_code:'R00078', ref_monture:'VO4279S', couleur:'Noir',
              optique_solaire:'Optique', matiere:'Acetate', cerclage:'Cercle', forme:'Rectangulaire',
-             largeur_verres:'54', code_douanier:'9003190000', pa_interne:'45', remise:'10', rfa:'2', prix_catalogue:'180',
+             largeur_verres:'54', code_douanier:'9003190000', pa_interne:'45', remise:'0.1', rfa:'0.02', prix_catalogue:'180',
              active_o:'Oui', active_l:'Non', date_maj_statut:'15/03/2025' } },
   { id:2,  cat:'Lentilles',   createdAt:'28/02/2025', maj:'02/07/2025 09:15', visualSrc:null, visuals:0,
     history:[
@@ -645,7 +691,7 @@ let products = [
              marque:'Ray-Ban', fournisseur_code:'R00078', ref_monture:'RB3025', couleur:'Or',
              optique_solaire:'Solaire', matiere:'Metal', cerclage:'Cercle', forme:'Aviateur',
              largeur_verres:'58',
-             code_douanier:'9004100000', pa_interne:'60', remise:'15', rfa:'3',
+             code_douanier:'9004100000', pa_interne:'60', remise:'0.15', rfa:'0.03',
              active_o:'Non', active_l:'Non', date_maj_statut:'12/05/2025' } },
   { id:4,  cat:'Accessoires', createdAt:'26/02/2025', maj:'30/06/2025 08:45', visualSrc:null, visuals:0,
     history:[], pendingChanges:[],
@@ -660,7 +706,7 @@ let products = [
     fields:{ sap:'M906346000001', ean:'08056262361245', nom:'Monture Oakley OX8046', miseEnLigne:'10/04/2025',
              marque:'Oakley', fournisseur_code:'R00078', ref_monture:'OX8046', couleur:'Gris',
              optique_solaire:'Optique', matiere:'Metal', cerclage:'Semi-cercle', forme:'Rectangulaire',
-             code_douanier:'9003190000', cible:'Homme', largeur_verres:'50', pa_interne:'55', remise:'12', rfa:'2',
+             code_douanier:'9003190000', cible:'Homme', largeur_verres:'50', pa_interne:'55', remise:'0.12', rfa:'0.02',
              prix_catalogue:'220', active_o:'Oui', active_l:'Oui', date_maj_statut:'10/04/2025' } },
   { id:6,  cat:'Montures',    createdAt:'26/02/2025', maj:'28/06/2025 10:10', visualSrc:null, visuals:0,
     history:[
@@ -670,7 +716,7 @@ let products = [
              marque:'Vogue', fournisseur_code:'R00078', ref_monture:'VO3987', couleur:'Rose',
              optique_solaire:'Optique', matiere:'Acetate', cerclage:'Cercle', forme:'Papillon',
              largeur_verres:'45',
-             code_douanier:'9003190000', pa_interne:'42', remise:'10', rfa:'2', prix_catalogue:'165',
+             code_douanier:'9003190000', pa_interne:'42', remise:'0.1', rfa:'0.02', prix_catalogue:'165',
              active_o:'Non', active_l:'Non', date_maj_statut:'05/03/2025' } },
   { id:7,  cat:'PEL', createdAt:'25/08/2026', maj:'25/08/2026 00:00', visualSrc:null, visuals:0,
     history:[], pendingChanges:[],
@@ -694,15 +740,52 @@ let products = [
     history:[], pendingChanges:[],
     fields:{ sap:'PEL005', ean:'', nom:'Renu MPS 360ml', miseEnLigne:'', prix_vente:'',
              active_o:'Non', active_l:'Non', date_maj_statut:'25/08/2026' } },
+
+  { id:12, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M90588600001", ean:"888989442727", nom:"Esprit - 33513 - Ecaille", marque:"Esprit", fournisseur_code:"R00028", ref_monture:"33513", code_couleur:"545", couleur:"Ecaille", largeur_verres:"48", hauteur_verres:"44", taille_nez:"21", largeur_face:"140", taille_branches:"140", branches_flex:"Oui", branches_antiderapantes:"Non", teinte_verres:"Verres de présentation", pola:"Non", miroir:"Non", degrade:"Non", adaptable_vue:"Oui", forme:"rondes/ovales/pantos", style:"Classique", pays_origine:"Chine", cible:"Femme", optique_solaire:"Optique", adaptable_progressifs:"Oui", code_douanier:"90031100", matiere:"Plastique", profil_caractere:"PFL0020 : Femme", groupe_marchandise:"GM0040     Mont.Opt.Pl.Cerclées", prix_catalogue:"53", remise:"0.07", rfa:"0.09" } },
+  { id:13, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M90579100001", ean:"889652533940", nom:"Saint Laurent - SL753 OPT - Noir", marque:"Saint Laurent", fournisseur_code:"R01554", ref_monture:"SL753 OPT", code_couleur:"001", couleur:"Noir", largeur_verres:"50", hauteur_verres:"39.899", taille_nez:"20", largeur_face:"145", taille_branches:"145", branches_antiderapantes:"Non", teinte_verres:"Verres de présentation", pola:"Non", miroir:"Non", degrade:"Non", adaptable_vue:"Oui", forme:"rondes/ovales/pantos", style:"Classique", pays_origine:"Japon", cible:"Mixte", optique_solaire:"Optique", adaptable_progressifs:"Oui", code_douanier:"90031100", matiere:"Plastique", profil_caractere:"PFL0030 : Mixte", groupe_marchandise:"GM0040     Mont.Opt.Pl.Cerclées", prix_catalogue:"141", remise:"0.04", rfa:"0" } },
+  { id:14, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M90630600001", ean:"889652555874", nom:"Saint Laurent - SLM146 - Noir", marque:"Saint Laurent", fournisseur_code:"R01554", ref_monture:"SLM146", code_couleur:"001", couleur:"Noir", largeur_verres:"54", hauteur_verres:"46.2", taille_nez:"19", largeur_face:"145", taille_branches:"145", branches_antiderapantes:"Non", teinte_verres:"Gris", pola:"Non", miroir:"Non", degrade:"Non", adaptable_vue:"Oui", forme:"carrées", style:"Fashion", pays_origine:"Italie", cible:"Femme", optique_solaire:"Solaire", adaptable_progressifs:"Oui", code_douanier:"90041091", matiere:"Plastique", profil_caractere:"PFL0020 : Femme", groupe_marchandise:"GM0130     Mont Sol Pl.Cerclées", prix_catalogue:"155", remise:"0.04", rfa:"0" } },
+  { id:15, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M10529300001", ean:"889652422107", nom:"MontBlanc - MB0279O - Gris", marque:"MontBlanc", fournisseur_code:"R01554", ref_monture:"MB0279O", code_couleur:"001", couleur:"Gris", largeur_verres:"54", hauteur_verres:"37.6", taille_nez:"20", largeur_face:"145", taille_branches:"145", branches_flex:"Non", branches_antiderapantes:"Non", teinte_verres:"Verres de présentation", pola:"Non", miroir:"Non", degrade:"Non", adaptable_vue:"Oui", forme:"rectangles", style:"Classique", pays_origine:"Italie", cible:"Homme", optique_solaire:"Optique", adaptable_progressifs:"Oui", code_douanier:"90031930", matiere:"Métal", profil_caractere:"PFL0010 : Homme", groupe_marchandise:"GM0030     Mont.Opt.Mé.Percées", prix_catalogue:"138", remise:"0.04", rfa:"0" } },
+  { id:16, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M10553600001", ean:"889652547091", nom:"MontBlanc - MB0389O - Bleu", marque:"MontBlanc", fournisseur_code:"R01554", ref_monture:"MB0389O", code_couleur:"009", couleur:"Bleu", largeur_verres:"52", hauteur_verres:"39.8", taille_nez:"22", largeur_face:"145", taille_branches:"145", branches_flex:"Non", branches_antiderapantes:"Non", teinte_verres:"Verres de présentation", pola:"Non", miroir:"Non", degrade:"Non", adaptable_vue:"Oui", forme:"rectangles", style:"Classique", pays_origine:"Japon", cible:"Homme", optique_solaire:"Optique", adaptable_progressifs:"Oui", code_douanier:"90031930", matiere:"Métal", profil_caractere:"PFL0010 : Homme", groupe_marchandise:"GM0010     Mont.Opt.Mé.Cerclée", prix_catalogue:"104", remise:"0.04", rfa:"0" } },
+  { id:17, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M10573200001", ean:"889652446769", nom:"MontBlanc - MB0292O - Noir", marque:"MontBlanc", fournisseur_code:"R01554", ref_monture:"MB0292O", code_couleur:"001", couleur:"Noir", largeur_verres:"51", hauteur_verres:"49.2", taille_nez:"20", largeur_face:"150", taille_branches:"150", branches_flex:"Non", branches_antiderapantes:"Non", teinte_verres:"Verres de présentation", pola:"Non", miroir:"Non", degrade:"Non", adaptable_vue:"Oui", forme:"rectangles", style:"Classique", pays_origine:"Italie", cible:"Homme", optique_solaire:"Optique", adaptable_progressifs:"Oui", code_douanier:"90031100", matiere:"Plastique", profil_caractere:"PFL0010 : Homme", groupe_marchandise:"GM0040     Mont.Opt.Pl.Cerclées", prix_catalogue:"89", remise:"0.04", rfa:"0" } },
+  { id:18, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M10573300001", ean:"889652447407", nom:"MontBlanc - MB0305O - Noir", marque:"MontBlanc", fournisseur_code:"R01554", ref_monture:"MB0305O", code_couleur:"001", couleur:"Noir", largeur_verres:"51", hauteur_verres:"45", taille_nez:"21", largeur_face:"145", taille_branches:"145", branches_flex:"Non", branches_antiderapantes:"Non", teinte_verres:"Verres de présentation", pola:"Non", miroir:"Non", degrade:"Non", adaptable_vue:"Oui", forme:"rectangles", style:"Classique", pays_origine:"Japon", cible:"Homme", optique_solaire:"Optique", adaptable_progressifs:"Oui", code_douanier:"90031100", matiere:"Plastique", profil_caractere:"PFL0010 : Homme", groupe_marchandise:"GM0040     Mont.Opt.Pl.Cerclées", prix_catalogue:"126", remise:"0.04", rfa:"0" } },
+  { id:19, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M10573400001", ean:"889652599243", nom:"MontBlanc - MB0422O - Ecaille", marque:"MontBlanc", fournisseur_code:"R01554", ref_monture:"MB0422O", code_couleur:"008", couleur:"Ecaille", largeur_verres:"53", hauteur_verres:"45.1", taille_nez:"21", largeur_face:"150", taille_branches:"150", branches_flex:"Non", branches_antiderapantes:"Non", teinte_verres:"Verres de présentation", pola:"Non", miroir:"Non", degrade:"Non", adaptable_vue:"Oui", forme:"rectangles", style:"Classique", pays_origine:"Italie", cible:"Homme", optique_solaire:"Optique", adaptable_progressifs:"Oui", code_douanier:"90031100", matiere:"Plastique", profil_caractere:"PFL0010 : Homme", groupe_marchandise:"GM0040     Mont.Opt.Pl.Cerclées", prix_catalogue:"112", remise:"0.04", rfa:"0" } },
+  { id:20, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M10573600001", ean:"889652405339", nom:"Saint Laurent - SL M112 - Ecaille", marque:"Saint Laurent", fournisseur_code:"R01554", ref_monture:"SL M112", code_couleur:"002", couleur:"Ecaille", largeur_verres:"54", hauteur_verres:"45", taille_nez:"16", largeur_face:"145", taille_branches:"145", branches_flex:"Non", branches_antiderapantes:"Non", teinte_verres:"Verres de présentation", pola:"Non", miroir:"Non", degrade:"Non", adaptable_vue:"Oui", forme:"rondes/ovales/pantos", style:"Classique", pays_origine:"Italie", cible:"Femme", optique_solaire:"Optique", adaptable_progressifs:"Oui", code_douanier:"90031100", matiere:"Plastique", profil_caractere:"PFL0020 : Femme", groupe_marchandise:"GM0040     Mont.Opt.Pl.Cerclées", prix_catalogue:"119", remise:"0.04", rfa:"0" } },
+  { id:21, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M10576200001", ean:"03663234210309", nom:"Julbo - J567 FREQUENCY - Vert", marque:"Julbo", fournisseur_code:"R00066", ref_monture:"J567 FREQUENCY", code_couleur:"1116", couleur:"Vert", largeur_verres:"130", taille_nez:"13", largeur_face:"140", taille_branches:"123", branches_flex:"Non", branches_antiderapantes:"Oui", teinte_verres:"Vert", pola:"Non", miroir:"Oui", degrade:"Non", adaptable_vue:"Oui", forme:"Masque", style:"Sport", pays_origine:"Roumanie", cible:"Mixte", optique_solaire:"Solaire", adaptable_progressifs:"Non", code_douanier:"90041091", matiere:"Plastique", profil_caractere:"PFL0030 : Mixte", groupe_marchandise:"GM0150     Mont.Sol.Pl.Percées", prix_catalogue:"54", remise:"0", rfa:"0" } },
+  { id:22, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M10576300001", ean:"03663234210316", nom:"Julbo - J590 INTENSITY - Bleu", marque:"Julbo", fournisseur_code:"R00066", ref_monture:"J590 INTENSITY", code_couleur:"1512", couleur:"Bleu", largeur_verres:"136", taille_nez:"14", largeur_face:"136", taille_branches:"130", branches_flex:"Non", branches_antiderapantes:"Oui", teinte_verres:"Rose", pola:"Non", miroir:"Oui", degrade:"Non", adaptable_vue:"Oui", forme:"Masque", style:"Sport", pays_origine:"Roumanie", cible:"Mixte", optique_solaire:"Solaire", adaptable_progressifs:"Non", code_douanier:"90041091", matiere:"Plastique", profil_caractere:"PFL0030 : Mixte", groupe_marchandise:"GM0150     Mont.Sol.Pl.Percées", prix_catalogue:"65", remise:"0", rfa:"0" } },
+  { id:23, cat:'Montures', createdAt:'24/09/2026', maj:'24/09/2026 00:00', visualSrc:null, visuals:0,
+    history:[], pendingChanges:[],
+    fields:{ sap:"M10576400001", ean:"03663234210323", nom:"Julbo - J586 WARD - Vert", marque:"Julbo", fournisseur_code:"R00066", ref_monture:"J586 WARD", code_couleur:"1116", couleur:"Vert", largeur_verres:"56", hauteur_verres:"48", taille_nez:"17", largeur_face:"137", taille_branches:"137", branches_flex:"Non", branches_antiderapantes:"Oui", teinte_verres:"Gris", pola:"Non", miroir:"Oui", degrade:"Non", adaptable_vue:"Oui", forme:"pilotes/aviator", style:"Sport", pays_origine:"Roumanie", cible:"Mixte", optique_solaire:"Solaire", adaptable_progressifs:"Oui", code_douanier:"90041091", matiere:"Plastique", profil_caractere:"PFL0030 : Mixte", groupe_marchandise:"GM0130     Mont Sol Pl.Cerclées", prix_catalogue:"39", remise:"0", rfa:"0" } },
 ];
 
 // ============================================================
 // COMPTEURS AUTO-INCREMENT
 // ============================================================
-let nextAttrId     = 82;
+let nextAttrId     = 101;
 let nextCatId      = 6;
-let nextGroupId    = 13;
-let nextProductId  = 12;
+let nextGroupId    = 14;
+let nextProductId  = 24;
 let _filterIncomplets = false;
 
 // ============================================================
@@ -723,6 +806,104 @@ let currentPage       = 1;
 // ============================================================
 // EXPORT STATE — filtres actifs au moment du clic "Exporter"
 // ============================================================
+let exportPick = null;
+let activeExportTemplate = 'catalogue';
+let exportTemplates = [
+  { id: 'catalogue', name: 'Catalogue', builtin: true },
+  { id: 'iwi', name: 'IWI', builtin: true },
+];
+
+const IWI_COLUMNS = [
+  { header: 'Code fabricant', code: 'code_fabricant', required: true },
+  { header: 'Nom du fabricant', code: 'nom_fabricant', required: true },
+  { header: 'Code du distributeur', constant: IWI_EXPORT_CONSTANTS.codeDistributeur, required: true },
+  { header: 'Nom du distributeur', constant: IWI_EXPORT_CONSTANTS.nomDistributeur, required: true },
+  { header: 'GTIN', code: 'ean', required: true },
+  { header: 'Prix 1', code: 'pa_interne', required: true },
+  { header: 'Prix 2', code: 'prix_catalogue', required: true },
+  { header: 'Type', code: 'optique_solaire', required: true },
+  { header: 'Sous-type monture', code: 'cerclage', required: true },
+  { header: 'Taille du verre', code: 'largeur_verres', required: true },
+  { header: 'Taille du pont', code: 'taille_nez', required: true },
+  { header: 'Longueur de branche', code: 'taille_branches', required: true },
+  { header: 'Code douanier', code: 'code_douanier', required: true },
+  { header: 'Materiau face', code: 'matiere', required: true },
+  { header: 'Type utilisateur', code: 'cible', required: true },
+  { header: 'Marque', code: 'marque', required: true },
+];
+
+function exportGroupsForCat(catName) {
+  const cat = catName ? getCatByName(catName) : null;
+  const ids = cat ? cat.groupIds : attrGroups.map(g => g.id);
+  return ids.map(id => getGroupById(id)).filter(Boolean);
+}
+
+function ensureExportPick() {
+  const cat = exportSnapshot.catFilter || '';
+  if (exportPick && exportPick.cat === cat && exportPick.template === activeExportTemplate) return;
+  const groups = exportGroupsForCat(cat);
+  const groupIds = new Set(groups.map(g => g.id));
+  const attrs = new Set();
+  groups.forEach(g => (g.attrIds || []).forEach(id => {
+    const a = getAttrById(id);
+    if (a && a.code !== 'completion') attrs.add(a.code);
+  }));
+  const iwi = activeExportTemplate === 'iwi';
+  exportPick = { cat, template: activeExportTemplate, groups: groupIds, attrs, single: iwi, zip: iwi };
+}
+
+function exportPickerHtml() {
+  ensureExportPick();
+  const groups = exportGroupsForCat(exportPick.cat);
+  const tplOpts = exportTemplates.map(t =>
+    `<option value="${t.id}"${t.id === activeExportTemplate ? ' selected' : ''}>${t.name}</option>`
+  ).join('');
+  const blocks = groups.map(g => {
+    const on = exportPick.groups.has(g.id);
+    const attrs = (g.attrIds || []).map(id => getAttrById(id)).filter(a => a && a.code !== 'completion');
+    const fields = attrs.map(a => {
+      const checked = on && exportPick.attrs.has(a.code);
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:2px 0 2px 22px;color:${on ? '#1a2332' : '#a0b0c0'}">
+        <input type="checkbox" ${checked ? 'checked' : ''} ${on ? '' : 'disabled'}
+          onchange="toggleExportAttr(${g.id},'${a.code}',this.checked)">
+        ${escapeHtml(a.name)}
+      </label>`;
+    }).join('');
+    return `<div style="margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600">
+        <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleExportGroup(${g.id},this.checked)">
+        ${escapeHtml(g.name)}
+      </label>
+      ${fields}
+    </div>`;
+  }).join('');
+  const iwiNote = activeExportTemplate === 'iwi'
+    ? `<div id="iwi-missing" style="font-size:12px;color:#607080;margin-top:8px"></div>`
+    : '';
+  return `
+    <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:20px">
+      <div style="font-size:13px;font-weight:600;color:#1a2332;margin-bottom:12px">Trame</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+        <select class="form-select" style="max-width:240px" onchange="selectExportTemplate(this.value)">${tplOpts}</select>
+        <input class="field-input" id="export-template-name" placeholder="Nom d'une nouvelle trame" style="max-width:220px">
+        <button class="btn btn-secondary" onclick="saveExportTemplate()">Enregistrer la trame</button>
+      </div>
+      <div style="font-size:12px;color:#607080;margin-bottom:10px">
+        Decocher un groupe decoche ses attributs. Un attribut present dans deux groupes part s'il reste coche dans au moins un groupe.
+      </div>
+      <div style="max-height:320px;overflow:auto">${blocks}</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:12px">
+        <input type="checkbox" ${exportPick.single ? 'checked' : ''} onchange="exportPick.single=this.checked">
+        Tout regrouper dans un seul onglet
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px">
+        <input type="checkbox" ${exportPick.zip ? 'checked' : ''} onchange="exportPick.zip=this.checked">
+        Telecharger en .zip
+      </label>
+      ${iwiNote}
+    </div>`;
+}
+
 let exportSnapshot = {
   colFilters:    {},
   catFilter:     '',

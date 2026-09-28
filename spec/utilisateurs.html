@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Gestion des utilisateurs — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Gestion des utilisateurs</h1>
+      <p class="lead">
+        Un utilisateur est une personne qui se connecte. Son role determine
+        ce qu’il voit et ce qu’il peut modifier. La maquette simule des comptes
+        locaux ; la cible s’appuie sur Okta.
+      </p>
+
+      <h2>Qu’est-ce qu’un utilisateur ?</h2>
+      <p>
+        Un compte (nom, role). Il n’a pas de droits individuels : tout passe
+        par le role. Cela simplifie les audits et le mapping SSO.
+      </p>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Savoir qui a enregistre une modification (historique produit).</li>
+        <li>Appliquer le bon perimetre des l’ecran de connexion.</li>
+        <li>Raccorder le PIM au referentiel d’identites de l’entreprise.</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <table>
+        <thead>
+          <tr><th></th><th>Maquette</th><th>Cible</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Connexion</td><td>Switch d’utilisateur dans l’en-tete</td><td>Okta (SSO)</td></tr>
+          <tr><td>Affectation du role</td><td>Role pose sur le compte de demo</td><td>Groupe Okta ↔ role OctoPIM</td></tr>
+          <tr><td>Creation de compte</td><td>Hors ecran (comptes en dur)</td><td>Cycle de vie Okta ; OctoPIM ne duplique pas l’annuaire</td></tr>
+          <tr><td>Desactivation</td><td>Non represente</td><td>Desactivation IdP → plus d’acces PIM</td></tr>
+        </tbody>
+      </table>
+      <svg class="schema" viewBox="0 0 720 110" role="img" aria-label="Okta vers role">
+        <rect x="40" y="30" width="180" height="50" rx="8" fill="#fff" stroke="#c5d0dc"/>
+        <text x="130" y="60" text-anchor="middle" fill="#1a2332" font-size="13">Okta (compte)</text>
+        <rect x="270" y="30" width="180" height="50" rx="8" fill="#e8f0fe" stroke="#1565c0"/>
+        <text x="360" y="60" text-anchor="middle" fill="#1a2332" font-size="13">Groupe Okta</text>
+        <rect x="500" y="30" width="180" height="50" rx="8" fill="#1565c0"/>
+        <text x="590" y="60" text-anchor="middle" fill="#fff" font-size="13">Role OctoPIM</text>
+        <line x1="220" y1="55" x2="270" y2="55" stroke="#90a4ae"/>
+        <line x1="450" y1="55" x2="500" y2="55" stroke="#90a4ae"/>
+      </svg>
+      <details class="mermaid-src">
+        <summary>Diagramme Mermaid (macro Confluence)</summary>
+<pre>flowchart LR
+  U[Utilisateur Okta] --> G[Groupe Okta]
+  G --> R[Role OctoPIM]
+  R --> D[Droits : menus, categories, admin]</pre>
+      </details>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-USR-01 — Les droits ne se posent pas sur la personne, uniquement sur le role.<br>
+        RG-USR-02 — <span class="tag tag-cible">Cible</span> OctoPIM n’est pas l’annuaire : pas de mot de passe local.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

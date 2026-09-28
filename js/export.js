@@ -31,6 +31,10 @@ function renderExportPage() {
         <div style="font-size:13px;color:#607080">
           Genere un fichier <strong>.xlsx</strong> avec les onglets
           <strong>Synthese</strong> et <strong>Informations generales</strong>.
+          Export IWI : distributeur fixe
+          <strong>${IWI_EXPORT_CONSTANTS.codeDistributeur}</strong>
+          — ${IWI_EXPORT_CONSTANTS.nomDistributeur}.
+          Prix 1 = PA ATS, prix 2 = prix catalogue.
         </div>
       </div>
 
@@ -75,53 +79,7 @@ function renderExportPage() {
           : ''}
       </div>
 
-      <!-- Onglets export -->
-      <div style="background:#fff;border-radius:12px;padding:20px;
-        box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:20px">
-        <div style="font-size:13px;font-weight:600;color:#1a2332;margin-bottom:16px">
-          Contenu des onglets
-        </div>
-
-        <!-- Onglet Synthese -->
-        <div style="border:1px solid #e8ecf0;border-radius:10px;padding:16px;margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <span style="font-size:13px;font-weight:700;color:#1a2332">Onglet : Synthese</span>
-            <span class="badge badge-green" style="font-size:11px">Toujours inclus</span>
-          </div>
-          <div style="font-size:12px;color:#607080;margin-bottom:10px">
-            Colonnes issues du groupe Synthese, dans l'ordre configure.
-            En-tetes = <strong>codes techniques</strong> pour le re-import.
-            Les colonnes "Action" (ex : Supprimer) sont exclues de l'export.
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px">
-            ${synthCols.map(c =>
-              `<span class="attr-chip" style="background:#e3f2fd;color:#1565c0;font-size:11px">${c.code}</span>`
-            ).join('')}
-          </div>
-        </div>
-
-        <!-- Onglet Informations generales -->
-        <div style="border:1px solid #e8ecf0;border-radius:10px;padding:16px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <span style="font-size:13px;font-weight:700;color:#1a2332">Onglet : Informations generales</span>
-            ${catFilter
-              ? `<span class="badge badge-green" style="font-size:11px">Inclus</span>`
-              : `<span class="badge badge-grey" style="font-size:11px">Necessite une categorie</span>`}
-          </div>
-          <div style="font-size:12px;color:#607080;margin-bottom:10px">
-            ${catFilter
-              ? `Colonnes des groupes d'attributs associes a la categorie <strong>${catFilter}</strong>.`
-              : 'Selectionnez une categorie dans la liste produits pour activer cet onglet.'}
-          </div>
-          ${catFilter && detailCols.length > 0
-            ? `<div style="display:flex;flex-wrap:wrap;gap:6px">
-                 ${detailCols.map(c =>
-                   `<span class="attr-chip" style="background:#f3e5f5;color:#6a1b9a;font-size:11px">${c.code}</span>`
-                 ).join('')}
-               </div>`
-            : ''}
-        </div>
-      </div>
+      ${exportPickerHtml()}
 
       <!-- Options export -->
       <div style="background:#fff;border-radius:12px;padding:20px;
@@ -152,11 +110,12 @@ function renderExportPage() {
         </button>
         <button class="btn btn-primary" style="padding:10px 28px;font-size:14px"
           onclick="runExport()">
-          &#8681; Exporter .xlsx
+          &#8681; Exporter
         </button>
       </div>
 
     </div>`;
+  fillIwiMissing();
 }
 
 // ============================================================
@@ -223,86 +182,196 @@ function getFilteredProductsFromSnapshot() {
 // ============================================================
 // EXECUTION EXPORT
 // ============================================================
+function selectExportTemplate(id) {
+  activeExportTemplate = id;
+  exportPick = null;
+  renderExportPage();
+  const saved = exportTemplates.find(t => t.id === id);
+  if (saved && saved.pick && exportPick) {
+    exportPick.groups = new Set(saved.pick.groups);
+    exportPick.attrs = new Set(saved.pick.attrs);
+    exportPick.single = !!saved.pick.single;
+    exportPick.zip = !!saved.pick.zip;
+    renderExportPage();
+  }
+}
+
+function toggleExportGroup(gid, on) {
+  ensureExportPick();
+  if (on) exportPick.groups.add(gid);
+  else exportPick.groups.delete(gid);
+  exportPick.attrs = new Set();
+  exportPick.groups.forEach(id => {
+    const g = getGroupById(id);
+    (g && g.attrIds || []).forEach(aid => {
+      const a = getAttrById(aid);
+      if (a && a.code !== 'completion') exportPick.attrs.add(a.code);
+    });
+  });
+  renderExportPage();
+}
+
+function toggleExportAttr(gid, code, on) {
+  ensureExportPick();
+  if (on) {
+    exportPick.groups.add(gid);
+    exportPick.attrs.add(code);
+  } else {
+    exportPick.attrs.delete(code);
+  }
+  renderExportPage();
+}
+
+function saveExportTemplate() {
+  const input = document.getElementById('export-template-name');
+  const name = input ? input.value.trim() : '';
+  if (!name) { showNotif('Donnez un nom a la trame', 'warn'); return; }
+  ensureExportPick();
+  const id = 'tpl_' + Date.now();
+  exportTemplates.push({
+    id, name, builtin: false,
+    pick: {
+      groups: [...exportPick.groups],
+      attrs: [...exportPick.attrs],
+      single: !!exportPick.single,
+      zip: !!exportPick.zip,
+    },
+  });
+  activeExportTemplate = id;
+  showNotif('Trame enregistree : ' + name);
+  renderExportPage();
+}
+
+function iwiCell(p, col) {
+  if (col.constant) return col.constant;
+  const attr = attributes.find(a => a.code === col.code);
+  if (col.code === 'pa_interne') computeCalcFields(p);
+  const val = attr ? getAttrFieldValue(p, attr) : (p.fields[col.code] || '');
+  if (col.code === 'marque' && val && typeof IWI_BRAND_CODES !== 'undefined') {
+    const code = IWI_BRAND_CODES[val];
+    if (code) return code + ' - ' + val;
+  }
+  return val !== undefined && val !== null ? String(val) : '';
+}
+
+function iwiMissingCounts(prods) {
+  const counts = {};
+  prods.forEach(p => {
+    IWI_COLUMNS.forEach(col => {
+      if (!col.required || col.constant) return;
+      if (!String(iwiCell(p, col) || '').trim()) counts[col.header] = (counts[col.header] || 0) + 1;
+    });
+  });
+  return counts;
+}
+
+function fillIwiMissing() {
+  const el = document.getElementById('iwi-missing');
+  if (!el || activeExportTemplate !== 'iwi') return;
+  let prods = getFilteredProductsFromSnapshot();
+  const opt = document.getElementById('export-opt-selection');
+  if (opt && opt.checked && selectedProductIds.length) prods = prods.filter(p => selectedProductIds.includes(p.id));
+  const counts = iwiMissingCounts(prods);
+  const keys = Object.keys(counts);
+  el.textContent = keys.length
+    ? 'Manquants : ' + keys.map(k => counts[k] + ' ' + k).join(', ') + '. L\'export IWI reste bloque.'
+    : 'Toutes les colonnes IWI exigees sont remplies.';
+}
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 function runExport() {
   if (typeof XLSX === 'undefined') {
     showNotif('Erreur : librairie SheetJS non chargee');
     return;
   }
-
+  ensureExportPick();
   const optSelection = document.getElementById('export-opt-selection');
-  const optCalc      = document.getElementById('export-opt-calc');
-  const optImages    = document.getElementById('export-opt-images');
-  const inclCalc     = optCalc    ? optCalc.checked    : true;
-  const inclImages   = optImages  ? optImages.checked  : false;
-  const selOnly      = optSelection && optSelection.checked && selectedProductIds.length > 0;
-
+  const selOnly = optSelection && optSelection.checked && selectedProductIds.length > 0;
   let prods = getFilteredProductsFromSnapshot();
   if (selOnly) prods = prods.filter(p => selectedProductIds.includes(p.id));
   if (!prods.length) { showNotif('Aucun produit a exporter'); return; }
-
   prods.forEach(p => computeCalcFields(p));
 
-  const wb = XLSX.utils.book_new();
-
-  // ---- Onglet Synthese ----
-  const synthCols = getSyntheseExportCols().filter(c => {
-    if (!inclCalc) {
-      const a = attributes.find(x => x.code === c.code);
-      if (a && a.calc) return false;
-    }
-    if (!inclImages) {
-      const a = attributes.find(x => x.code === c.code);
-      if (a && a.type === 'Image') return false;
-    }
-    return true;
-  });
-
-  const synthHeader = synthCols.map(c => c.code);
-  const synthRows   = prods.map(p => synthCols.map(c => {
-    const attr = attributes.find(a => a.code === c.code);
-    if (c.code === 'visuel_face' && !inclImages) return '';
-    if (attr) {
-      const val = getAttrFieldValue(p, attr);
-      return val !== undefined && val !== null ? String(val) : '';
-    }
-    const val = p.fields[c.src || c.code];
-    return val !== undefined && val !== null ? String(val) : '';
-  }));
-
-  const synthData = [synthHeader, ...synthRows];
-  const wsSynth   = XLSX.utils.aoa_to_sheet(synthData);
-  applySheetStyles(wsSynth, synthHeader.length, synthRows.length);
-  XLSX.utils.book_append_sheet(wb, wsSynth, 'Synthese');
-
-  // ---- Onglet Informations generales ----
-  const catFilter = exportSnapshot.catFilter || '';
-  if (catFilter) {
-    const detailCols = getDetailExportCols(catFilter).filter(c => {
-      if (!inclCalc && c.calc) return false;
-      return true;
-    });
-    if (detailCols.length > 0) {
-      const detailHeader = detailCols.map(c => c.code);
-      const detailRows   = prods.map(p => detailCols.map(c => {
-        const attr = attributes.find(a => a.code === c.code);
-        const val  = attr ? getAttrFieldValue(p, attr) : p.fields[c.code];
-        return val !== undefined && val !== null ? String(val) : '';
-      }));
-      const detailData = [detailHeader, ...detailRows];
-      const wsDetail   = XLSX.utils.aoa_to_sheet(detailData);
-      applySheetStyles(wsDetail, detailHeader.length, detailRows.length);
-      XLSX.utils.book_append_sheet(wb, wsDetail, 'Informations generales');
+  if (activeExportTemplate === 'iwi') {
+    const counts = iwiMissingCounts(prods);
+    const keys = Object.keys(counts);
+    fillIwiMissing();
+    if (keys.length) {
+      showNotif('Export IWI bloque : des colonnes exigees sont vides', 'warn');
+      return;
     }
   }
 
-  // ---- Nom du fichier ----
+  const wb = XLSX.utils.book_new();
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const catStr  = catFilter ? '_' + catFilter.replace(/\s+/g, '_') : '';
-  const selStr  = selOnly   ? '_selection'                         : '';
-  const fileName = `export_produits${catStr}${selStr}_${dateStr}.xlsx`;
 
-  XLSX.writeFile(wb, fileName);
-  showNotif('Export termine : ' + fileName);
+  if (activeExportTemplate === 'iwi') {
+    const header = IWI_COLUMNS.map(c => c.header);
+    const rows = prods.map(p => IWI_COLUMNS.map(c => iwiCell(p, c)));
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    applySheetStyles(ws, header.length, rows.length);
+    XLSX.utils.book_append_sheet(wb, ws, 'Montures');
+  } else if (exportPick.single) {
+    const seen = new Set();
+    const cols = [];
+    exportPick.groups.forEach(gid => {
+      const g = getGroupById(gid);
+      (g && g.attrIds || []).forEach(id => {
+        const a = getAttrById(id);
+        if (!a || seen.has(a.code) || !exportPick.attrs.has(a.code)) return;
+        seen.add(a.code);
+        cols.push(a);
+      });
+    });
+    const header = cols.map(a => a.code);
+    const rows = prods.map(p => cols.map(a => {
+      const val = getAttrFieldValue(p, a);
+      return val !== undefined && val !== null ? String(val) : '';
+    }));
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    applySheetStyles(ws, header.length, rows.length);
+    XLSX.utils.book_append_sheet(wb, ws, 'Export');
+  } else {
+    let sheets = 0;
+    exportPick.groups.forEach(gid => {
+      const g = getGroupById(gid);
+      if (!g) return;
+      const cols = (g.attrIds || []).map(id => getAttrById(id)).filter(a => a && exportPick.attrs.has(a.code));
+      if (!cols.length) return;
+      const header = cols.map(a => a.code);
+      const rows = prods.map(p => cols.map(a => {
+        const val = getAttrFieldValue(p, a);
+        return val !== undefined && val !== null ? String(val) : '';
+      }));
+      const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+      applySheetStyles(ws, header.length, rows.length);
+      XLSX.utils.book_append_sheet(wb, ws, g.name.slice(0, 31));
+      sheets++;
+    });
+    if (!sheets) { showNotif('Aucun champ coche'); return; }
+  }
+
+  const base = activeExportTemplate === 'iwi' ? 'export_iwi_' : 'export_produits_';
+  const xlsxName = base + dateStr + '.xlsx';
+  if (exportPick.zip) {
+    if (typeof JSZip === 'undefined') { showNotif('Librairie ZIP non chargee'); return; }
+    const zip = new JSZip();
+    zip.file(xlsxName, XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
+    zip.generateAsync({ type: 'blob' }).then(blob => {
+      downloadBlob(blob, base + dateStr + '.zip');
+      showNotif('Export termine : ' + base + dateStr + '.zip');
+    });
+    return;
+  }
+  XLSX.writeFile(wb, xlsxName);
+  showNotif('Export termine : ' + xlsxName);
 }
 
 // ============================================================

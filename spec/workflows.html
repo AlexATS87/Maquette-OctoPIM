@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Workflows d’utilisation — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Workflows d’utilisation</h1>
+      <p class="lead">
+        Parcours metier, du point de vue de l’utilisateur. Chaque diagramme
+        se copie dans Confluence (image SVG ou macro Mermaid).
+      </p>
+      <ul class="wf-list">
+        <li><a href="#wf-create">Creation d’un produit</a></li>
+        <li><a href="#wf-edit">Modification d’un attribut d’un produit</a></li>
+        <li><a href="#wf-force">Forcer une valeur calculee</a></li>
+        <li><a href="#wf-pub">Activer un canal de publication</a></li>
+        <li><a href="#wf-supplier">Ajouter un fournisseur / une condition</a></li>
+        <li><a href="#wf-import">Importer un fichier</a></li>
+        <li><a href="#wf-export">Exporter un extrait</a></li>
+        <li><a href="#wf-attr">Creer un attribut</a></li>
+        <li><a href="#wf-attach">Rattacher un attribut a un groupe</a></li>
+        <li><a href="#wf-cat">Ajouter une categorie</a></li>
+        <li><a href="#wf-role">Donner un role a un utilisateur</a></li>
+        <li><a href="#wf-visual">Ajouter un visuel</a></li>
+      </ul>
+
+      <h2 id="wf-create">Creation d’un produit</h2>
+      <p>Objectif : enregistrer une nouvelle reference dans le referentiel.</p>
+      <svg class="schema" viewBox="0 0 720 90" role="img">
+        <rect x="8" y="20" width="130" height="50" rx="8" fill="#1565c0"/><text x="73" y="50" text-anchor="middle" fill="#fff" font-size="12">Liste → Nouveau</text>
+        <rect x="154" y="20" width="130" height="50" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/><text x="219" y="50" text-anchor="middle" fill="#1a2332" font-size="12">EAN, nom, categorie</text>
+        <rect x="300" y="20" width="130" height="50" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/><text x="365" y="50" text-anchor="middle" fill="#1a2332" font-size="12">SAP facultatif</text>
+        <rect x="446" y="20" width="130" height="50" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/><text x="511" y="50" text-anchor="middle" fill="#1a2332" font-size="12">Fiche ouverte</text>
+        <rect x="592" y="20" width="120" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32"/><text x="652" y="50" text-anchor="middle" fill="#1a2332" font-size="12">Completer / Enreg.</text>
+      </svg>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart LR
+  A[Liste - Nouveau produit] --> B[Saisir EAN, nom, categorie]
+  B --> C[SAP facultatif]
+  C --> D{Droits d'ecriture sur la categorie ?}
+  D -->|Non| E[Refus]
+  D -->|Oui| F[Fiche creee]
+  F --> G[Completer les onglets]
+  G --> H[Enregistrer]</pre></details>
+      <div class="callout">RG-WF-01 — Sans droit d’ecriture sur la categorie, la creation est refusee. EAN, nom et categorie sont le minimum.</div>
+
+      <h2 id="wf-edit">Modification d’un attribut d’un produit</h2>
+      <p>Objectif : corriger une valeur (ex. couleur, remise) et tracer le changement.</p>
+      <svg class="schema" viewBox="0 0 720 90" role="img">
+        <rect x="20" y="20" width="150" height="50" rx="8" fill="#1565c0"/><text x="95" y="50" text-anchor="middle" fill="#fff" font-size="12">Ouvrir la fiche</text>
+        <rect x="196" y="20" width="150" height="50" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/><text x="271" y="50" text-anchor="middle" fill="#1a2332" font-size="12">Onglet du groupe</text>
+        <rect x="372" y="20" width="150" height="50" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/><text x="447" y="50" text-anchor="middle" fill="#1a2332" font-size="12">Saisir la valeur</text>
+        <rect x="548" y="20" width="150" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32"/><text x="623" y="50" text-anchor="middle" fill="#1a2332" font-size="12">Enregistrer</text>
+      </svg>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart TD
+  A[Liste ou recherche] --> B[Fiche produit]
+  B --> C[Onglet du groupe]
+  C --> D[Modifier le champ]
+  D --> E[Champs calcules se mettent a jour]
+  E --> F[Enregistrer]
+  F --> G[Historique : ancienne / nouvelle valeur, utilisateur, date]
+  D --> H[Quitter sans enregistrer]
+  H --> I[Confirmation si modifications en cours]</pre></details>
+      <div class="callout">RG-WF-02 — L’historique n’est ecrit qu’a l’enregistrement. Quitter la fiche avec des changements non sauves demande confirmation.</div>
+
+      <h2 id="wf-force">Forcer une valeur calculee</h2>
+      <p>Objectif : ecarter exceptionnellement une formule (ex. PA interne). Priorite basse si complexite trop forte en cible.</p>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart LR
+  A[Champ calcule] --> B[Saisie manuelle]
+  B --> C[Valeur forcee conservee]
+  C --> D[Enregistrer]
+  D --> E[La formule ne s'applique plus tant que le forçage n'est pas leve]</pre></details>
+      <div class="callout warn">RG-WF-03 — <span class="tag tag-maq">Maquette</span> Les champs calcules sont forcables. <span class="tag tag-cible">Cible</span> A arbitrer : conserver un levier d’exception, avec trace.</div>
+
+      <h2 id="wf-pub">Activer un canal de publication</h2>
+      <p>Objectif : rendre le produit actif sur Optic 2000 (O) et/ou Lissac (L).</p>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart TD
+  A[Onglet Informations generales] --> B[Actif canal O / Actif canal L]
+  B --> C{Au moins un canal actif ?}
+  C -->|Oui| D[Statut de publication = Oui]
+  C -->|Non| E[Statut de publication = Non]
+  D --> F[Date de MAJ du statut si le statut change]
+  E --> F
+  F --> G[Enregistrer]</pre></details>
+      <div class="callout">RG-WF-04 — Le statut de publication n’est pas saisi : il se deduit des canaux. La date de MAJ statut ne bouge que si le statut change.</div>
+
+      <h2 id="wf-supplier">Ajouter un fournisseur / une condition commerciale</h2>
+      <p>Objectif : enregistrer un accord (marque × fournisseur × type × segmentation).</p>
+      <svg class="schema" viewBox="0 0 720 90" role="img">
+        <rect x="10" y="20" width="165" height="50" rx="8" fill="#1565c0"/><text x="92" y="50" text-anchor="middle" fill="#fff" font-size="11">Admin → Conditions</text>
+        <rect x="190" y="20" width="165" height="50" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/><text x="272" y="50" text-anchor="middle" fill="#1a2332" font-size="11">+ Fournisseur si besoin</text>
+        <rect x="370" y="20" width="165" height="50" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/><text x="452" y="50" text-anchor="middle" fill="#1a2332" font-size="11">+ Nouvelle condition</text>
+        <rect x="550" y="20" width="160" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32"/><text x="630" y="50" text-anchor="middle" fill="#1a2332" font-size="11">RF, RFA, remises</text>
+      </svg>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart TD
+  A[Administration - Conditions commerciales] --> B{Fournisseur connu ?}
+  B -->|Non| C[Creer le fournisseur]
+  B -->|Oui| D[Nouvelle condition commerciale]
+  C --> D
+  D --> E[Marque, type, segmentation]
+  E --> F[RF, RFA, remise interne, reprise, livraison]
+  F --> G[Enregistrer la ligne]
+  G --> H[Les fiches produits correspondantes peuvent reprendre l'accord]</pre></details>
+      <div class="callout">RG-WF-05 — Une nouvelle marque tapee ici (ou sur une fiche) enrichit le referentiel unique de marques.</div>
+
+      <h2 id="wf-import">Importer un fichier</h2>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart TD
+  A[Imports] --> B[Choisir ajout / maj / suppression]
+  B --> C[Choisir la categorie]
+  C --> D[Deposer Excel ou CSV]
+  D --> E[Mapper les colonnes vers les attributs]
+  E --> F{Obligatoires presents ?}
+  F -->|Non| G[Bloquer avec la liste manquante]
+  F -->|Oui| H[Matching EAN puis SAP]
+  H --> I[Resultat : crees / mis a jour / erreurs]</pre></details>
+      <p>Detail : <a href="import.html">Fonction d’import</a>.</p>
+
+      <h2 id="wf-export">Exporter un extrait</h2>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart LR
+  A[Filtrer la liste] --> B[Exports]
+  B --> C[Verifier le perimetre]
+  C --> D[Generer le xlsx]
+  D --> E[En-tetes = identifiants d'attributs]</pre></details>
+      <p>Detail : <a href="export.html">Fonction d’export</a>.</p>
+
+      <h2 id="wf-attr">Creer un attribut</h2>
+      <p>Objectif : etendre le modele sans deploiement (parametrage).</p>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart TD
+  A[Administration - Attributs] --> B[Nouvel attribut]
+  B --> C[Libelle, identifiant, type de saisie]
+  C --> D[Groupe d'accueil]
+  D --> E[Obligatoire ? Qualite / completion ?]
+  E --> F{Formule, masque, liste de valeurs}
+  F --> G[Enregistrer]
+  G --> H[L'attribut est disponible a la saisie, a l'import et a l'export]
+  H --> I[Eventuellement le rattacher a d'autres groupes]</pre></details>
+      <div class="callout">RG-WF-06 — L’identifiant ne se change plus une fois utilise dans des fichiers d’echange. Un attribut systeme n’est pas cree par ce parcours.</div>
+
+      <h2 id="wf-attach">Rattacher un attribut a un groupe</h2>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart LR
+  A[Administration - Groupes] --> B[Ouvrir le groupe]
+  B --> C[Ajouter un attribut existant]
+  C --> D[Ordonner la liste]
+  D --> E[L'onglet fiche affiche le champ, sans nouvel objet attribut]</pre></details>
+
+      <h2 id="wf-cat">Ajouter une categorie</h2>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart TD
+  A[Administration - Categories] --> B[Nouvelle categorie]
+  B --> C[Nommer la famille]
+  C --> D[Rattacher des groupes existants]
+  D --> E[Ajuster les droits des roles]
+  E --> F[Les utilisateurs habilites peuvent creer des produits dans cette famille]</pre></details>
+
+      <h2 id="wf-role">Donner un role a un utilisateur</h2>
+      <p><span class="tag tag-cible">Cible</span> La maquette se contente d’un switch de compte.</p>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart LR
+  A[Compte dans Okta] --> B[Affecter le groupe Okta]
+  B --> C[Le groupe correspond a un role OctoPIM]
+  C --> D[A la connexion, menus et categories s'appliquent]</pre></details>
+
+      <h2 id="wf-visual">Ajouter un visuel</h2>
+      <p><span class="tag tag-maq">Maquette</span> Depot de fichier local. <span class="tag tag-cible">Cible</span> Selection depuis Babil (DAM).</p>
+      <details class="mermaid-src"><summary>Mermaid</summary>
+<pre>flowchart TD
+  A[Fiche - onglet Visuels] --> B{Cible}
+  B -->|Maquette| C[Telecharger un fichier]
+  B -->|Cible| D[Chercher l'asset dans Babil]
+  D --> E[Associer face / 3-4 / profil / ambiance / fournisseur]
+  C --> E
+  E --> F[Enregistrer la fiche]</pre></details>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

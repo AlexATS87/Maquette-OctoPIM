@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Dashboard</h1>
+      <p class="lead">
+        Vue de pilotage : volume du catalogue, completude, repartition par
+        categorie et par fournisseur.
+      </p>
+
+      <h2>Qu’est-ce que le dashboard ?</h2>
+      <p>
+        La page d’accueil. Elle ne sert pas a saisir : elle alerte (produits
+        incomplets) et donne un ordre de grandeur.
+      </p>
+      <figure>
+        <img src="captures/dashboard.jpg" alt="Dashboard">
+        <figcaption>Volume, donut categories, evolution 6 mois, incompletude, completion par famille, vue fournisseur.</figcaption>
+      </figure>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Savoir combien de references sont dans le perimetre de l’utilisateur.</li>
+        <li>Mesurer la qualite (taux de completion vs seuil, defaut 80 %).</li>
+        <li>Entrer dans la liste des incomplets en un clic.</li>
+        <li>Voir le poids des fournisseurs dans le catalogue.</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <table>
+        <thead>
+          <tr><th>Indicateur</th><th>Lecture</th><th>Statut</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Total produits</td><td>Produits des categories accessibles. Clic → liste.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
+          <tr><td>Repartition par categorie</td><td>Donut du catalogue visible.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
+          <tr><td>Evolution 6 mois</td><td>Le mois courant = stock reel. Les mois passes sont illustratifs.</td><td><span class="tag tag-maq">Maquette</span> <span class="tag tag-cible">Cible</span> source temporelle reelle a specifier</td></tr>
+          <tr><td>Produits incomplets</td><td>Completion &lt; seuil. Clic → liste filtree.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
+          <tr><td>Completion globale / par categorie</td><td>Moyenne des taux, hors attributs systeme.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
+          <tr><td>Vue fournisseur</td><td>Volume par fournisseur et part du catalogue.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-DSH-01 — Tous les indicateurs respectent le perimetre de droits de l’utilisateur.<br>
+        RG-DSH-02 — Le seuil de completion est parametrable (Administration &gt; Preferences).
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

@@ -6,8 +6,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <title>OctoPIM</title>
-  <link rel="stylesheet" href="css/style.css?v=16">
+  <link rel="stylesheet" href="css/style.css?v=21">
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
 
@@ -236,7 +237,7 @@
 
       <!-- FICHE PRODUIT -->
       <div class="page" id="page-product-detail">
-        <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+        <div class="detail-sticky">
           <button class="btn btn-secondary"
             onclick="safeShowPage('products',
               document.querySelector('.nav-item[onclick*=\'products\']'))">
@@ -260,8 +261,6 @@
           </div>
           <div style="font-size:14px;font-weight:700;min-width:44px;text-align:right"
             id="detail-completion-pct">—</div>
-          <div style="font-size:11px;color:#a0b0c0;min-width:160px;text-align:right"
-            id="detail-completion-sub"></div>
         </div>
         <div class="product-tabs-bar" id="product-tabs"></div>
         <div id="product-tab-contents"></div>
@@ -443,8 +442,13 @@
             </select>
           </div>
           <div class="field-row">
-            <div class="field-label">Groupe</div>
+            <div class="field-label">Groupe maison</div>
             <select class="form-select" id="ea-group"></select>
+            <div style="font-size:11px;color:#8090a0;margin-top:4px">
+              Un attribut peut aussi figurer dans d'autres groupes (meme code technique).
+              Les appartenances supplementaires se gerent dans l'edition du groupe.
+            </div>
+            <div id="ea-other-groups" style="margin-top:6px"></div>
           </div>
           <div class="field-row">
             <div class="field-label">Obligatoire</div>
@@ -459,6 +463,15 @@
               <option value="1">Oui</option>
               <option value="0">Non</option>
             </select>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Afficher seulement si</div>
+            <select class="form-select" id="ea-show-if" onchange="onShowIfAttrChange('ea')">
+              <option value="">Toujours affiche</option>
+            </select>
+            <div id="ea-show-if-value-wrap" style="display:none;margin-top:8px">
+              <select class="form-select" id="ea-show-if-value"></select>
+            </div>
           </div>
           <div class="field-row" id="ea-formula-wrap">
             <div class="field-label">Formule</div>
@@ -552,6 +565,13 @@
               <input class="field-input" id="edit-group-code"
                 style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
             </div>
+            <div class="field-row">
+              <div class="field-label">Completion pour</div>
+              <div id="edit-group-audience"></div>
+              <div style="font-size:11px;color:#8090a0;margin-top:4px">
+                Aucun coche = tous les groupes utilisateur. Sinon, seuls les groupes coches comptent ce groupe d'attributs dans leur completion.
+              </div>
+            </div>
             <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
               <button class="btn btn-secondary"
                 onclick="showPage('admin-groups',null)">Annuler</button>
@@ -620,10 +640,9 @@
   <div class="modal-box">
     <div class="modal-title">Nouveau produit</div>
     <div class="field-row">
-      <div class="field-label">Code SAP *</div>
+      <div class="field-label">Code SAP</div>
       <input class="field-input" id="np-sap"
         placeholder="ex: M906342000001" style="font-family:monospace">
-      <div class="field-error-msg" id="err-np-sap">Code SAP obligatoire.</div>
     </div>
     <div class="field-row">
       <div class="field-label">Code EAN/GTIN *</div>
@@ -734,6 +753,15 @@
         </select>
       </div>
       <div class="form-field">
+        <div class="form-label">Afficher seulement si</div>
+        <select class="form-select" id="new-attr-show-if" onchange="onShowIfAttrChange('new-attr')">
+          <option value="">Toujours affiche</option>
+        </select>
+        <div id="new-attr-show-if-value-wrap" style="display:none;margin-top:8px">
+          <select class="form-select" id="new-attr-show-if-value"></select>
+        </div>
+      </div>
+      <div class="form-field">
         <div class="form-label">Masque de saisie</div>
         <input class="field-input" id="new-attr-mask"
           placeholder="ex: A999999999999" style="font-family:monospace">
@@ -805,6 +833,10 @@
         style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
         placeholder="auto-genere" readonly>
     </div>
+    <div class="field-row">
+      <div class="field-label">Completion pour</div>
+      <div id="new-group-audience"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary"
         onclick="closeModal('modal-create-group')">Annuler</button>
@@ -862,14 +894,14 @@
 </div>
 
 <!-- SCRIPTS -->
-<script src="js/data.js?v=16"></script>
-<script src="js/utils.js?v=16"></script>
-<script src="js/dashboard.js?v=16"></script>
-<script src="js/products.js?v=16"></script>
-<script src="js/admin.js?v=16"></script>
-<script src="js/detail.js?v=16"></script>
-<script src="js/export.js?v=16"></script>
-<script src="js/import.js?v=16"></script>
+<script src="js/data.js?v=23"></script>
+<script src="js/utils.js?v=22"></script>
+<script src="js/dashboard.js?v=20"></script>
+<script src="js/products.js?v=20"></script>
+<script src="js/admin.js?v=24"></script>
+<script src="js/detail.js?v=23"></script>
+<script src="js/export.js?v=21"></script>
+<script src="js/import.js?v=19"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {

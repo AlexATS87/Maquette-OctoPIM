@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Fonction d’import — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Fonction d’import</h1>
+      <p class="lead">
+        L’import permet d’ajouter, modifier ou supprimer des produits en masse
+        a partir d’un fichier Excel ou CSV — le mode de travail actuel sur Excel
+        doit pouvoir basculer ici.
+      </p>
+
+      <h2>Qu’est-ce que l’import ?</h2>
+      <p>Un assistant en trois etapes : configuration, apercu et mapping, resultat.</p>
+      <figure>
+        <img src="captures/import.jpg" alt="Ecran d’import">
+        <figcaption>Etape 1 : action (ajout / modification / suppression), categorie, fichier.</figcaption>
+      </figure>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Reprendre les fichiers fournisseurs ou l’Excel historique.</li>
+        <li>Mettre a jour un lot de references sans passer fiche par fiche.</li>
+        <li>Alimenter le referentiel unique avant les interfaces SAP / Snowflake.</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <svg class="schema" viewBox="0 0 720 100" role="img" aria-label="Etapes import">
+        <rect x="20" y="24" width="200" height="52" rx="8" fill="#1565c0"/>
+        <text x="120" y="54" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">1. Configuration</text>
+        <rect x="260" y="24" width="200" height="52" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="360" y="54" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">2. Apercu &amp; mapping</text>
+        <rect x="500" y="24" width="200" height="52" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="600" y="54" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">3. Resultat</text>
+        <line x1="220" y1="50" x2="260" y2="50" stroke="#90a4ae"/>
+        <line x1="460" y1="50" x2="500" y2="50" stroke="#90a4ae"/>
+      </svg>
+      <details class="mermaid-src">
+        <summary>Diagramme Mermaid (macro Confluence)</summary>
+<pre>flowchart LR
+  A[Configuration : action + categorie + fichier] --> B[Mapping colonnes vers attributs]
+  B --> C[Controle des obligatoires]
+  C --> D[Execution : matching EAN puis SAP]
+  D --> E[Compte-rendu : crees / maj / erreurs]</pre>
+      </details>
+      <table>
+        <thead>
+          <tr><th>Point</th><th>Comportement</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Colonnes du fichier</td><td>On mappe chaque colonne vers un attribut, de preference via l’identifiant (ex. ean, nom). Les en-tetes identiques a l’identifiant se proposent seuls.</td></tr>
+          <tr><td>Champs obligatoires</td><td>Ceux marques Obligatoire sur les attributs de la categorie (EAN, nom, categorie). SAP n’en fait pas partie.</td></tr>
+          <tr><td>Reconnaissance d’un produit</td><td>D’abord EAN/GTIN, sinon code SAP.</td></tr>
+          <tr><td>Pourcentages</td><td>Accepte 10 ou 10 % et stocke 0,10.</td></tr>
+          <tr><td>Marques nouvelles</td><td>Ajoutees au referentiel unique.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-IMP-01 — Ajout / modification : tous les attributs obligatoires de la categorie doivent etre mappes et renseignes.<br>
+        RG-IMP-02 — Suppression : EAN ou SAP suffit pour identifier la ligne.<br>
+        RG-IMP-03 — L’import ne propose que les categories accessibles en ecriture (ou suppression).
+      </div>
+      <div class="callout cible">
+        <strong>Cible</strong>
+        Traitement serveur, quotas, journal d’erreurs consultable, pas un traitement uniquement navigateur.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

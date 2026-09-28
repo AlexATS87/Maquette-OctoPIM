@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Liste des produits — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Liste des produits</h1>
+      <p class="lead">
+        Ecran de travail quotidien : retrouver, trier, filtrer, ouvrir une fiche
+        ou creer un produit.
+      </p>
+
+      <h2>Qu’est-ce que la liste ?</h2>
+      <p>
+        Un tableau du catalogue accessible a l’utilisateur (selon ses categories).
+        Deux presentations : <strong>Synthese</strong> (colonnes configurees en admin)
+        et <strong>Detaillee</strong> (colonnes des groupes visibles, filtrables par onglet).
+      </p>
+      <figure>
+        <div class="shot">
+          <img src="captures/liste-produits.jpg" alt="Liste des produits">
+          <span class="shot-mark" style="top:11%;left:22%;width:28%;height:6%" title="Recherche et filtre"></span>
+        </div>
+        <figcaption>Encadre rouge : retrouver un produit. Le reste de l’ecran est la liste de travail.</figcaption>
+      </figure>
+
+      <h2>A quoi sert-elle ?</h2>
+      <ul>
+        <li>Piloter le catalogue (recherche, categorie, tri, filtres de colonnes).</li>
+        <li>Entrer dans une fiche (clic sur le nom ou une colonne « ouvrir »).</li>
+        <li>Creer un produit (EAN, nom, categorie obligatoires ; SAP facultatif).</li>
+        <li>Preparer un export (le perimetre filtre est repris).</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <table>
+        <thead>
+          <tr><th>Action</th><th>Comportement</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Retrouver un produit</td><td>Besoin : identifier une reference parmi un catalogue qui visera plus de 100 000 produits, avec la meme facilite que les filtres par colonne d’Excel. La maquette propose une recherche globale et des filtres de colonne. A challenger : afficher toutes les valeurs distinctes d’une colonne ne tiendra pas a ce volume.</td></tr>
+          <tr><td>Filtre categorie</td><td>Restreint a une famille. Le tri/filtre colonne Categorie reste possible en synthese.</td></tr>
+          <tr><td>Vue synthese</td><td>Colonnes definies dans Administration &gt; Vue de synthese (visuel, nom, SAP, EAN, categorie, dates, completion…).</td></tr>
+          <tr><td>Vue detaillee</td><td>Colonnes des groupes de la categorie filtree. Sans categorie choisie, la barre de groupes est masquee.</td></tr>
+          <tr><td>Completion</td><td>Jauge a gauche du nom. Seuil parametrable (defaut 80 %).</td></tr>
+          <tr><td>Nouveau produit</td><td>Modale : EAN, nom, categorie obligatoires. Redirige vers la fiche.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-LST-01 — L’utilisateur ne voit que les produits des categories en lecture.<br>
+        RG-LST-02 — Le bouton Nouveau produit n’apparait que s’il a au moins une categorie en ecriture.<br>
+        RG-LST-03 — La jauge de completion ne compte que les champs saisissables (hors systeme, calcules, visuels, commentaire).
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Fonction d’export — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Fonction d’export</h1>
+      <p class="lead">
+        Extraire une trame du catalogue. L’utilisateur coche les groupes et les champs.
+        Un groupe decoche retire ses champs. Un champ present dans deux groupes part
+        des qu’un de ces groupes reste coche. Le fichier peut tenir sur un seul onglet
+        et se telecharger en zip. La trame IWI ne part que si ses colonnes exigees sont remplies.
+      </p>
+
+      <h2>Qu’est-ce que l’export ?</h2>
+      <p>
+        Un fichier .xlsx dont les colonnes portent l’<strong>identifiant
+        d’attribut</strong> (pas le libelle, trop instable pour un echange).
+        Le perimetre reprend les filtres de la liste (categorie, recherche,
+        selection).
+      </p>
+      <figure>
+        <img src="captures/export.jpg" alt="Ecran d’export">
+        <figcaption>Perimetre repris de la liste, onglets Synthese et Informations generales.</figcaption>
+      </figure>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Donner un extrait de travail (acheteur, agence, controle qualite).</li>
+        <li>Produire une trame reimportable (memes identifiants qu’a l’import).</li>
+        <li>Pont transitoire vers Snowflake / autres outils tant que les interfaces ne sont pas en place.</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <ul>
+        <li>Choisir une trame (Catalogue, IWI, ou une trame enregistree).</li>
+        <li>Cocher les groupes et, dans chaque groupe, les champs.</li>
+        <li>Option : un seul onglet, ou un onglet par groupe.</li>
+        <li>Option : fichier zip contenant le classeur.</li>
+        <li>IWI : le telechargement est refuse tant qu’une colonne exigee est vide. Le decompte des manques s’affiche avant.</li>
+      </ul>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-EXP-01 — Les en-tetes d’export sont les identifiants d’attribut.<br>
+        RG-EXP-02 — Le perimetre = filtres liste + selection eventuelle.<br>
+        RG-EXP-03 — Seuls les produits des categories en lecture sont exportes.<br>
+        RG-EXP-04 — L’export IWI ne se telecharge que si chaque colonne exigee par IWI est remplie. L’utilisateur voit le decompte des manques avant.<br>
+        RG-EXP-05 — Prix 2 IWI = prix catalogue. Prix 1 IWI = PA ATS. Le distributeur est fixe (ATS, Audioptic Trade Services).<br>
+        RG-EXP-06 — Decocher un groupe decoche ses attributs. Un attribut dans deux groupes est exporte si au moins un de ces groupes reste coche.<br>
+        RG-EXP-07 — Une trame enregistree memorise les groupes, les champs, l’onglet unique et le zip.
+      </div>
+      <div class="callout cible">
+        <strong>Cible</strong>
+        Job serveur, historisation des exports, formats vers Cosium / Osmose a specifier.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

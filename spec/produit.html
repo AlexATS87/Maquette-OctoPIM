@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Definition d’un produit — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Definition d’un produit</h1>
+      <p class="lead">
+        Le produit est l’objet central du PIM : une reference commercialisable
+        (monture, lentille, accessoire, PEL…) avec ses valeurs, ses visuels
+        et son historique.
+      </p>
+
+      <h2>Qu’est-ce qu’un produit ?</h2>
+      <p>
+        Un produit est une fiche rattachee a <strong>une categorie</strong>.
+        La categorie decide quels groupes d’attributs (onglets) s’affichent.
+        Les valeurs saisies appartiennent au produit ; les attributs n’en sont
+        que le contrat (voir <a href="attributs.html">Gestion des attributs</a>).
+      </p>
+      <figure>
+        <img src="captures/fiche-produit-onglets.jpg" alt="Fiche produit">
+        <figcaption>Fiche produit : identite a gauche, onglets = groupes de la categorie, valeurs au centre.</figcaption>
+      </figure>
+
+      <h2>A quoi sert un produit ?</h2>
+      <ul>
+        <li>Porter la verite metier d’une reference (nom, codes, caracteristiques, tarifs, SEO, visuels).</li>
+        <li>Alimenter les canaux (Optic 2000 / Lissac) via les indicateurs d’activation.</li>
+        <li>Servir de source unique pour l’export, Snowflake, la caisse et les autres outils.</li>
+        <li>Tracer qui a change quoi (historique a l’enregistrement).</li>
+      </ul>
+
+      <h2>Ce que porte une fiche</h2>
+      <table>
+        <thead>
+          <tr><th>Famille d’information</th><th>Exemples</th><th>Commentaire</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Identite</td><td>Categorie, nom, code EAN/GTIN, code SAP, dates de creation / mise a jour</td><td>Le code SAP n’est pas obligatoire a la creation. L’EAN, le nom et la categorie le sont.</td></tr>
+          <tr><td>Publication</td><td>Actif canal O, actif canal L, statut de publication, date de mise en ligne</td><td>Le statut de publication se deduit des canaux (calcule).</td></tr>
+          <tr><td>Qualite</td><td>Taux de completion</td><td>Champs saisissables des groupes visibles pour la population du role. Un meme champ dans deux onglets ne compte qu’une fois. La fiche detaille aussi le taux de chaque groupe.</td></tr>
+          <tr><td>Valeurs metier</td><td>Caracteristiques, tarifs, SEO, conditions commerciales, visuels</td><td>Selon les onglets de la categorie.</td></tr>
+          <tr><td>Historique</td><td>Ancienne / nouvelle valeur, utilisateur, horodatage</td><td>Flush a l’enregistrement, pas a chaque frappe.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Comment on le reconnait</h2>
+      <p>
+        A l’import et a la recherche de doublon, le produit est identifie
+        d’abord par le <strong>code EAN/GTIN</strong>, sinon par le
+        <strong>code SAP</strong>. Ce n’est pas un identifiant technique cache :
+        c’est la cle metier d’echange avec SAP et les fichiers Excel.
+      </p>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-PRD-01 — Un produit a une et une seule categorie.<br>
+        RG-PRD-02 — A la creation, EAN, nom et categorie sont obligatoires. SAP est facultatif.<br>
+        RG-PRD-03 — L’historique n’est enregistre que lorsque l’utilisateur clique sur Enregistrer.<br>
+        RG-PRD-04 — Le taux de completion ne compte qu’un champ saisissable, une seule fois, et seulement dans les groupes de la population du role (un role sans population voit tous les groupes). Hors taux : champs systeme, champs calcules, visuels, commentaire, champ masque par une condition. Chaque onglet affiche sa barre de completion, au meme format que la barre du produit, et elle se met a jour a la saisie. Le picto de completion s’affiche sur tous les types de champ concernes, y compris une image. Sans ce picto, le champ est optionnel : on n’affiche pas une pastille « Optionnel ».
+      </div>
+      <div class="callout cible">
+        <strong>Cible</strong>
+        Unicite EAN a confirmer (flag d’unicite). Cycle de vie referentiel
+        (brouillon / valide / archive) n’est pas dans la maquette.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

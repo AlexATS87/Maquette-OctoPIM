@@ -357,11 +357,47 @@ input, select, textarea { font-family: inherit; }
   border-bottom: 1px solid #f0f4f8;
 }
 
+.detail-sticky {
+  position: sticky;
+  top: -24px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -24px -24px 16px;
+  padding: 12px 24px;
+  background: #f0f4f8;
+  border-bottom: 1px solid #e8ecf0;
+}
+
 .fields-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 20px;
 }
+
+.fields-flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 4px 20px;
+  align-items: start;
+}
+
+.field-span { grid-column: 1 / -1; }
+
+.group-completion {
+  grid-column: 1 / -1;
+  margin-bottom: 12px;
+}
+
+.group-comp-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #607080;
+  min-width: 80px;
+}
+
+.group-completion .completion-bar-bg { flex: 1; height: 10px; }
 
 .form-grid {
   display: grid;

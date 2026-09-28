@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Vue de synthese — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Configuration de la vue de synthese</h1>
+      <p class="lead">
+        La vue synthese est la liste « courte » des produits : quelles colonnes,
+        dans quel ordre. Elle est commune a tous les utilisateurs
+        (parametrage admin, pas une pref personnelle).
+      </p>
+
+      <h2>Qu’est-ce que la vue de synthese ?</h2>
+      <p>
+        Un assemblage de colonnes : attributs (visuel, nom, codes, categorie,
+        dates, statut, completion…) et, en option, des actions (ex. supprimer).
+      </p>
+      <figure>
+        <img src="captures/synthese.jpg" alt="Configuration vue synthese">
+        <figcaption>Administration &gt; Vue synthese : ordre des colonnes, ajout d’un attribut ou d’une action.</figcaption>
+      </figure>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Adapter la liste de travail sans toucher au modele de donnees.</li>
+        <li>Mettre en avant ce que l’equipe achat / qualite regarde tous les jours.</li>
+        <li>Alimenter l’onglet Synthese de l’export.</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <ul>
+        <li>On ajoute un attribut existant a la liste, on reordonne, on retire.</li>
+        <li>Le nom du produit reste le point d’entree vers la fiche (colonne cliquable).</li>
+        <li>La jauge de completion s’affiche a gauche du nom, pas a la place d’une etoile d’obligation.</li>
+      </ul>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-SYN-01 — La vue synthese est un parametrage d’application, identique pour tous les roles (les droits filtrent les lignes, pas les colonnes).<br>
+        RG-SYN-02 — On n’ajoute que des attributs deja definis.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

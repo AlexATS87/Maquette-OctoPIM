@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Modele de donnees — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Modele de donnees</h1>
+      <p class="lead">
+        Vue d’ensemble fonctionnelle : quelles notions existent et comment
+        elles se relient. Les catalogues detailles sont sur les pages
+        Attributs, Groupes et Categories. Le stockage technique (API, tables)
+        viendra quand le choix d’architecture sera tranche.
+      </p>
+      <div class="stats">
+        <div class="stat"><strong>7</strong><span>Notions coeur</span></div>
+        <div class="stat"><strong>N-N</strong><span>Attribut ↔ Groupe</span></div>
+        <div class="stat"><strong>N-N</strong><span>Categorie ↔ Groupe</span></div>
+        <div class="stat"><strong>1-N</strong><span>Categorie → Produits</span></div>
+      </div>
+
+      <h2>Schema d’ensemble</h2>
+      <svg class="schema" viewBox="0 0 760 340" role="img" aria-label="Modele de donnees">
+        <rect x="280" y="8" width="200" height="52" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="380" y="30" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Categorie</text>
+        <text x="380" y="46" text-anchor="middle" fill="#607080" font-size="10">famille de produits</text>
+        <rect x="20" y="120" width="200" height="52" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="120" y="142" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Produit</text>
+        <text x="120" y="158" text-anchor="middle" fill="#607080" font-size="10">fiche + valeurs + historique</text>
+        <rect x="280" y="120" width="200" height="52" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="380" y="142" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Groupe d’attributs</text>
+        <text x="380" y="158" text-anchor="middle" fill="#607080" font-size="10">onglet de la fiche</text>
+        <rect x="540" y="120" width="200" height="52" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="640" y="142" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Attribut</text>
+        <text x="640" y="158" text-anchor="middle" fill="#607080" font-size="10">contrat d’un champ</text>
+        <rect x="20" y="250" width="200" height="52" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="120" y="272" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Utilisateur / Role</text>
+        <text x="120" y="288" text-anchor="middle" fill="#607080" font-size="10">droits lecture / ecriture</text>
+        <rect x="280" y="250" width="200" height="52" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="380" y="272" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Condition commerciale</text>
+        <text x="380" y="288" text-anchor="middle" fill="#607080" font-size="10">marque × fournisseur × type</text>
+        <rect x="540" y="250" width="200" height="52" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="640" y="272" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Historique</text>
+        <text x="640" y="288" text-anchor="middle" fill="#607080" font-size="10">a l’enregistrement</text>
+        <line x1="380" y1="60" x2="120" y2="120" stroke="#c5d0dc"/>
+        <line x1="380" y1="60" x2="380" y2="120" stroke="#c5d0dc"/>
+        <text x="200" y="88" fill="#1565c0" font-size="11">1-N</text>
+        <text x="390" y="92" fill="#1565c0" font-size="11">N-N</text>
+        <line x1="480" y1="146" x2="540" y2="146" stroke="#1565c0" stroke-width="1.5"/>
+        <text x="500" y="138" fill="#1565c0" font-size="11" font-weight="600">N-N</text>
+        <line x1="120" y1="172" x2="380" y2="250" stroke="#c5d0dc"/>
+        <text x="200" y="220" fill="#607080" font-size="10">matching accord</text>
+        <line x1="120" y1="172" x2="120" y2="250" stroke="#c5d0dc"/>
+        <text x="128" y="220" fill="#607080" font-size="10">droits par categorie</text>
+      </svg>
+      <details class="mermaid-src">
+        <summary>Diagramme Mermaid (macro Confluence)</summary>
+<pre>flowchart TB
+  Cat[Categorie] -->|1-N| Prod[Produit]
+  Cat -->|N-N| Grp[Groupe d'attributs]
+  Grp -->|N-N| Attr[Attribut]
+  Prod --> Val[Valeurs de la fiche]
+  Prod --> Hist[Historique]
+  Prod --> CC[Condition commerciale]
+  Role[Role] --> Prod</pre>
+      </details>
+
+      <h2>Cardinalites (lecture metier)</h2>
+      <table>
+        <thead>
+          <tr><th>De</th><th>Vers</th><th>Card.</th><th>Sens</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Categorie</td><td>Produit</td><td>1-N</td><td>Un produit a une famille.</td></tr>
+          <tr><td>Categorie</td><td>Groupe</td><td>N-N</td><td>Les groupes rattaches = onglets de la fiche.</td></tr>
+          <tr><td>Groupe</td><td>Attribut</td><td>N-N</td><td>Un attribut peut apparaitre dans plusieurs onglets.</td></tr>
+          <tr><td>Produit</td><td>Valeurs</td><td>1-N</td><td>Une valeur par attribut renseigne.</td></tr>
+          <tr><td>Marque + fournisseur + categorie + segmentation</td><td>Condition commerciale</td><td>1-1</td><td>Un accord, une ligne.</td></tr>
+          <tr><td>Role</td><td>Droits</td><td>1-N</td><td>Menus, categories, modules.</td></tr>
+          <tr><td>Produit</td><td>Historique</td><td>1-N</td><td>Journal a l’enregistrement.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Ou ça se voit</h2>
+      <div class="grid2">
+        <figure>
+          <img src="captures/fiche-produit-onglets.jpg" alt="Fiche">
+          <figcaption>Produit + categorie + groupes (onglets).</figcaption>
+        </figure>
+        <figure>
+          <img src="captures/admin-attributs.jpg" alt="Attributs">
+          <figcaption>Attribut dans plusieurs groupes.</figcaption>
+        </figure>
+      </div>
+      <div class="callout cible">
+        <strong>A completer</strong>
+        Diagramme API / tables quand le stockage sera choisi. Unicite EAN,
+        cycle de vie referentiel. Visuels : Babil. Identites : Okta.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

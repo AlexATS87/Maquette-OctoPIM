@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Roles et permissions — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Roles et permissions</h1>
+      <p class="lead">
+        Un role est un panier de droits : menus visibles, categories accessibles,
+        modules d’administration. Trois actions : lire, ecrire, supprimer.
+      </p>
+
+      <h2>Qu’est-ce qu’un role ?</h2>
+      <p>
+        Un profil metier (Admin Systeme, Admin Achats, Consultation, Users Achats…).
+        En cible, le role est relie a un groupe Okta. Le mode peut etre Manuel
+        (droits ajustes dans OctoPIM) ou Automatique (droits issus du mapping).
+      </p>
+      <figure>
+        <img src="captures/roles.jpg" alt="Roles et permissions">
+        <figcaption>Matrice : categories, menus, modules d’administration, avec lecture / ecriture / suppression.</figcaption>
+      </figure>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Limiter la saisie a certaines familles (ex. Achats ne voit que les Montures).</li>
+        <li>Masquer Import, Administration, etc. selon le profil.</li>
+        <li>Eviter qu’un lecteur puisse supprimer un produit ou un attribut.</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <table>
+        <thead>
+          <tr><th>Maille</th><th>Exemples</th><th>Effet</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Categorie</td><td>Montures, Lentilles…</td><td>Voir / modifier / supprimer les produits de la famille.</td></tr>
+          <tr><td>Menu</td><td>Tableau de bord, Produits, Imports, Exports, Administration</td><td>Afficher ou masquer l’entree de navigation.</td></tr>
+          <tr><td>Module admin</td><td>Attributs, Roles, Conditions…</td><td>Ouvrir la carte et editer le parametrage.</td></tr>
+        </tbody>
+      </table>
+      <p>Roles de la maquette (exemples, pas une liste figee) :</p>
+      <ul>
+        <li>Admin Systeme — tout, toutes categories.</li>
+        <li>Admin Achats — catalogue Montures en ecriture, pas d’administration globale.</li>
+        <li>Consultation — lecture sur toutes les familles, pas d’import ni d’admin.</li>
+        <li>Users Achats — lecture Montures uniquement. Population Achats.</li>
+        <li>Referencement — ecriture Montures. Population Referencement. Compte L. Petit.</li>
+      </ul>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-RBAC-01 — Sans lecture sur une categorie, ses produits n’apparaissent nulle part (liste, dashboard, export).<br>
+        RG-RBAC-02 — Ecrire sans lire n’a pas de sens : la lecture est le socle.<br>
+        RG-RBAC-03 — <span class="tag tag-cible">Cible</span> Authentification Okta ; les noms de groupes sont deja poses sur les roles.<br>
+        RG-RBAC-04 — La completion suit le groupe utilisateur : un role ne compte que les groupes d’attributs qui le citent, plus ceux qui ne citent personne. L’admin systeme compte tout.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

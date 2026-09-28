@@ -1,0 +1,20 @@
+---
+description: Tenir la continuite OctoPIM via index.md et les specs HTML
+alwaysApply: true
+---
+
+# Continuite des specs
+
+En cas de doute sur un comportement, poser la question et challenger le besoin avant de modifier le code.
+
+A chaque modification de la maquette ou d'une regle metier :
+
+1. Lire `index.md` avant de changer le comportement.
+2. Mettre a jour la page `spec/*.html` du sujet (besoin, regle, capture si l'ecran change).
+3. Ajouter une ligne datee dans `index.md` (decision, point ouvert, ou correctif).
+
+Ecrire le besoin avant la solution. Si la maquette ne tient pas au volume vise (100k produits) ou a un systeme cible (SAP, Babil, Okta), le signaler dans la spec au lieu de figer le comportement de la maquette.
+
+Exemple : la liste doit permettre de retrouver un produit. Ne pas specifier « afficher toutes les valeurs de la colonne » comme exigence.
+
+Encadrer en rouge (classe `shot-mark`) la zone d'une capture dont parle la section.
