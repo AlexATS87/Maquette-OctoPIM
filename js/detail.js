@@ -644,6 +644,22 @@ function evaluateFormula(formula, fields) {
   // DATE_MAJ est evenementielle : la valeur est posee par computeCalcFields
   // au moment ou le champ surveille change, pas recalculee a chaque rendu.
   if (isEventFormula(expr)) return '';
+  if (/^TODAY\s*\(\s*\)$/i.test(expr)) return todayStr();
+
+  const brand = expr.match(/^IWI_MARQUE\s*\(\s*([A-Za-z0-9_]+)\s*\)$/i);
+  if (brand) return iwiMarqueLabel(fields[brand[1]]);
+
+  const mapped = expr.match(/^MAP\s*\(\s*([A-Za-z0-9_]+)\s*,([\s\S]*)\)$/i);
+  if (mapped) {
+    const raw = fields[mapped[1]];
+    const val = raw == null ? '' : String(raw);
+    const re = /"([^"]*)"\s*=\s*"([^"]*)"/g;
+    let hit;
+    while ((hit = re.exec(mapped[2]))) {
+      if (hit[1] === val) return hit[2];
+    }
+    return '';
+  }
 
   const concat = expr.match(/^CONCAT\s*\(([\s\S]*)\)$/i);
   if (concat) return evalConcat(concat[1], fields || {});

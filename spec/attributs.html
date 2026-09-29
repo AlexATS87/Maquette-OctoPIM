@@ -15,16 +15,9 @@
     <article id="spec-article">
       <h1>Gestion des attributs</h1>
       <p class="lead">
-        Un attribut decrit un champ du PIM. Il se rattache a un ou plusieurs
-        groupes. Le catalogue ci-dessous n’est pas classe par groupe : chaque
-        ligne est un attribut, avec son groupe d’accueil et ses rattachements.
+        Un attribut est le contrat d’un champ : libelle, identifiant, type de saisie,
+        contraintes, parfois une formule. La valeur, elle, appartient au produit.
       </p>
-      <div class="stats">
-        <div class="stat"><strong id="stat-count">—</strong><span>Attributs (un par identifiant)</span></div>
-        <div class="stat"><strong>2</strong><span>Natures : systeme ou classique</span></div>
-        <div class="stat"><strong>5</strong><span>Attributs dans plusieurs groupes</span></div>
-        <div class="stat"><strong>3</strong><span>Obligatoires : EAN, nom, categorie</span></div>
-      </div>
 
       <h2>Qu’est-ce qu’un attribut ?</h2>
       <p>
@@ -44,7 +37,11 @@
         Les endroits ou la valeur est stockee (fiche produit vs ligne de conditions)
         sont un detail d’implementation : ce n’est pas un troisieme type d’attribut.
       </p>
-      <h3>Sur la fiche, un groupe = un onglet</h3>
+      <h3>Ou la valeur s’affiche</h3>
+      <p>
+        L’attribut se rattache a un ou plusieurs groupes. Sur la fiche, chaque groupe
+        de la categorie du produit est un onglet, et le champ y apparait.
+      </p>
       <svg class="schema" viewBox="0 0 720 90" role="img" aria-label="Onglets fiche">
         <rect x="8" y="18" width="704" height="54" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
         <rect x="20" y="32" width="104" height="26" rx="4" fill="#1565c0"/>
@@ -128,12 +125,79 @@
         RG-A04 — « Obligatoire » est le seul flag d’obligation. SAP n’est pas obligatoire.<br>
         RG-A05 — Le taux de completion ne compte que les champs saisissables, une fois chacun. Hors taux : systeme, calcules, visuels, commentaire. Le picto vaut pour tous les types, images comprises.<br>
         RG-A06 — Marque est le referentiel unique de marques, liste extensible a la saisie. Son code IWI fait 3 caracteres au maximum et sert uniquement a l’export IWI.<br>
-        RG-A09 — Les pourcentages s’affichent en % et se stockent en decimal entre 0 et 1.
+        RG-A09 — Les pourcentages s’affichent en % et se stockent en decimal entre 0 et 1.<br>
+        RG-A13 — Un nombre a 0, 1 ou 2 chiffres apres la virgule. Par defaut, 0 (arrondi). Prix catalogue, PA interne, marge interne et PA opticien ont 2 chiffres. Le prix final arrondi reste a 0.<br>
+        RG-A14 — Les codes IWI (type, sous-type, matiere, forme, utilisateur, marque, date de modification) sont des attributs calcules du groupe IWI. La date de modification vaut la date du jour au moment de l’affichage et de l’export. Action vaut toujours 1 : c’est une constante de la trame, pas un attribut. La matiere de branche reprend la matiere de face tant qu’il n’existe pas de champ branche. Le libelle « rondes/ovales/pantos » ne produit pas de code forme : il melange plusieurs codes IWI.
       </div>
       <figure>
         <img src="captures/fiche-tarification-percent.jpg" alt="Pourcentages a l’ecran">
         <figcaption>Remise et RFA s’affichent en % (ex. 10 % et 2 %). Les champs calcules sont visuellement distingues et forcables.</figcaption>
       </figure>
+
+      <h2>Format d’un nombre</h2>
+      <p>
+        Sur un attribut de type Nombre, on choisit 0, 1 ou 2 chiffres apres la virgule.
+        Sans choix, la valeur est arrondie (0 chiffre). Le meme format sert a l’ecran et a l’export.
+      </p>
+      <ul>
+        <li>Prix catalogue, PA interne, marge interne, PA opticien : 2 chiffres.</li>
+        <li>Prix final arrondi : 0 chiffre.</li>
+        <li>Un pourcentage reste affiche en % et stocke entre 0 et 1. Ce n’est pas un nombre a decimales.</li>
+      </ul>
+
+      <h2>Champs calcules pour IWI</h2>
+      <p>
+        Les codes attendus par IWI sont des attributs calcules du groupe IWI.
+        Ils se deduisent du champ metier, ils ne se saisissent pas.
+      </p>
+      <ul>
+        <li>Type : Optique = A, Solaire = B.</li>
+        <li>Sous-type : Cercle = A, semi-cercle et nylor = B, sans cerclage = C (percee dans la legende IWI).</li>
+        <li>Matiere de la face : plastique et acetate = A, metal = C, titane = F, carbone = G, bois = H.</li>
+        <li>Matiere de la branche : meme lettre que la face, tant qu’il n’existe pas de champ branche.</li>
+        <li>Utilisateur : Homme = A, Femme = B, Enfant et Junior = C, Mixte = D (unisexe chez IWI).</li>
+        <li>Forme : aviateur 1, carree 2, clubmaster 3, masque 4, ovale 5, papillon 8, rectangle 9, ronde 10. Le libelle « rondes/ovales/pantos » reste vide : il melange plusieurs codes.</li>
+        <li>Marque : code IWI de la marque (3 caracteres au plus) puis le libelle, par exemple « 43 - Esprit ».</li>
+        <li>Date de modification : la date du jour, recalculee a l’affichage et a l’export.</li>
+        <li>Date de creation : la date de creation du produit.</li>
+        <li>Action : toujours 1. Ce n’est pas un attribut, c’est une constante de la trame.</li>
+      </ul>
+
+      <h2>Saisie, limites et agencement</h2>
+      <p>
+        Un attribut classique se cree et se modifie dans l’administration.
+        Un attribut systeme ne se supprime pas et ne se reparametre pas : son identifiant reste fige.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Propriete</th><th>Regle</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Types</td><td>Texte, texte long, nombre, date, liste simple, liste multiple, oui / non, image.</td></tr>
+          <tr><td>Obligatoire</td><td>Bloque l’enregistrement de la fiche et l’import si la valeur est vide. Les lignes de conditions commerciales ne sont pas exigees de cette facon sur la fiche.</td></tr>
+          <tr><td>Completion</td><td>Case separee de l’obligation. Un champ sans picto de completion est optionnel. Pas de pastille « Optionnel ».</td></tr>
+          <tr><td>Masque</td><td>Longueur exacte. A = lettre, 9 = chiffre, * = caractere quelconque, les autres signes sont litteraux. L’EAN est un masque de 14 chiffres. Le code IWI d’une marque est une longueur maximale de 3, pas un masque fixe.</td></tr>
+          <tr><td>Texte long</td><td>Longueur maximale parametrable. Pleine largeur sur la fiche.</td></tr>
+          <tr><td>Nombre</td><td>Minimum, maximum, pas d’increment optionnel. 0, 1 ou 2 decimales (voir plus haut). Un depassement de borne est ramene a la borne.</td></tr>
+          <tr><td>Date</td><td>Saisie jj/mm/aaaa.</td></tr>
+          <tr><td>Listes</td><td>Une option par ligne. La liste multiple stocke les valeurs choisies ensemble.</td></tr>
+          <tr><td>Image</td><td>Clic pour deposer un fichier. L’onglet Visuels liste les attributs image de son groupe (JPG, PNG, 2000 px de cote au minimum dans le rappel affiche). <span class="tag tag-cible">Cible</span> le fichier vit dans Babil, pas dans le navigateur.</td></tr>
+          <tr><td>Aide</td><td>Texte d’aide affiche a cote du libelle.</td></tr>
+          <tr><td>Lecture seule</td><td>Valeur affichee, non saisissable (dates systeme).</td></tr>
+          <tr><td>Formule</td><td>CONCAT, SI, operations sur d’autres champs, DATE_MAJ (horodate le changement d’un champ), MAP (correspondance de valeurs), TODAY (date du jour). Deux passages pour les formules qui dependent d’une autre formule.</td></tr>
+          <tr><td>Champ calcule</td><td>Fond jaune, non saisi. On peut forcer une valeur produit par produit, puis revenir au calcul. Une valeur forcee prime sur la formule.</td></tr>
+          <tr><td>Afficher seulement si</td><td>Sans condition, toujours visible. Condition vide ou non remplie : le champ est masque et sort de la completion.</td></tr>
+          <tr><td>Agencement fiche</td><td>Les champs courts se rangent sur plusieurs colonnes. Texte long et image prennent toute la largeur. L’ordre est celui du groupe.</td></tr>
+          <tr><td>Ouvrir la fiche</td><td>Un attribut peut etre marque « clic pour ouvrir » : dans la liste, cliquer sa valeur ouvre le produit. Le nom l’est.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-A15 — Les types de saisie sont ceux du tableau ci-dessus. Un nouveau type ne s’invente pas dans un ecran.<br>
+        RG-A16 — Un masque impose la longueur et la nature de chaque caractere. Il ne s’applique pas a un champ calcule ni en lecture seule.<br>
+        RG-A17 — Un champ calcule se distingue visuellement et se met a jour des la saisie d’un champ dont il depend.<br>
+        RG-A18 — Forcer une valeur calculee est un levier d’exception, trace par le fait que la valeur ne suit plus la formule jusqu’au retour au calcul.
+      </div>
 
       <h2>Liste des attributs</h2>
       <p class="lead">
@@ -169,7 +233,6 @@
 <script>
 (function () {
   var catalog = window.CATALOG || [];
-  document.getElementById("stat-count").textContent = String(catalog.length);
   var typeSel = document.getElementById("type");
   var types = [];
   catalog.forEach(function (r) {

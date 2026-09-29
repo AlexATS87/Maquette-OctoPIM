@@ -574,6 +574,8 @@ function editAttribute(id) {
   document.getElementById('ea-step').value = a.step ?? '';
   document.getElementById('ea-min').value  = a.min  ?? '';
   document.getElementById('ea-max').value  = a.max  ?? '';
+  const decEl = document.getElementById('ea-decimals');
+  if (decEl) decEl.value = String(a.decimals === 1 || a.decimals === 2 ? a.decimals : 0);
 
   // Code technique : lecture seule pour non-admin
   const codeEl = document.getElementById('ea-code');
@@ -731,6 +733,8 @@ function saveAttributeEdit() {
     a.step = numOrNull(document.getElementById('ea-step').value);
     a.min  = numOrNull(document.getElementById('ea-min').value);
     a.max  = numOrNull(document.getElementById('ea-max').value);
+    const dec = parseInt(document.getElementById('ea-decimals').value, 10);
+    a.decimals = dec === 1 || dec === 2 ? dec : 0;
   }
   const helpSaveEl = document.getElementById('ea-helptext');
   a.helpText = helpSaveEl ? helpSaveEl.value.trim() : (a.helpText || '');
@@ -784,6 +788,8 @@ function createNewAttribute() {
   const step        = stepEl ? numOrNull(stepEl.value) : null;
   const min         = minEl  ? numOrNull(minEl.value)  : null;
   const max         = maxEl  ? numOrNull(maxEl.value)  : null;
+  const decEl       = document.getElementById('new-attr-decimals');
+  const decimals    = decEl && (decEl.value === '1' || decEl.value === '2') ? parseInt(decEl.value, 10) : 0;
   const formula  = formulaEl ? formulaEl.value.trim() : '';
   const helpText = helpEl ? helpEl.value.trim() : '';
 
@@ -827,6 +833,7 @@ function createNewAttribute() {
     step,
     min,
     max,
+    decimals,
     formula,
     helpText,
     showIfAttr: readShowIf('new-attr').showIfAttr,

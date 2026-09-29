@@ -19,6 +19,7 @@
         se copie dans Confluence (image SVG ou macro Mermaid).
       </p>
       <ul class="wf-list">
+        <li><a href="#wf-achat">Parcours Admin Achats</a></li>
         <li><a href="#wf-create">Creation d’un produit</a></li>
         <li><a href="#wf-edit">Modification d’un attribut d’un produit</a></li>
         <li><a href="#wf-force">Forcer une valeur calculee</a></li>
@@ -32,6 +33,24 @@
         <li><a href="#wf-role">Donner un role a un utilisateur</a></li>
         <li><a href="#wf-visual">Ajouter un visuel</a></li>
       </ul>
+
+      <h2 id="wf-achat">Parcours Admin Achats</h2>
+      <p>
+        Ce n’est pas un cycle de vie produit (brouillon, valide, archive).
+        C’est un comportement type : qui fait quoi, quand, et avec quels droits.
+      </p>
+      <p>
+        Exemple. Un Admin Achats doit ajouter des produits dont un attribut manque.
+      </p>
+      <ol>
+        <li>Il va dans l’administration, cree l’attribut, choisit son type, ses contraintes et son groupe.</li>
+        <li>Il importe le fichier qui porte les valeurs.</li>
+        <li>Il verifie la liste : les produits sont la, le champ est visible dans le groupe.</li>
+        <li>Il ouvre une fiche et complete les champs jusqu’a 100 % pour son perimetre.</li>
+      </ol>
+      <div class="callout">
+        RG-WF-00 — Les droits se lisent par groupe d’utilisateurs. L’Admin Systeme voit toute la completion. Les autres ne comptent que les groupes coches pour leur role. Aucune case = tout le monde.
+      </div>
 
       <h2 id="wf-create">Creation d’un produit</h2>
       <p>Objectif : enregistrer une nouvelle reference dans le referentiel.</p>

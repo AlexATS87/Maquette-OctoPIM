@@ -69,7 +69,9 @@
         <strong>Regles</strong>
         RG-IMP-01 — Ajout / modification : tous les attributs obligatoires de la categorie doivent etre mappes et renseignes.<br>
         RG-IMP-02 — Suppression : EAN ou SAP suffit pour identifier la ligne.<br>
-        RG-IMP-03 — L’import ne propose que les categories accessibles en ecriture (ou suppression).
+        RG-IMP-03 — L’import ne propose que les categories accessibles en ecriture (ou suppression).<br>
+        RG-IMP-04 — Reconnaissance d’une ligne : d’abord l’EAN, sinon le SAP, sinon l’ensemble des obligatoires de la categorie. Une ligne en erreur est comptee et n’arrete pas le reste du fichier.<br>
+        RG-IMP-05 — Un pourcentage accepte une saisie en % ou en nombre affiche et se stocke entre 0 et 1. Une marque inconnue est ajoutee au referentiel.
       </div>
       <div class="callout cible">
         <strong>Cible</strong>

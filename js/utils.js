@@ -377,6 +377,7 @@ function formatCalcFieldDisplay(attr, stored) {
     const d = formatPercentDisplay(stored);
     return d === '' ? '' : d + '%';
   }
+  if (attr && (attr.type === 'Nombre' || attr.type === 'Nombre decimal')) return formatAttrNumber(attr, stored);
   return stored == null ? '' : String(stored);
 }
 
@@ -1141,6 +1142,21 @@ function numOrNull(v) {
   return isNaN(n) ? null : n;
 }
 
+function attrDecimals(a) {
+  if (!a || isPercentAttr(a)) return null;
+  if (a.type !== 'Nombre' && a.type !== 'Nombre decimal') return null;
+  return a.decimals === 1 || a.decimals === 2 ? a.decimals : 0;
+}
+
+function formatAttrNumber(a, val) {
+  if (val === undefined || val === null || String(val).trim() === '') return '';
+  if (isPercentAttr(a)) return formatPercentDisplay(val);
+  const d = attrDecimals(a);
+  const n = parseFloat(String(val).replace(',', '.'));
+  if (isNaN(n) || d == null) return String(val);
+  return n.toFixed(d);
+}
+
 function numberInput(p, a, val) {
   const percent = isPercentAttr(a);
   const bounded = k => a[k] !== undefined && a[k] !== null && a[k] !== '';
@@ -1154,7 +1170,7 @@ function numberInput(p, a, val) {
     if (bounded('max'))  extra += ` max="${max}"`;
   }
   const typeAttr = a.stepEnabled ? 'type="number"' : 'type="text" inputmode="decimal"';
-  const display  = percent ? formatPercentDisplay(val) : (val == null ? '' : val);
+  const display  = percent ? formatPercentDisplay(val) : formatAttrNumber(a, val);
   const input = `<input class="field-input" ${typeAttr}${extra} value="${display}"
     data-field-code="${a.code}" ${percent ? 'data-percent-display="1"' : ''}
     onwheel="event.preventDefault();this.blur()"
@@ -1186,9 +1202,11 @@ function onNumberBlur(el, code) {
   const max = percent && a.max != null && a.max !== '' ? Number(a.max) * 100 : Number(a.max);
   if (a.min !== undefined && a.min !== null && a.min !== '' && v < min) v = min;
   if (a.max !== undefined && a.max !== null && a.max !== '' && v > max) v = max;
-  if (v === n) return;
-  el.value = v;
+  const shown = percent ? String(v) : formatAttrNumber(a, v);
+  if (String(el.value) === shown) return;
+  el.value = shown;
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  if (v === n) return;
   showNotif((a.name || code) + ' ramene a ' + v + (percent ? '%' : '')
     + ' (bornes ' + (percent ? min : a.min) + ' a ' + (percent ? max : a.max) + ')');
 }
@@ -1207,8 +1225,8 @@ function calcFieldInput(p, a, val) {
   const badgeStyle = `position:absolute;right:8px;top:50%;transform:translateY(-50%);
     width:18px;height:18px;border-radius:50%;font-size:11px;font-weight:700;
     display:flex;align-items:center;justify-content:center;cursor:help;`;
-  const safeVal = isPercentAttr(a)
-    ? escapeHtml(formatPercentDisplay(val) + (formatPercentDisplay(val) === '' ? '' : '%'))
+  const safeVal = (a.type === 'Nombre' || a.type === 'Nombre decimal' || isPercentAttr(a))
+    ? escapeHtml(formatCalcFieldDisplay(a, val))
     : escapeHtml(displayFieldVal(val));
 
   const field = forced

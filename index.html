@@ -513,6 +513,14 @@
               <input class="field-input" id="ea-max" type="number"
                 placeholder="vide = pas de maximum" onwheel="event.preventDefault();this.blur()">
             </div>
+            <div class="field-row">
+              <div class="field-label">Chiffres apres la virgule</div>
+              <select class="form-select" id="ea-decimals">
+                <option value="0">0 — arrondi</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+            </div>
           </div>
           <div class="field-row">
             <div class="field-label">Masque de saisie</div>
@@ -795,6 +803,14 @@
         <input class="field-input" id="new-attr-max" type="number"
           placeholder="vide = pas de maximum" onwheel="event.preventDefault();this.blur()">
       </div>
+      <div class="form-field">
+        <div class="form-label">Chiffres apres la virgule</div>
+        <select class="form-select" id="new-attr-decimals">
+          <option value="0">0 — arrondi</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+        </select>
+      </div>
     </div>
     <div id="new-attr-mask-help" style="display:none"></div>
     <div class="field-row" style="margin-top:14px" id="new-attr-formula-wrap">
@@ -894,13 +910,13 @@
 </div>
 
 <!-- SCRIPTS -->
-<script src="js/data.js?v=23"></script>
-<script src="js/utils.js?v=22"></script>
+<script src="js/data.js?v=26"></script>
+<script src="js/utils.js?v=24"></script>
 <script src="js/dashboard.js?v=20"></script>
 <script src="js/products.js?v=20"></script>
-<script src="js/admin.js?v=24"></script>
-<script src="js/detail.js?v=23"></script>
-<script src="js/export.js?v=21"></script>
+<script src="js/admin.js?v=25"></script>
+<script src="js/detail.js?v=24"></script>
+<script src="js/export.js?v=23"></script>
 <script src="js/import.js?v=19"></script>
 
 <script>

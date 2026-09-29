@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Guide utilisateur — OctoPIM</title>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; color: #1a2332; line-height: 1.5; margin: 0; background: #f4f7fb; }
+    main { max-width: 820px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    h2 { font-size: 20px; margin-top: 32px; }
+    .lead { color: #607080; }
+    .callout { background: #fff8e1; border-left: 4px solid #f9a825; padding: 12px 16px; border-radius: 8px; }
+    section { background: #fff; border-radius: 12px; padding: 8px 22px 18px; margin-top: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    ul { padding-left: 18px; }
+    a { color: #1565c0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Guide utilisateur OctoPIM</h1>
+  <p class="lead">Retrouver un produit, le completer, l’importer ou l’exporter. Ce que vous pouvez faire depend de votre role.</p>
+
+  <div class="callout">
+    <strong>Action impossible</strong>
+    <p>Si vous ne pouvez pas modifier ou supprimer (bouton absent, enregistrement refuse, import bloque), vos droits ne le permettent pas. Contactez l’administrateur de la solution, <strong>Alexis Béranger</strong>. Ne contournez pas le droit.</p>
+  </div>
+
+  <section>
+    <h2>Se connecter</h2>
+    <p>Ouvrez OctoPIM et choisissez votre compte. Le menu et les produits visibles dependent de votre role. En cible, la connexion passera par Okta : OctoPIM ne gere pas le mot de passe.</p>
+  </section>
+
+  <section>
+    <h2>Retrouver un produit</h2>
+    <ul>
+      <li>La liste ne montre que les categories que vous avez le droit de lire.</li>
+      <li>Utilisez la recherche, le filtre de categorie, le tri sur une colonne.</li>
+      <li>La vue Synthese reprend les colonnes definies pour tout le monde. La vue Detaillee montre les groupes de la categorie choisie. Sans categorie, ces groupes ne s’affichent pas.</li>
+      <li>Cliquez le nom pour ouvrir la fiche.</li>
+      <li>Le bouton Nouveau produit n’apparait que si vous pouvez ecrire au moins une categorie. EAN, nom et categorie sont obligatoires. Le code SAP peut rester vide.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Completer une fiche</h2>
+    <ul>
+      <li>Les onglets sont les groupes de la categorie du produit. Il n’y a pas d’onglet Synthese.</li>
+      <li>Les champs courts se rangent cote a cote. Un texte long ou une image prend toute la largeur.</li>
+      <li>Un champ avec un picto entre dans la completion. Sans picto, il est optionnel.</li>
+      <li>La barre en haut de la fiche et la barre de chaque onglet se mettent a jour pendant la saisie.</li>
+      <li>Enregistrer refuse la fiche si un champ obligatoire est vide. L’historique n’est ecrit qu’a l’enregistrement.</li>
+      <li>Retour a la liste et Enregistrer restent visibles quand vous defilez. Quitter avec des changements non enregistres demande une confirmation.</li>
+      <li>Un champ jaune est calcule. Vous pouvez forcer une valeur, puis revenir au calcul.</li>
+      <li>Les prix et les PA s’affichent avec deux decimales. Le prix final arrondi n’en a pas. Un pourcentage s’affiche en %.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Importer</h2>
+    <ul>
+      <li>Choisissez ajout, modification ou suppression, puis la categorie et le fichier.</li>
+      <li>Chaque colonne se relie a un identifiant d’attribut. EAN, nom et categorie doivent etre presents pour un ajout ou une modification.</li>
+      <li>Un produit deja connu est reconnu d’abord par l’EAN, sinon par le SAP.</li>
+      <li>La suppression exige l’EAN ou le SAP, et le droit de supprimer.</li>
+      <li>Si l’import est refuse, c’est un droit ou un champ obligatoire : contactez Alexis Béranger si le droit vous manque.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Exporter</h2>
+    <ul>
+      <li>Le perimetre est celui des filtres de la liste. S’il y a une selection, elle est indiquee, avec « Tout exporter ».</li>
+      <li>Catalogue, IWI ou une trame enregistree : cochez un groupe, depliez-le pour retirer un champ.</li>
+      <li>IWI propose les 76 colonnes de la trame. Un nombre en rouge sur une colonne exigee bloque le fichier tant que des produits n’ont pas la valeur.</li>
+      <li>Le format (.xlsx, .csv ou .zip) se choisit a cote du bouton Exporter. Le fichier tient sur un seul onglet.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Administration</h2>
+    <p>Le menu Administration n’apparait que si votre role peut ouvrir au moins un module (attributs, groupes, categories, roles, conditions, preferences). La pagination de la liste et le seuil de completion se reglent dans les preferences de l’application. Le theme d’affichage, lui, est personnel.</p>
+    <p>Creer un attribut, un groupe ou une categorie est reserve aux roles qui ont ce droit. Sinon, demandez-le a Alexis Béranger.</p>
+  </section>
+</main>
+</body>
+</html>

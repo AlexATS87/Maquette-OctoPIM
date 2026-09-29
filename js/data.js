@@ -53,7 +53,7 @@ let attrGroups = [
   { id:10, name:'SEO lentille',                code:'seo_lentille',          system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[47,48,49,50] },
   { id:11, name:'Caracteristiques accessoire', code:'caract_accessoire',     system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[51,52] },
   { id:12, name:'Caracteristiques PEL',        code:'caract_pel',            system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[74,30,70,75,76,45,44] },
-  { id:13, name:'IWI',                         code:'iwi',                   system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[99,100] },
+  { id:13, name:'IWI',                         code:'iwi',                   system:false, isSynthGroup:false, isBrandGroup:false, attrIds:[99,100,101,102,103,104,105,106,107,108] },
 ];
 
 // ============================================================
@@ -107,21 +107,21 @@ let attributes = [
   { id:15, name:'Forme de la monture', code:'forme',         type:'Simple select',   groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Ronde','Carree','Rectangulaire','Ovale','Papillon','Aviateur','Clubmaster','rondes/ovales/pantos','carrées','rectangles','Masque','pilotes/aviator'] },
   { id:16, name:'Code douanier',       code:'code_douanier', type:'Texte',           groupId:4,  required:false, calc:false, inCompletion:true, formula:'', mask:'99999999', showInSynth:false, clickToOpen:false },
   { id:17, name:'Commentaire',         code:'commentaire',   type:'Texte long',      groupId:4,  required:false, calc:false, inCompletion:false, formula:'', mask:'', maxLength:500, showInSynth:false, clickToOpen:false, isConditionCommerciale:true },
-  { id:18, name:'Prix catalogue',      code:'prix_catalogue',type:'Nombre',          groupId:5,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:18, name:'Prix catalogue',      code:'prix_catalogue',type:'Nombre',          groupId:5,  required:false, calc:false, inCompletion:true, formula:'', mask:'', decimals:2, showInSynth:false, clickToOpen:false },
   { id:19, name:'PA interne',          code:'pa_interne',        type:'Nombre',          groupId:5,  required:false, calc:true, inCompletion:false,
     formula:'=[prix_catalogue]*(1-[remiseEnseigne])', formulaLabel:'Prix catalogue x (1 - Remise interne)',
-    mask:'', showInSynth:false, clickToOpen:false },
+    mask:'', decimals:2, showInSynth:false, clickToOpen:false },
   { id:20, name:'Remise sur facture',  code:'remise',        type:'Nombre',          groupId:5,  required:false, calc:false, inCompletion:true, formula:'', mask:'', stepEnabled:true, step:0.01, min:0, max:1, showInSynth:false, clickToOpen:false, displayFormat:'percent' },
   { id:21, name:'RFA',                 code:'rfa',           type:'Nombre',          groupId:5,  required:false, calc:false, inCompletion:true, formula:'', mask:'', stepEnabled:true, step:0.005, min:0, max:1, showInSynth:false, clickToOpen:false, isConditionCommerciale:true, displayFormat:'percent' },
   { id:22, name:'marge interne',           code:'marge_interne',     type:'Nombre',  groupId:5,  required:false, calc:true, inCompletion:false,
     formula:'=[pa_interne]*(1-[remise])*(1+[rfa])', formulaLabel:'pa interne x (1 - Remise) x (1 + RFA)',
-    mask:'', showInSynth:false, clickToOpen:false },
+    mask:'', decimals:2, showInSynth:false, clickToOpen:false },
   { id:23, name:'PA opticien',         code:'pa_opticien',   type:'Nombre',  groupId:5,  required:false, calc:true, inCompletion:false,
     formula:'=[pa_interne]*(1-[remise])', formulaLabel:'pa interne x (1 - Remise)',
-    mask:'', showInSynth:false, clickToOpen:false },
+    mask:'', decimals:2, showInSynth:false, clickToOpen:false },
   { id:24, name:'Prix final arrondi',  code:'prix_final',    type:'Nombre',  groupId:5,  required:false, calc:true, inCompletion:false,
     formula:'=[pa_opticien]*2', formulaLabel:'PA opticien x 2',
-    mask:'', showInSynth:false, clickToOpen:false },
+    mask:'', decimals:0, showInSynth:false, clickToOpen:false },
   { id:25, name:'Taux de marque',      code:'taux_marque',   type:'Nombre',  groupId:5,  required:false, calc:true, inCompletion:false,
     formula:'=([prix_final]-[pa_opticien])/[prix_final]', formulaLabel:'(Prix final - PA opticien) / Prix final', displayFormat:'percent',
     mask:'', showInSynth:false, clickToOpen:false },
@@ -203,6 +203,14 @@ let attributes = [
   { id:98, name:'Groupe de marchandise', code:'groupe_marchandise', type:'Texte', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:99, name:'Code fabricant',      code:'code_fabricant', type:'Texte', groupId:13, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:100, name:'Nom du fabricant',   code:'nom_fabricant',  type:'Texte', groupId:13, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:101, name:'IWI - Type',              code:'iwi_type',              type:'Texte', groupId:13, required:false, calc:true, inCompletion:false, formula:'MAP(optique_solaire,"Optique"="A","Solaire"="B")', formulaLabel:'Optique = A, Solaire = B', mask:'', showInSynth:false, clickToOpen:false },
+  { id:102, name:'IWI - Sous-type',         code:'iwi_sous_type',         type:'Texte', groupId:13, required:false, calc:true, inCompletion:false, formula:'MAP(cerclage,"Cercle"="A","Semi-cercle"="B","Sans cerclage"="C","Nylor"="B")', formulaLabel:'Cercle A, semi et nylor B, sans cerclage C', mask:'', showInSynth:false, clickToOpen:false },
+  { id:103, name:'IWI - Materiau face',     code:'iwi_materiau_face',     type:'Texte', groupId:13, required:false, calc:true, inCompletion:false, formula:'MAP(matiere,"Plastique"="A","Acetate"="A","Métal"="C","Metal"="C","Titane"="F","Bois"="H","Carbone"="G")', formulaLabel:'Lettre IWI de la matiere', mask:'', showInSynth:false, clickToOpen:false },
+  { id:104, name:'IWI - Materiau branche',  code:'iwi_materiau_branche',  type:'Texte', groupId:13, required:false, calc:true, inCompletion:false, formula:'MAP(matiere,"Plastique"="A","Acetate"="A","Métal"="C","Metal"="C","Titane"="F","Bois"="H","Carbone"="G")', formulaLabel:'Meme matiere que la face tant qu\'il n\'y a pas d\'attribut branche', mask:'', showInSynth:false, clickToOpen:false },
+  { id:105, name:'IWI - Type utilisateur',  code:'iwi_utilisateur',       type:'Texte', groupId:13, required:false, calc:true, inCompletion:false, formula:'MAP(cible,"Homme"="A","Femme"="B","Enfant"="C","Junior"="C","Mixte"="D")', formulaLabel:'Homme A, femme B, enfant C, mixte D', mask:'', showInSynth:false, clickToOpen:false },
+  { id:106, name:'IWI - Forme',             code:'iwi_forme',             type:'Texte', groupId:13, required:false, calc:true, inCompletion:false, formula:'MAP(forme,"Aviateur"="1","pilotes/aviator"="1","Carree"="2","carrées"="2","Clubmaster"="3","Masque"="4","Ovale"="5","Papillon"="8","Rectangulaire"="9","rectangles"="9","Ronde"="10")', formulaLabel:'Code forme IWI. rondes/ovales/pantos reste vide : trop de codes IWI dans un seul libelle', mask:'', showInSynth:false, clickToOpen:false },
+  { id:107, name:'IWI - Marque',            code:'iwi_marque',            type:'Texte', groupId:13, required:false, calc:true, inCompletion:false, formula:'IWI_MARQUE(marque)', formulaLabel:'Code IWI de la marque et libelle', mask:'', showInSynth:false, clickToOpen:false },
+  { id:108, name:'IWI - Date de modification', code:'iwi_date_modif',     type:'Texte', groupId:13, required:false, calc:true, inCompletion:false, formula:'TODAY()', formulaLabel:'Date du jour a l\'export', mask:'', showInSynth:false, clickToOpen:false },
 ];
 
 // ============================================================
@@ -306,6 +314,14 @@ const IWI_BRAND_CODES = {
 brandSettings.forEach(b => {
   if (!b.iwiCode && IWI_BRAND_CODES[b.marque]) b.iwiCode = IWI_BRAND_CODES[b.marque];
 });
+
+function iwiMarqueLabel(name) {
+  if (name == null || String(name).trim() === '') return '';
+  const label = String(name);
+  const b = brandSettings.find(x => x.marque === label);
+  const code = (b && b.iwiCode) || IWI_BRAND_CODES[label] || '';
+  return code ? code + ' - ' + label : '';
+}
 
 const IWI_EXPORT_CONSTANTS = {
   codeDistributeur: 'ATS',
@@ -782,7 +798,7 @@ let products = [
 // ============================================================
 // COMPTEURS AUTO-INCREMENT
 // ============================================================
-let nextAttrId     = 101;
+let nextAttrId     = 109;
 let nextCatId      = 6;
 let nextGroupId    = 14;
 let nextProductId  = 24;
@@ -808,29 +824,69 @@ let currentPage       = 1;
 // ============================================================
 let exportPick = null;
 let activeExportTemplate = 'catalogue';
+let exportOpenGroups = new Set();
+let exportIgnoreSelection = false;
 let exportTemplates = [
   { id: 'catalogue', name: 'Catalogue', builtin: true },
   { id: 'iwi', name: 'IWI', builtin: true },
 ];
 
-const IWI_COLUMNS = [
-  { header: 'Code fabricant', code: 'code_fabricant', required: true },
-  { header: 'Nom du fabricant', code: 'nom_fabricant', required: true },
-  { header: 'Code du distributeur', constant: IWI_EXPORT_CONSTANTS.codeDistributeur, required: true },
-  { header: 'Nom du distributeur', constant: IWI_EXPORT_CONSTANTS.nomDistributeur, required: true },
-  { header: 'GTIN', code: 'ean', required: true },
-  { header: 'Prix 1', code: 'pa_interne', required: true },
-  { header: 'Prix 2', code: 'prix_catalogue', required: true },
-  { header: 'Type', code: 'optique_solaire', required: true },
-  { header: 'Sous-type monture', code: 'cerclage', required: true },
-  { header: 'Taille du verre', code: 'largeur_verres', required: true },
-  { header: 'Taille du pont', code: 'taille_nez', required: true },
-  { header: 'Longueur de branche', code: 'taille_branches', required: true },
-  { header: 'Code douanier', code: 'code_douanier', required: true },
-  { header: 'Materiau face', code: 'matiere', required: true },
-  { header: 'Type utilisateur', code: 'cible', required: true },
-  { header: 'Marque', code: 'marque', required: true },
-];
+function iwiBind(list) {
+  const out = [];
+  list.forEach(item => {
+    if (typeof item === 'number') {
+      for (let i = 0; i < item; i++) out.push({});
+    } else out.push(item);
+  });
+  return out;
+}
+
+const IWI_HEADERS = ["Code fabricant","Nom du fabricant","Code du distributeur","Nom du distributeur","GTIN","Nom du produit","Code enseigne","Code produit public","Code marquage","Code commande","Code modèle","Code interne","Code monture","UPC","EAN","Type","Sous-type monture","Type de pièce détachée","Taille du verre emboité (calibre)","Taille du pont (nez)","Longueur de branche nominale","Numéro de série","Marque","Collection","Code de la couleur","Nom de la couleur","Gabarit","Forme de la monture","Longueur de branche","Diamètre effectif de la monture","Angle pantoscopique","Angle de la monture","Base de la monture","Instruction de manipulation des montures","Disponibilité des pièces détachées","Compatibilité de clip","Identifiant du verre","Base de courbure du verre","Descriptif du verre","Catégorie CEN du verre","Restriction du verre","Type de filtration du verre","Matériau du verre","Puissance","Prescription","Type de découpe de la tranche du verre","Largeur du verre","Hauteur du verre","Distance entre les verres","Action","Date de début de validité","Date de fin de validité","Code douanier","Prix 1","Prix 2","Prix additionnel (non configuré)","Prix additionnel (non configuré)","Prix additionnel (non configuré)","Prix additionnel (non configuré)","Charnière sur ressort","Matériau principal de la face","Matériau principal de la branche","Type d'utilisateur","Type d'utilisation","Couleur NRF (US uniquement)","Spécifications additionnelles","Petite image","Image de face","Image droite","Image gauche","Image de dessus","Image de dessous","Caractéristiques essentielles","Origine garantie","Date de création","Date de modification"];
+
+const IWI_BINDS = iwiBind([
+  { code: 'code_fabricant', required: true },
+  { code: 'nom_fabricant', required: true },
+  { constant: IWI_EXPORT_CONSTANTS.codeDistributeur, required: true },
+  { constant: IWI_EXPORT_CONSTANTS.nomDistributeur, required: true },
+  { code: 'ean', required: true },
+  { code: 'nom' },
+  8,
+  { code: 'ean' },
+  { code: 'iwi_type', required: true },
+  { code: 'iwi_sous_type', required: true },
+  1,
+  { code: 'largeur_verres' },
+  { code: 'taille_nez' },
+  { code: 'taille_branches' },
+  1,
+  { code: 'iwi_marque', required: true },
+  2,
+  { code: 'couleur' },
+  1,
+  { code: 'iwi_forme' },
+  { code: 'taille_branches' },
+  17,
+  { code: 'largeur_verres' },
+  { code: 'hauteur_verres' },
+  1,
+  { constant: '1', required: true },
+  2,
+  { code: 'code_douanier' },
+  { code: 'pa_interne', required: true },
+  { code: 'prix_catalogue', required: true },
+  5,
+  { code: 'iwi_materiau_face', required: true },
+  { code: 'iwi_materiau_branche' },
+  { code: 'iwi_utilisateur', required: true },
+  11,
+  { code: '@createdAt' },
+  { code: 'iwi_date_modif', required: true },
+]);
+
+const IWI_COLUMNS = IWI_HEADERS.map((header, i) => {
+  const section = i < 26 ? 'Général' : (i < 49 ? 'Technique' : 'Commercial');
+  return Object.assign({ section, header }, IWI_BINDS[i] || {});
+});
 
 function exportGroupsForCat(catName) {
   const cat = catName ? getCatByName(catName) : null;
@@ -838,9 +894,25 @@ function exportGroupsForCat(catName) {
   return ids.map(id => getGroupById(id)).filter(Boolean);
 }
 
+function exportTemplateMode(id) {
+  if (id === 'iwi') return 'iwi';
+  const saved = exportTemplates.find(t => t.id === id);
+  return saved && saved.pick && saved.pick.mode === 'iwi' ? 'iwi' : 'catalogue';
+}
+
 function ensureExportPick() {
   const cat = exportSnapshot.catFilter || '';
   if (exportPick && exportPick.cat === cat && exportPick.template === activeExportTemplate) return;
+  const mode = exportTemplateMode(activeExportTemplate);
+  if (mode === 'iwi') {
+    exportPick = {
+      cat, template: activeExportTemplate, mode,
+      groups: new Set(['Général', 'Technique', 'Commercial']),
+      attrs: new Set(IWI_COLUMNS.map((_, i) => String(i))),
+      format: 'xlsx',
+    };
+    return;
+  }
   const groups = exportGroupsForCat(cat);
   const groupIds = new Set(groups.map(g => g.id));
   const attrs = new Set();
@@ -848,38 +920,18 @@ function ensureExportPick() {
     const a = getAttrById(id);
     if (a && a.code !== 'completion') attrs.add(a.code);
   }));
-  const iwi = activeExportTemplate === 'iwi';
-  exportPick = { cat, template: activeExportTemplate, groups: groupIds, attrs, single: iwi, zip: iwi };
+  exportPick = { cat, template: activeExportTemplate, mode, groups: groupIds, attrs, format: 'xlsx' };
 }
 
 function exportPickerHtml() {
   ensureExportPick();
-  const groups = exportGroupsForCat(exportPick.cat);
   const tplOpts = exportTemplates.map(t =>
     `<option value="${t.id}"${t.id === activeExportTemplate ? ' selected' : ''}>${t.name}</option>`
   ).join('');
-  const blocks = groups.map(g => {
-    const on = exportPick.groups.has(g.id);
-    const attrs = (g.attrIds || []).map(id => getAttrById(id)).filter(a => a && a.code !== 'completion');
-    const fields = attrs.map(a => {
-      const checked = on && exportPick.attrs.has(a.code);
-      return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:2px 0 2px 22px;color:${on ? '#1a2332' : '#a0b0c0'}">
-        <input type="checkbox" ${checked ? 'checked' : ''} ${on ? '' : 'disabled'}
-          onchange="toggleExportAttr(${g.id},'${a.code}',this.checked)">
-        ${escapeHtml(a.name)}
-      </label>`;
-    }).join('');
-    return `<div style="margin-bottom:10px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600">
-        <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleExportGroup(${g.id},this.checked)">
-        ${escapeHtml(g.name)}
-      </label>
-      ${fields}
-    </div>`;
-  }).join('');
-  const iwiNote = activeExportTemplate === 'iwi'
-    ? `<div id="iwi-missing" style="font-size:12px;color:#607080;margin-top:8px"></div>`
-    : '';
+  const iwi = exportPick.mode === 'iwi';
+  const missing = (iwi && typeof iwiMissingCounts === 'function' && typeof exportScopeProducts === 'function')
+    ? iwiMissingCounts(exportScopeProducts()) : {};
+  const blocks = iwi ? exportIwiPickerBlocks(missing) : exportCataloguePickerBlocks();
   return `
     <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:20px">
       <div style="font-size:13px;font-weight:600;color:#1a2332;margin-bottom:12px">Trame</div>
@@ -888,20 +940,64 @@ function exportPickerHtml() {
         <input class="field-input" id="export-template-name" placeholder="Nom d'une nouvelle trame" style="max-width:220px">
         <button class="btn btn-secondary" onclick="saveExportTemplate()">Enregistrer la trame</button>
       </div>
-      <div style="font-size:12px;color:#607080;margin-bottom:10px">
-        Decocher un groupe decoche ses attributs. Un attribut present dans deux groupes part s'il reste coche dans au moins un groupe.
-      </div>
-      <div style="max-height:320px;overflow:auto">${blocks}</div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:12px">
-        <input type="checkbox" ${exportPick.single ? 'checked' : ''} onchange="exportPick.single=this.checked">
-        Tout regrouper dans un seul onglet
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px">
-        <input type="checkbox" ${exportPick.zip ? 'checked' : ''} onchange="exportPick.zip=this.checked">
-        Telecharger en .zip
-      </label>
-      ${iwiNote}
+      <div>${blocks}</div>
     </div>`;
+}
+
+function exportCheckBlock(key, name, on, groupChange, items) {
+  const open = exportOpenGroups.has(String(key));
+  const checked = items.filter(it => it.on).length;
+  const fields = open ? items.map(it => `
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:2px 0 2px 28px;color:${on ? '#1a2332' : '#a0b0c0'}">
+      <input type="checkbox" ${it.on ? 'checked' : ''} ${on ? '' : 'disabled'} onchange="${it.change}">
+      ${escapeHtml(it.label)}${it.extra || ''}
+    </label>`).join('') : '';
+  return `<div style="margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" ${on ? 'checked' : ''} onchange="${groupChange}">
+      <button type="button" style="background:none;border:0;padding:0;font-weight:600;font-size:13px;cursor:pointer" onclick="toggleExportSection('${key}')">${open ? '▾' : '▸'} ${escapeHtml(name)}</button>
+      <span style="font-size:12px;color:#607080">${checked}/${items.length}</span>
+    </div>
+    ${fields}
+  </div>`;
+}
+
+function exportCataloguePickerBlocks() {
+  return exportGroupsForCat(exportPick.cat).map(g => {
+    const on = exportPick.groups.has(g.id);
+    const attrs = (g.attrIds || []).map(id => getAttrById(id)).filter(a => a && a.code !== 'completion');
+    const items = attrs.map(a => ({
+      on: on && exportPick.attrs.has(a.code),
+      label: a.name,
+      change: `toggleExportAttr(${g.id},'${a.code}',this.checked)`,
+    }));
+    return exportCheckBlock('g' + g.id, g.name, on, `toggleExportGroup(${g.id},this.checked)`, items);
+  }).join('');
+}
+
+function exportIwiPickerBlocks(missing) {
+  const sections = [];
+  IWI_COLUMNS.forEach((col, i) => {
+    let sec = sections.find(s => s.name === col.section);
+    if (!sec) { sec = { name: col.section, cols: [] }; sections.push(sec); }
+    sec.cols.push({ col, i });
+  });
+  return sections.map(sec => {
+    const on = exportPick.groups.has(sec.name);
+    const items = sec.cols.map(({ col, i }) => {
+      const n = missing[i] || 0;
+      const isOn = on && exportPick.attrs.has(String(i));
+      const mark = col.required && isOn && n
+        ? `<span style="color:#c62828;font-weight:700;margin-left:8px">${n}</span>` : '';
+      return {
+        on: isOn,
+        label: col.header,
+        extra: mark,
+        change: `toggleExportIwiCol(${i},this.checked)`,
+      };
+    });
+    return exportCheckBlock(sec.name, sec.name, on, `toggleExportIwiGroup('${sec.name}',this.checked)`, items);
+  }).join('');
 }
 
 let exportSnapshot = {

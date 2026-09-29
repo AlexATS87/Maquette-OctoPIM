@@ -53,13 +53,20 @@
           <tr><td>Vue detaillee</td><td>Colonnes des groupes de la categorie filtree. Sans categorie choisie, la barre de groupes est masquee.</td></tr>
           <tr><td>Completion</td><td>Jauge a gauche du nom. Seuil parametrable (defaut 80 %).</td></tr>
           <tr><td>Nouveau produit</td><td>Modale : EAN, nom, categorie obligatoires. Redirige vers la fiche.</td></tr>
+          <tr><td>Tri</td><td>Clic sur l’en-tete d’une colonne, croissant puis decroissant.</td></tr>
+          <tr><td>Pagination</td><td>Preference d’application. Defaut 50 lignes. 0 affiche toute la liste. Plafond de saisie 500. <span class="tag tag-cible">Cible</span> a 100 000 produits, la page ne charge pas tout le catalogue d’un coup.</td></tr>
+          <tr><td>Selection</td><td>Cases a cocher. Comparer demande au moins deux produits et une categorie (vue detaillee, ecarts en jaune). Modifier en masse ecrit la meme valeur sur la selection, seulement la ou l’utilisateur a le droit d’ecrire. Supprimer en masse demande confirmation et ignore les produits sans droit de suppression.</td></tr>
+          <tr><td>Groupes</td><td>En vue detaillee, une fois une categorie choisie, seuls les groupes de cette categorie apparaissent. On masque un groupe pour retirer ses colonnes. Sans categorie, pas de barre de groupes.</td></tr>
         </tbody>
       </table>
       <div class="callout">
         <strong>Regles</strong>
         RG-LST-01 — L’utilisateur ne voit que les produits des categories en lecture.<br>
         RG-LST-02 — Le bouton Nouveau produit n’apparait que s’il a au moins une categorie en ecriture.<br>
-        RG-LST-03 — La jauge de completion ne compte que les champs saisissables (hors systeme, calcules, visuels, commentaire).
+        RG-LST-03 — La jauge de completion ne compte que les champs saisissables (hors systeme, calcules, visuels, commentaire).<br>
+        RG-LST-04 — La vue detaillee n’affiche que les groupes de la categorie filtree. « Toutes categories » masque cette barre.<br>
+        RG-LST-05 — Une modification ou une suppression de masse ne touche que les produits sur lesquels le droit correspondant existe.<br>
+        RG-LST-06 — <span class="tag tag-maq">Maquette</span> Le filtre de colonne enumere les valeurs visibles. <span class="tag tag-cible">Cible</span> A 100 000 produits, retrouver une reference se fait par saisie, pas par une liste de toutes les valeurs.
       </div>
     </article>
   </main>
