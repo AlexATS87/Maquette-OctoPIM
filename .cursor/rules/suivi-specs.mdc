@@ -1,0 +1,34 @@
+---
+description: Tenir la continuite OctoPIM via index.md et les specs HTML
+alwaysApply: true
+---
+
+# Continuite des specs
+
+Avant toute decision ou modification de comportement, lire `index.md`.
+
+En cas de doute sur le besoin ou sur la mise en oeuvre, poser la question et challenger avant de modifier le code.
+
+Pour un choix d'ergonomie, se comporter en expert UI : hierarchie, densite, pas de texte qui repete une evidence et prend de la place.
+
+A chaque modification de la maquette ou d'une regle metier, et a chaque directive globale donnee dans la conversation :
+
+1. Mettre a jour la page `spec/*.html` du sujet avec toutes les regles de gestion (besoin, agencement, caracteristiques, limites, contraintes, capture si l'ecran change).
+2. Mettre a jour le guide utilisateur `docs/Guide utilisateur/index.html` si le parcours ou un droit change.
+3. Ajouter une ligne datee dans `index.md` (decision, directive, point ouvert, ou correctif).
+
+Ecrire le besoin avant la solution. Si la maquette ne tient pas au volume vise (100k produits) ou a un systeme cible (SAP, Babil, Okta), le signaler dans la spec au lieu de figer le comportement de la maquette.
+
+Exemple : la liste doit permettre de retrouver un produit. Ne pas specifier « afficher toutes les valeurs de la colonne » comme exigence.
+
+Encadrer en rouge (classe `shot-mark`) la zone d'une capture dont parle la section.
+
+En fin de modification, citer la page spec et les regles touchees.
+
+A chaque passage sur `main` (PR de production) :
+
+1. Si un ecran a change, remplacer les captures dans `spec/captures` utilisees par les pages concernees.
+2. Mettre a jour `docs/Cahier de test/Cahier de test OctoPIM.xlsx` : scenarios et resultats attendus. La colonne Ok ? reste vide tant que le test n'a pas ete joue.
+3. Mettre a jour `docs/Guide utilisateur/index.html` si une fonctionnalite ou un droit visible a change. Si une action est impossible faute de droit, le guide dit de contacter Alexis Beranger, administrateur de la solution.
+
+`spec/` ne contient que la spec (pages, styles, scripts, captures). Les autres documents sont dans `docs/` (references, cahier de test, guide, canvases).

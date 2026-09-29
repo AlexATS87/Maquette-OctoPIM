@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Gestion des attributs — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Gestion des attributs</h1>
+      <p class="lead">
+        Un attribut est le contrat d’un champ : libelle, identifiant, type de saisie,
+        contraintes, parfois une formule. La valeur, elle, appartient au produit.
+      </p>
+
+      <h2>Qu’est-ce qu’un attribut ?</h2>
+      <p>
+        Un attribut est le <strong>contrat d’un champ</strong> : libelle metier,
+        identifiant pour les echanges (import, export, formules), type de saisie,
+        contraintes, eventuellement une formule. Ce n’est pas la valeur.
+        La valeur appartient au produit (ou a une ligne de conditions commerciales).
+      </p>
+      <p>
+        Deux natures seulement :
+      </p>
+      <ul>
+        <li><strong>Systeme</strong> — non supprimable, non reparametrable (categorie, dates, marque, fournisseur, segmentation, completion).</li>
+        <li><strong>Classique</strong> — creable, modifiable, supprimable par l’administration.</li>
+      </ul>
+      <p>
+        Les endroits ou la valeur est stockee (fiche produit vs ligne de conditions)
+        sont un detail d’implementation : ce n’est pas un troisieme type d’attribut.
+      </p>
+      <h3>Ou la valeur s’affiche</h3>
+      <p>
+        L’attribut se rattache a un ou plusieurs groupes. Sur la fiche, chaque groupe
+        de la categorie du produit est un onglet, et le champ y apparait.
+      </p>
+      <svg class="schema" viewBox="0 0 720 90" role="img" aria-label="Onglets fiche">
+        <rect x="8" y="18" width="704" height="54" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <rect x="20" y="32" width="104" height="26" rx="4" fill="#1565c0"/>
+        <text x="72" y="49" text-anchor="middle" fill="#fff" font-size="11">Infos</text>
+        <rect x="134" y="32" width="104" height="26" rx="4" fill="#fff" stroke="#c5d0dc"/>
+        <text x="186" y="49" text-anchor="middle" fill="#607080" font-size="11">Visuels</text>
+        <rect x="248" y="32" width="104" height="26" rx="4" fill="#fff" stroke="#c5d0dc"/>
+        <text x="300" y="49" text-anchor="middle" fill="#607080" font-size="11">Conditions</text>
+        <rect x="362" y="32" width="104" height="26" rx="4" fill="#fff" stroke="#c5d0dc"/>
+        <text x="414" y="49" text-anchor="middle" fill="#607080" font-size="11">Caract.</text>
+        <rect x="476" y="32" width="104" height="26" rx="4" fill="#fff" stroke="#c5d0dc"/>
+        <text x="528" y="49" text-anchor="middle" fill="#607080" font-size="11">Tarif</text>
+        <rect x="590" y="32" width="104" height="26" rx="4" fill="#fff" stroke="#c5d0dc"/>
+        <text x="642" y="49" text-anchor="middle" fill="#607080" font-size="11">SEO</text>
+      </svg>
+      <figure>
+        <img src="captures/fiche-produit-onglets.jpg" alt="Fiche produit onglets">
+        <figcaption>Les onglets de la fiche sont les groupes rattaches a la categorie. L’attribut s’affiche dans l’onglet de chacun de ses groupes.</figcaption>
+      </figure>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-A01 — L’identifiant de l’attribut est unique et sert partout (import, export, formules).<br>
+        RG-A02 — Deux natures seulement : systeme et classique.
+      </div>
+
+      <h2>A quoi sert un attribut ?</h2>
+      <ul>
+        <li>Standardiser la saisie (type, liste de valeurs, masque, obligatoire).</li>
+        <li>Calculer des valeurs (nom marketing, tarifs, SEO, statut de publication).</li>
+        <li>Mesurer la completude du catalogue (attributs « a completer », hors systeme).</li>
+        <li>Permettre l’evolution du modele sans recoder (parametrage admin).</li>
+      </ul>
+      <h3>Rattachement : un attribut, un ou plusieurs groupes</h3>
+      <p>
+        A la creation, on choisit un <strong>groupe d’accueil</strong>.
+        On peut ensuite l’ajouter a d’autres groupes sans dupliquer l’attribut.
+        L’ajout a un second groupe se fait depuis la fiche du groupe
+        (liste ordonnee), pas en recopiant l’objet.
+      </p>
+      <svg class="schema" viewBox="0 0 720 220" role="img" aria-label="Un attribut dans plusieurs groupes">
+        <rect x="250" y="20" width="220" height="64" rx="8" fill="#f4f7fb" stroke="#1565c0"/>
+        <text x="360" y="44" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Attribut Marque</text>
+        <text x="360" y="64" text-anchor="middle" fill="#607080" font-size="11">un seul identifiant</text>
+        <line x1="300" y1="84" x2="160" y2="128" stroke="#c5d0dc"/>
+        <line x1="420" y1="84" x2="560" y2="128" stroke="#c5d0dc"/>
+        <text x="210" y="108" fill="#1565c0" font-size="11" font-weight="600">N</text>
+        <text x="500" y="108" fill="#1565c0" font-size="11" font-weight="600">N</text>
+        <rect x="40" y="128" width="240" height="70" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="160" y="154" text-anchor="middle" fill="#1a2332" font-size="12" font-weight="600">Groupe d’accueil</text>
+        <text x="160" y="174" text-anchor="middle" fill="#607080" font-size="11">Conditions commerciales</text>
+        <rect x="440" y="128" width="240" height="70" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="560" y="154" text-anchor="middle" fill="#1a2332" font-size="12" font-weight="600">Autre groupe</text>
+        <text x="560" y="174" text-anchor="middle" fill="#607080" font-size="11">Caracteristiques PEL</text>
+      </svg>
+      <details class="mermaid-src">
+        <summary>Diagramme Mermaid (macro Confluence)</summary>
+<pre>flowchart TB
+  Attr[Attribut Marque]
+  Attr --> G1[Groupe d'accueil - Conditions commerciales]
+  Attr --> G2[Autre groupe - Caracteristiques PEL]</pre>
+      </details>
+      <div class="grid2">
+        <figure>
+          <img src="captures/admin-attributs.jpg" alt="Liste des attributs">
+          <figcaption>Administration &gt; Attributs. Categorie et Marque affichent plusieurs groupes. Obligatoire = Non pour SAP.</figcaption>
+        </figure>
+        <figure>
+          <img src="captures/attr-edit-marque.jpg" alt="Edition d’un attribut">
+          <figcaption>Edition de Marque : groupe d’accueil + indication « aussi dans » PEL.</figcaption>
+        </figure>
+      </div>
+      <figure>
+        <img src="captures/groupe-conditions-edit.jpg" alt="Rattachement depuis le groupe">
+        <figcaption>C’est dans le groupe qu’on ajoute ou retire un attribut deja existant.</figcaption>
+      </figure>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-A10 — Un attribut peut appartenir a plusieurs groupes sans dupliquer l’identifiant. Le groupe choisi a la creation ou a l’edition le rattache tout de suite a ce groupe.<br>
+        RG-A11 — Un champ peut n’apparaitre que si un autre champ a une valeur donnee (« Afficher seulement si »). Sans condition, il est toujours visible. Masque, il ne compte pas dans la completion.<br>
+        RG-A12 — Une nouvelle caracteristique de monture rejoint « Caracteristiques monture ». Un champ qui ne sert qu’a l’export IWI rejoint le groupe « IWI ».<br>
+        RG-A04 — « Obligatoire » est le seul flag d’obligation. SAP n’est pas obligatoire.<br>
+        RG-A05 — Le taux de completion ne compte que les champs saisissables, une fois chacun. Hors taux : systeme, calcules, visuels, commentaire. Le picto vaut pour tous les types, images comprises.<br>
+        RG-A06 — Marque est le referentiel unique de marques, liste extensible a la saisie. Son code IWI fait 3 caracteres au maximum et sert uniquement a l’export IWI.<br>
+        RG-A09 — Les pourcentages s’affichent en % et se stockent en decimal entre 0 et 1.<br>
+        RG-A13 — Un nombre a 0, 1 ou 2 chiffres apres la virgule. Par defaut, 0 (arrondi). Prix catalogue, PA interne, marge interne et PA opticien ont 2 chiffres. Le prix final arrondi reste a 0.<br>
+        RG-A14 — Les codes IWI (type, sous-type, matiere, forme, utilisateur, marque, date de modification) sont des attributs calcules du groupe IWI. La date de modification vaut la date du jour au moment de l’affichage et de l’export. Action vaut toujours 1 : c’est une constante de la trame, pas un attribut. La matiere de branche reprend la matiere de face tant qu’il n’existe pas de champ branche. Le libelle « rondes/ovales/pantos » ne produit pas de code forme : il melange plusieurs codes IWI.
+      </div>
+      <figure>
+        <img src="captures/fiche-tarification-percent.jpg" alt="Pourcentages a l’ecran">
+        <figcaption>Remise et RFA s’affichent en % (ex. 10 % et 2 %). Les champs calcules sont visuellement distingues et forcables.</figcaption>
+      </figure>
+
+      <h2>Format d’un nombre</h2>
+      <p>
+        Sur un attribut de type Nombre, on choisit 0, 1 ou 2 chiffres apres la virgule.
+        Sans choix, la valeur est arrondie (0 chiffre). Le meme format sert a l’ecran et a l’export.
+      </p>
+      <ul>
+        <li>Prix catalogue, PA interne, marge interne, PA opticien : 2 chiffres.</li>
+        <li>Prix final arrondi : 0 chiffre.</li>
+        <li>Un pourcentage reste affiche en % et stocke entre 0 et 1. Ce n’est pas un nombre a decimales.</li>
+      </ul>
+
+      <h2>Champs calcules pour IWI</h2>
+      <p>
+        Les codes attendus par IWI sont des attributs calcules du groupe IWI.
+        Ils se deduisent du champ metier, ils ne se saisissent pas.
+      </p>
+      <ul>
+        <li>Type : Optique = A, Solaire = B.</li>
+        <li>Sous-type : Cercle = A, semi-cercle et nylor = B, sans cerclage = C (percee dans la legende IWI).</li>
+        <li>Matiere de la face : plastique et acetate = A, metal = C, titane = F, carbone = G, bois = H.</li>
+        <li>Matiere de la branche : meme lettre que la face, tant qu’il n’existe pas de champ branche.</li>
+        <li>Utilisateur : Homme = A, Femme = B, Enfant et Junior = C, Mixte = D (unisexe chez IWI).</li>
+        <li>Forme : aviateur 1, carree 2, clubmaster 3, masque 4, ovale 5, papillon 8, rectangle 9, ronde 10. Le libelle « rondes/ovales/pantos » reste vide : il melange plusieurs codes.</li>
+        <li>Marque : code IWI de la marque (3 caracteres au plus) puis le libelle, par exemple « 43 - Esprit ».</li>
+        <li>Date de modification : la date du jour, recalculee a l’affichage et a l’export.</li>
+        <li>Date de creation : la date de creation du produit.</li>
+        <li>Action : toujours 1. Ce n’est pas un attribut, c’est une constante de la trame.</li>
+      </ul>
+
+      <h2>Saisie, limites et agencement</h2>
+      <p>
+        Un attribut classique se cree et se modifie dans l’administration.
+        Un attribut systeme ne se supprime pas et ne se reparametre pas : son identifiant reste fige.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Propriete</th><th>Regle</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Types</td><td>Texte, texte long, nombre, date, liste simple, liste multiple, oui / non, image.</td></tr>
+          <tr><td>Obligatoire</td><td>Bloque l’enregistrement de la fiche et l’import si la valeur est vide. Les lignes de conditions commerciales ne sont pas exigees de cette facon sur la fiche.</td></tr>
+          <tr><td>Completion</td><td>Case separee de l’obligation. Un champ sans picto de completion est optionnel. Pas de pastille « Optionnel ».</td></tr>
+          <tr><td>Masque</td><td>Longueur exacte. A = lettre, 9 = chiffre, * = caractere quelconque, les autres signes sont litteraux. L’EAN est un masque de 14 chiffres. Le code IWI d’une marque est une longueur maximale de 3, pas un masque fixe.</td></tr>
+          <tr><td>Texte long</td><td>Longueur maximale parametrable. Pleine largeur sur la fiche.</td></tr>
+          <tr><td>Nombre</td><td>Minimum, maximum, pas d’increment optionnel. 0, 1 ou 2 decimales (voir plus haut). Un depassement de borne est ramene a la borne.</td></tr>
+          <tr><td>Date</td><td>Saisie jj/mm/aaaa.</td></tr>
+          <tr><td>Listes</td><td>Une option par ligne. La liste multiple stocke les valeurs choisies ensemble.</td></tr>
+          <tr><td>Image</td><td>Clic pour deposer un fichier. L’onglet Visuels liste les attributs image de son groupe (JPG, PNG, 2000 px de cote au minimum dans le rappel affiche). <span class="tag tag-cible">Cible</span> le fichier vit dans Babil, pas dans le navigateur.</td></tr>
+          <tr><td>Aide</td><td>Texte d’aide affiche a cote du libelle.</td></tr>
+          <tr><td>Lecture seule</td><td>Valeur affichee, non saisissable (dates systeme).</td></tr>
+          <tr><td>Formule</td><td>CONCAT, SI, operations sur d’autres champs, DATE_MAJ (horodate le changement d’un champ), MAP (correspondance de valeurs), TODAY (date du jour). Deux passages pour les formules qui dependent d’une autre formule.</td></tr>
+          <tr><td>Champ calcule</td><td>Fond jaune, non saisi. On peut forcer une valeur produit par produit, puis revenir au calcul. Une valeur forcee prime sur la formule.</td></tr>
+          <tr><td>Afficher seulement si</td><td>Sans condition, toujours visible. Condition vide ou non remplie : le champ est masque et sort de la completion.</td></tr>
+          <tr><td>Agencement fiche</td><td>Les champs courts se rangent sur plusieurs colonnes. Texte long et image prennent toute la largeur. L’ordre est celui du groupe.</td></tr>
+          <tr><td>Ouvrir la fiche</td><td>Un attribut peut etre marque « clic pour ouvrir » : dans la liste, cliquer sa valeur ouvre le produit. Le nom l’est.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-A15 — Les types de saisie sont ceux du tableau ci-dessus. Un nouveau type ne s’invente pas dans un ecran.<br>
+        RG-A16 — Un masque impose la longueur et la nature de chaque caractere. Il ne s’applique pas a un champ calcule ni en lecture seule.<br>
+        RG-A17 — Un champ calcule se distingue visuellement et se met a jour des la saisie d’un champ dont il depend.<br>
+        RG-A18 — Forcer une valeur calculee est un levier d’exception, trace par le fait que la valeur ne suit plus la formule jusqu’au retour au calcul.
+      </div>
+
+      <h2>Liste des attributs</h2>
+      <p class="lead">
+        Une ligne = un attribut. « Groupe d’accueil » = groupe choisi a la creation.
+        « Aussi dans » = autres rattachements. Le detail des groupes est sur
+        <a href="groupes.html">Groupes d’attributs</a>.
+      </p>
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Filtrer libelle, identifiant, groupe…">
+        <select id="type"><option value="tous">Tous les types</option></select>
+      </div>
+      <p class="lead" id="count"></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Identifiant</th>
+            <th>Libelle</th>
+            <th>Type de saisie</th>
+            <th>Groupe d’accueil</th>
+            <th>Aussi dans</th>
+            <th>Obligatoire</th>
+            <th>Qualite</th>
+            <th>Commentaire fonctionnel</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </article>
+  </main>
+</div>
+<script src="catalog.js"></script>
+<script src="nav.js"></script>
+<script>
+(function () {
+  var catalog = window.CATALOG || [];
+  var typeSel = document.getElementById("type");
+  var types = [];
+  catalog.forEach(function (r) {
+    if (types.indexOf(r.type) === -1) types.push(r.type);
+  });
+  types.forEach(function (t) {
+    var o = document.createElement("option");
+    o.value = t; o.textContent = t;
+    typeSel.appendChild(o);
+  });
+  function render() {
+    var q = document.getElementById("q").value.toLowerCase();
+    var type = typeSel.value;
+    var filtered = catalog.filter(function (r) {
+      var hay = (r.code + r.name + r.groupInit + r.extra).toLowerCase();
+      if (q && hay.indexOf(q) === -1) return false;
+      if (type !== "tous" && r.type !== type) return false;
+      return true;
+    });
+    document.getElementById("count").textContent = filtered.length + " / " + catalog.length;
+    document.getElementById("rows").innerHTML = filtered.map(function (r) {
+      return "<tr><td>" + r.code + "</td><td>" + r.name + "</td><td>" + r.type +
+        "</td><td>" + r.groupInit + "</td><td>" + (r.extra || "—") +
+        "</td><td>" + r.req + "</td><td>" + (r.cpl === "Oui" ? "Compte dans la completion" : "Hors completion") +
+        "</td><td>" + r.note + "</td></tr>";
+    }).join("");
+  }
+  document.getElementById("q").addEventListener("input", render);
+  typeSel.addEventListener("change", render);
+  render();
+})();
+</script>
+</body>
+</html>

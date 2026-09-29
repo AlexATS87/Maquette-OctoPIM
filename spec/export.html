@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Fonction d’export — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Fonction d’export</h1>
+      <p class="lead">
+        Extraire une trame du catalogue. Catalogue, IWI ou une trame enregistree :
+        la meme liste de cases. On decoche un groupe, ou on le deplie pour retirer un champ.
+      </p>
+
+      <h2>Qu’est-ce que l’export ?</h2>
+      <p>
+        Un fichier .xlsx dont les colonnes portent l’<strong>identifiant
+        d’attribut</strong> (pas le libelle, trop instable pour un echange).
+        Le perimetre reprend les filtres de la liste (categorie, recherche,
+        selection).
+      </p>
+      <figure>
+        <img src="captures/export.jpg" alt="Ecran d’export">
+        <figcaption>Perimetre repris de la liste, onglets Synthese et Informations generales.</figcaption>
+      </figure>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Donner un extrait de travail (acheteur, agence, controle qualite).</li>
+        <li>Produire une trame reimportable (memes identifiants qu’a l’import).</li>
+        <li>Pont transitoire vers Snowflake / autres outils tant que les interfaces ne sont pas en place.</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <ul>
+        <li>Choisir une trame. Catalogue, IWI et chaque trame enregistree s’affichent pareil : un groupe, une case, un compteur de champs coches. On deplie pour decocher un champ.</li>
+        <li>IWI propose ses trois sections (General, Technique, Commercial) et ses 76 colonnes, dans l’ordre de la trame d’import, y compris les colonnes vides. On peut ensuite en retirer, comme sur Catalogue. Une trame enregistree depuis IWI garde ce choix.</li>
+        <li>Le fichier a un seul onglet. La premiere ligne porte le nom du groupe ou de la section, la seconde les en-tetes.</li>
+        <li>Le format se choisit a cote du bouton : .xlsx, .csv, ou .zip (le zip contient le classeur).</li>
+        <li>Le perimetre est celui des filtres de la liste. S’il y a une selection, elle est indiquee, avec « Tout exporter ».</li>
+        <li>Sur une colonne IWI exigee et encore cochee, le nombre en rouge est le nombre de produits sans valeur. L’export reste bloque tant qu’il en reste.</li>
+      </ul>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-EXP-01 — Une seule feuille. Ligne 1 : nom de groupe ou de section, seulement sur la premiere colonne du bloc. Ligne 2 : identifiant d’attribut (Catalogue) ou intitule IWI.<br>
+        RG-EXP-02 — Le perimetre est celui des filtres. Une selection le reduit. « Tout exporter » revient aux filtres.<br>
+        RG-EXP-03 — Seuls les produits des categories en lecture sont exportes.<br>
+        RG-EXP-04 — Une colonne IWI exigee, si elle reste cochee, bloque l’export tant qu’un produit n’a pas de valeur. Le manque est le nombre en rouge sur la ligne du champ.<br>
+        RG-EXP-05 — Prix 2 = prix catalogue, 2 decimales. Prix 1 = PA ATS, 2 decimales. Distributeur fixe : ATS, Audioptic Trade Services. Action fixe a 1. Date de modification = date du jour. Date de creation = date de creation du produit.<br>
+        RG-EXP-06 — Decocher un groupe decoche ses champs. Un champ present dans deux groupes part si au moins un de ces groupes reste coche.<br>
+        RG-EXP-07 — Toute trame, y compris une trame enregistree, se regle avec les memes cases. L’enregistrement memorise les groupes et les champs coches. Le format se choisit au moment de l’export.<br>
+        RG-EXP-08 — Les nombres sortent avec le nombre de decimales de l’attribut (0 par defaut, 2 pour les prix et les PA, 0 pour le prix final arrondi).
+      </div>
+      <div class="callout cible">
+        <strong>Cible</strong>
+        Job serveur, historisation des exports, formats vers Cosium / Osmose a specifier.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

@@ -32,6 +32,23 @@ function showPage(id, navEl) {
   const target = document.getElementById('page-' + id);
   if (target) target.classList.add('active');
   if (navEl)  navEl.classList.add('active');
+  const pageTitles = {
+    dashboard: 'Dashboard',
+    products: 'Produits',
+    exports: 'Exports',
+    imports: 'Imports',
+    'user-prefs': 'Preferences',
+    admin: 'Administration',
+    'admin-categories': 'Categories',
+    'admin-attributes': 'Attributs',
+    'admin-groups': 'Groupes d\'attributs',
+    'admin-synthese': 'Vue synthese',
+    'admin-suppliers': 'Conditions commerciales',
+    'admin-prefs': 'Preferences',
+    'admin-roles': 'Roles & permissions',
+    'product-detail': 'Produit',
+  };
+  if (pageTitles[id]) updateTopbarTitle(pageTitles[id]);
 
   // Rendu conditionnel selon la page
   switch (id) {
@@ -155,10 +172,12 @@ function openModal(id) {
     showNotif('Action non autorisee', 'warn');
     return;
   }
+  if (id === 'modal-create-attr') fillShowIfControls('new-attr', '', '', '');
   if (id === 'modal-create-group' && !canMod('mod_groups', 'w')) {
     showNotif('Action non autorisee', 'warn');
     return;
   }
+  if (id === 'modal-create-group') renderAudienceChecks('new-group-audience', []);
   const m = document.getElementById(id);
   if (m) m.classList.add('active');
 }
@@ -229,21 +248,63 @@ function nowStr() {
 // COMPLETION
 // ============================================================
 // Attributs comptant dans la completion, limites aux groupes de la categorie
+function groupCountsForRole(group, role) {
+  const ids = (group && group.audienceRoleIds) || [];
+  if (!ids.length) return true;
+  if (!role || role.id === 1) return true;
+  return ids.includes(role.id);
+}
+
+function getCompletionGroups(product) {
+  const cat = getCatByName(product && product.cat);
+  const ids = cat ? cat.groupIds : attrGroups.map(g => g.id);
+  const role = typeof getCurrentRole === 'function' ? getCurrentRole() : null;
+  return ids
+    .map(id => getGroupById(id))
+    .filter(g => g && groupCountsForRole(g, role));
+}
+
 function getCompletionAttrs(product) {
-  const cat = getCatByName(product.cat);
-  return (cat ? getAttrsForCat(product.cat) : attributes).filter(a => a.inCompletion);
+  const seen = new Set();
+  const list = [];
+  getCompletionGroups(product).forEach(g => {
+    (g.attrIds || []).forEach(id => {
+      const a = getAttrById(id);
+      if (!a || seen.has(a.id)) return;
+      seen.add(a.id);
+      if (!(a.inCompletion && !a.system && !a.calc && !a.readonly)) return;
+      if (!isAttrShown(product, a)) return;
+      list.push(a);
+    });
+  });
+  return list;
+}
+
+function isAttrShown(product, attr) {
+  if (!attr || !attr.showIfAttr) return true;
+  const pilot = attributes.find(a => a.code === attr.showIfAttr);
+  if (!pilot) return true;
+  const current = product && product.fields ? (product.fields[attr.showIfAttr] || '') : '';
+  return String(current) === String(attr.showIfValue || '');
+}
+
+function isCompletionValueFilled(v) {
+  return v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '—';
+}
+
+function isCompletionFilled(product, attr) {
+  if (attr.isConditionCommerciale && typeof getBrandInfoForProduct === 'function') {
+    const brand = getBrandInfoForProduct(product);
+    if (brand && isCompletionValueFilled(getBrandSettingAttrValue(brand, attr))) return true;
+  }
+  return isCompletionValueFilled(getAttrFieldValue(product, attr));
 }
 
 function calcCompletion(product) {
   const attrs = getCompletionAttrs(product);
   const total = attrs.length;
   if (!total) return 100;
-
-  const filled = attrs.filter(a => {
-    const v = product.fields[a.code];
-    return v !== undefined && v !== null && String(v).trim() !== '';
-  }).length;
-
+  const filled = attrs.filter(a => isCompletionFilled(product, a)).length;
   return Math.round((filled / total) * 100);
 }
 
@@ -285,8 +346,84 @@ function getConditionAttrs() {
   return g ? g.attrIds.map(id => getAttrById(id)).filter(Boolean) : [];
 }
 
+function isPercentAttr(a) {
+  return !!(a && (a.displayFormat === 'percent' || a.code === 'rf' || a.code === 'rfa'
+    || a.code === 'remiseEnseigne' || a.code === 'remise' || a.code === 'taux_marque'));
+}
+
 function isPercentBrandAttr(a) {
-  return !!(a && (a.displayFormat === 'percent' || a.code === 'rf' || a.code === 'rfa' || a.code === 'remiseEnseigne'));
+  return isPercentAttr(a);
+}
+
+function formatPercentDisplay(stored) {
+  if (stored === undefined || stored === null || String(stored).trim() === '') return '';
+  const unit = parseFloat(typeof coercePercentStored === 'function'
+    ? coercePercentStored(stored) : stored);
+  if (isNaN(unit)) return '';
+  const pct = unit * 100;
+  return String(parseFloat(pct.toFixed(4)));
+}
+
+function percentFromDisplay(input) {
+  if (input === undefined || input === null || String(input).trim() === '') return '';
+  const n = parseFloat(String(input).replace('%', '').replace(',', '.').trim());
+  if (isNaN(n)) return '';
+  const unit = n / 100;
+  return String(parseFloat(Math.max(0, Math.min(1, unit)).toFixed(6)));
+}
+
+function formatCalcFieldDisplay(attr, stored) {
+  if (attr && isPercentAttr(attr)) {
+    const d = formatPercentDisplay(stored);
+    return d === '' ? '' : d + '%';
+  }
+  if (attr && (attr.type === 'Nombre' || attr.type === 'Nombre decimal')) return formatAttrNumber(attr, stored);
+  return stored == null ? '' : String(stored);
+}
+
+function getGroupsForAttr(attr) {
+  if (!attr) return [];
+  const seen = new Set();
+  const list = [];
+  attrGroups.forEach(g => {
+    if ((g.attrIds || []).includes(attr.id) && !seen.has(g.id)) {
+      seen.add(g.id);
+      list.push(g);
+    }
+  });
+  if (attr.groupId && !seen.has(attr.groupId)) {
+    const home = getGroupById(attr.groupId);
+    if (home) list.unshift(home);
+  }
+  return list;
+}
+
+function getMarqueAttr() {
+  return attributes.find(a => a.code === 'marque') || null;
+}
+
+function getMarqueOptions() {
+  const a = getMarqueAttr();
+  return [...new Set((a && a.options) ? a.options : [])]
+    .filter(Boolean)
+    .sort((x, y) => x.localeCompare(y, 'fr'));
+}
+
+function registerMarque(name) {
+  const n = (name || '').trim();
+  if (!n) return;
+  const a = getMarqueAttr();
+  if (!a) return;
+  if (!a.options) a.options = [];
+  if (!a.options.some(o => o.toLowerCase() === n.toLowerCase())) a.options.push(n);
+  a.options.sort((x, y) => x.localeCompare(y, 'fr'));
+}
+
+function syncMarqueOptionsFromBrandSettings() {
+  (brandSettings || []).forEach(b => registerMarque(b.marque));
+  (products || []).forEach(p => {
+    if (p.fields && p.fields.marque) registerMarque(p.fields.marque);
+  });
 }
 
 function brandAttrStorageKey(attr) {
@@ -358,16 +495,17 @@ function completionMarkHtml() {
 
 function attrLabelHtml(a) {
   if (!a) return '';
-  const mark = a.inCompletion ? completionMarkHtml() : '';
+  const mark = (a.inCompletion && !a.system) ? completionMarkHtml() : '';
   const req  = a.required ? '<span class="field-required">*</span>' : '';
   return `${mark}<span>${escapeHtml(a.name)}</span>${req}${attrHelpTip(a)}`;
 }
 
 function attrFillRate(attr) {
+  const attrGroupsIds = new Set(getGroupsForAttr(attr).map(g => g.id));
   const scope = products.filter(p => {
     const cat = getCatByName(p.cat);
-    if (!cat || !attr.groupId) return true;
-    return cat.groupIds.includes(attr.groupId);
+    if (!cat || !attrGroupsIds.size) return true;
+    return (cat.groupIds || []).some(id => attrGroupsIds.has(id));
   });
   if (!scope.length) return { pct: 0, filled: 0, total: 0 };
 
@@ -411,6 +549,11 @@ function getSynthValue(p, code) {
   if (code === 'completion') return calcCompletion(p) + '%';
   if (code === 'createdAt' || code === 'created_at') return p.createdAt || '';
   if (code === 'maj' || code === 'updated_at') return p.maj || '';
+  const attr = attributes.find(a => a.code === code);
+  if (attr && isPercentAttr(attr)) {
+    const d = formatPercentDisplay(p.fields[code]);
+    return d === '' ? '' : d + '%';
+  }
   return displayFieldVal(p.fields[code]);
 }
 
@@ -462,6 +605,10 @@ function formatAttrListValue(p, attr) {
     return supplierNameByCode(v) || String(v);
   }
   const v = getAttrFieldValue(p, attr);
+  if (isPercentAttr(attr)) {
+    const d = formatPercentDisplay(v);
+    return d === '' ? '—' : d + '%';
+  }
   return isEmptyFieldVal(v) ? '—' : String(v);
 }
 
@@ -995,19 +1142,43 @@ function numOrNull(v) {
   return isNaN(n) ? null : n;
 }
 
+function attrDecimals(a) {
+  if (!a || isPercentAttr(a)) return null;
+  if (a.type !== 'Nombre' && a.type !== 'Nombre decimal') return null;
+  return a.decimals === 1 || a.decimals === 2 ? a.decimals : 0;
+}
+
+function formatAttrNumber(a, val) {
+  if (val === undefined || val === null || String(val).trim() === '') return '';
+  if (isPercentAttr(a)) return formatPercentDisplay(val);
+  const d = attrDecimals(a);
+  const n = parseFloat(String(val).replace(',', '.'));
+  if (isNaN(n) || d == null) return String(val);
+  return n.toFixed(d);
+}
+
 function numberInput(p, a, val) {
+  const percent = isPercentAttr(a);
   const bounded = k => a[k] !== undefined && a[k] !== null && a[k] !== '';
   let extra = '';
+  const step = percent && bounded('step') ? a.step * 100 : a.step;
+  const min  = percent && bounded('min')  ? a.min * 100  : a.min;
+  const max  = percent && bounded('max')  ? a.max * 100  : a.max;
   if (a.stepEnabled) {
-    if (bounded('step')) extra += ` step="${a.step}"`;
-    if (bounded('min'))  extra += ` min="${a.min}"`;
-    if (bounded('max'))  extra += ` max="${a.max}"`;
+    if (bounded('step')) extra += ` step="${step}"`;
+    if (bounded('min'))  extra += ` min="${min}"`;
+    if (bounded('max'))  extra += ` max="${max}"`;
   }
   const typeAttr = a.stepEnabled ? 'type="number"' : 'type="text" inputmode="decimal"';
-  return `<input class="field-input" ${typeAttr}${extra} value="${val}"
-    data-field-code="${a.code}" onwheel="event.preventDefault();this.blur()"
+  const display  = percent ? formatPercentDisplay(val) : formatAttrNumber(a, val);
+  const input = `<input class="field-input" ${typeAttr}${extra} value="${display}"
+    data-field-code="${a.code}" ${percent ? 'data-percent-display="1"' : ''}
+    onwheel="event.preventDefault();this.blur()"
     oninput="onNumberInput(${p.id},this,'${a.code}')"
     onblur="onNumberBlur(this,'${a.code}')">`;
+  if (!percent) return input;
+  return `<div style="display:flex;align-items:center;gap:6px">${input}
+    <span style="font-size:12px;color:#607080">%</span></div>`;
 }
 
 function onNumberInput(productId, el, code) {
@@ -1023,15 +1194,21 @@ function onNumberInput(productId, el, code) {
 // Recadre la valeur dans les bornes de l'attribut
 function onNumberBlur(el, code) {
   const a = attributes.find(x => x.code === code) || {};
-  const n = parseFloat(el.value);
+  const percent = isPercentAttr(a) || el.getAttribute('data-percent-display') === '1';
+  const n = parseFloat(String(el.value).replace(',', '.'));
   if (isNaN(n)) return;
   let v = n;
-  if (a.min !== undefined && a.min !== null && a.min !== '' && v < Number(a.min)) v = Number(a.min);
-  if (a.max !== undefined && a.max !== null && a.max !== '' && v > Number(a.max)) v = Number(a.max);
-  if (v === n) return;
-  el.value = v;
+  const min = percent && a.min != null && a.min !== '' ? Number(a.min) * 100 : Number(a.min);
+  const max = percent && a.max != null && a.max !== '' ? Number(a.max) * 100 : Number(a.max);
+  if (a.min !== undefined && a.min !== null && a.min !== '' && v < min) v = min;
+  if (a.max !== undefined && a.max !== null && a.max !== '' && v > max) v = max;
+  const shown = percent ? String(v) : formatAttrNumber(a, v);
+  if (String(el.value) === shown) return;
+  el.value = shown;
   el.dispatchEvent(new Event('input', { bubbles: true }));
-  showNotif((a.name || code) + ' ramene a ' + v + ' (bornes ' + (a.min ?? '-') + ' a ' + (a.max ?? '-') + ')');
+  if (v === n) return;
+  showNotif((a.name || code) + ' ramene a ' + v + (percent ? '%' : '')
+    + ' (bornes ' + (percent ? min : a.min) + ' a ' + (percent ? max : a.max) + ')');
 }
 
 // ============================================================
@@ -1048,7 +1225,9 @@ function calcFieldInput(p, a, val) {
   const badgeStyle = `position:absolute;right:8px;top:50%;transform:translateY(-50%);
     width:18px;height:18px;border-radius:50%;font-size:11px;font-weight:700;
     display:flex;align-items:center;justify-content:center;cursor:help;`;
-  const safeVal = escapeHtml(displayFieldVal(val));
+  const safeVal = (a.type === 'Nombre' || a.type === 'Nombre decimal' || isPercentAttr(a))
+    ? escapeHtml(formatCalcFieldDisplay(a, val))
+    : escapeHtml(displayFieldVal(val));
 
   const field = forced
     ? `<input class="field-input" data-calc="${a.code}" value="${safeVal}"
@@ -1109,7 +1288,10 @@ function onForcedFieldInput(productId, el, code) {
   const p = products.find(x => x.id === productId);
   if (!p || !canEditProduct(p)) return;
   if (!p.forcedFields) p.forcedFields = {};
-  p.forcedFields[code] = el.value;
+  const attr = attributes.find(a => a.code === code);
+  p.forcedFields[code] = (attr && isPercentAttr(attr))
+    ? percentFromDisplay(el.value)
+    : el.value;
   onFieldChange(productId, el, code);
 }
 
@@ -1187,6 +1369,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Mise en coherence des produits, puis calcul initial des champs calculés
   normalizeProducts();
+  syncMarqueOptionsFromBrandSettings();
   products.forEach(p => computeCalcFields(p));
   // Date dashboard
   const datEl = document.getElementById('dashboard-date');

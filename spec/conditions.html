@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Conditions commerciales — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Conditions commerciales</h1>
+      <p class="lead">
+        Une condition commerciale n’est pas un attribut duplique : c’est une
+        <strong>ligne d’accord</strong> marque × fournisseur × type de produit
+        × segmentation (ex. Optique / Solaire), avec RF, RFA, remises, reprise, livraison.
+      </p>
+
+      <h2>Qu’est-ce qu’une condition commerciale ?</h2>
+      <p>
+        C’est le barème négocié avec un fournisseur pour une marque, dans une
+        famille et une segmentation. Sur la fiche produit, ces valeurs se
+        retrouvent dans l’onglet Conditions commerciales lorsque la marque
+        et le fournisseur correspondent.
+      </p>
+      <figure>
+        <img src="captures/conditions.jpg" alt="Table des conditions commerciales">
+        <figcaption>Administration &gt; Conditions commerciales : une ligne = un accord.</figcaption>
+      </figure>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Centraliser RF, RFA, remise interne, reprise échange, conditions de livraison.</li>
+        <li>Eviter de resaisir le barème sur chaque produit.</li>
+        <li>Alimenter les calculs de tarif (PA interne, etc.).</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <svg class="schema" viewBox="0 0 720 150" role="img" aria-label="Matching conditions">
+        <rect x="20" y="40" width="200" height="70" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="120" y="70" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Produit</text>
+        <text x="120" y="90" text-anchor="middle" fill="#607080" font-size="11">marque + fournisseur</text>
+        <rect x="260" y="40" width="200" height="70" rx="8" fill="#e8f0fe" stroke="#1565c0"/>
+        <text x="360" y="70" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Matching</text>
+        <text x="360" y="90" text-anchor="middle" fill="#607080" font-size="11">+ categorie + segmentation</text>
+        <rect x="500" y="40" width="200" height="70" rx="8" fill="#f4f7fb" stroke="#c5d0dc"/>
+        <text x="600" y="70" text-anchor="middle" fill="#1a2332" font-size="13" font-weight="600">Ligne d’accord</text>
+        <text x="600" y="90" text-anchor="middle" fill="#607080" font-size="11">RF, RFA, remises…</text>
+        <line x1="220" y1="75" x2="260" y2="75" stroke="#1565c0"/>
+        <line x1="460" y1="75" x2="500" y2="75" stroke="#1565c0"/>
+      </svg>
+      <details class="mermaid-src">
+        <summary>Diagramme Mermaid (macro Confluence)</summary>
+<pre>flowchart LR
+  P[Produit : marque + fournisseur + categorie + segmentation]
+  P --> M[Recherche de la ligne d'accord]
+  M --> L[RF, RFA, remise interne, reprise, livraison]</pre>
+      </details>
+      <ul>
+        <li><span class="tag tag-maq">Maquette</span> Boutons + Fournisseur et + Nouvelle condition commerciale.</li>
+        <li>La liste des marques est <strong>unique</strong> et s’enrichit quand on saisit une nouvelle marque (produit ou condition).</li>
+        <li>Les pourcentages s’affichent en % (stockage decimal 0–1).</li>
+      </ul>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-CC-01 — Une ligne d’accord est unique pour la combinaison marque × fournisseur × type × segmentation.<br>
+        RG-CC-02 — Marque n’est pas une liste figee : toute nouvelle valeur enrichit le referentiel.<br>
+        RG-CC-03 — Quand un produit a une marque et un fournisseur qui matchent une ligne d’accord, la remise interne de cette ligne est reportee sur la fiche et compte dans la completion.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

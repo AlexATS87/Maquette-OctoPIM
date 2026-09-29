@@ -560,6 +560,11 @@ function runImport() {
       const attrCode = importColMapping[col];
       if (attrCode) fields[attrCode] = (row[col] || '').toString().trim();
     });
+    Object.keys(fields).forEach(code => {
+      const attr = attributes.find(a => a.code === code);
+      if (attr && isPercentAttr(attr)) fields[code] = coercePercentStored(fields[code]);
+      if (code === 'marque') registerMarque(fields[code]);
+    });
 
     if (importAction !== 'delete') {
       const emptyReq = requiredAttrs.filter(a => !(fields[a.code] || '').toString().trim());

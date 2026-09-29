@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Categories de produit — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Categories de produit</h1>
+      <p class="lead">
+        La categorie est la famille du produit. Elle decide quels onglets
+        (groupes d’attributs) apparaissent sur la fiche, et sert de maille
+        pour les droits d’acces.
+      </p>
+
+      <h2>Qu’est-ce qu’une categorie ?</h2>
+      <p>
+        C’est une famille metier : Montures, Lentilles, Accessoires, PEL.
+        Un produit appartient a une seule categorie. Creer une categorie
+        consiste surtout a choisir les groupes d’attributs qu’elle expose.
+      </p>
+      <figure>
+        <img src="captures/categories.jpg" alt="Administration categories">
+        <figcaption>Administration &gt; Categories : familles, nombre de groupes rattaches.</figcaption>
+      </figure>
+
+      <h2>A quoi sert une categorie ?</h2>
+      <ul>
+        <li>Adapter la fiche au type de produit (pas de « largeur des verres » sur une lentille).</li>
+        <li>Filtrer la liste, le dashboard, l’import et l’export.</li>
+        <li>Porter les droits : un role peut ecrire les Montures et seulement lire les Lentilles.</li>
+        <li>Clef des conditions commerciales (avec marque, fournisseur, segmentation).</li>
+      </ul>
+
+      <h2>Composition (maquette)</h2>
+      <table>
+        <thead>
+          <tr><th>Categorie</th><th>Onglets (groupes)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Montures</td><td>Informations generales, Visuels, Conditions commerciales, Caracteristiques monture, Tarification monture, SEO monture</td></tr>
+          <tr><td>Lentilles</td><td>Informations generales, Visuels, Caracteristiques lentille, Tarification lentille</td></tr>
+          <tr><td>Accessoires</td><td>Informations generales, Visuels, Caracteristiques accessoire</td></tr>
+          <tr><td>PEL</td><td>Informations generales, Visuels, Caracteristiques PEL, Tarification lentille</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-CAT-01 — Un produit a une seule categorie.<br>
+        RG-CAT-02 — Les onglets de la fiche = groupes rattaches a la categorie, dans l’ordre defini.<br>
+        RG-CAT-03 — Une nouvelle categorie recoit des droits par defaut (admin systeme : tout ; consultation : lecture ; les autres : rien) — a ajuster ensuite.
+      </div>
+      <div class="callout cible">
+        <strong>Cible</strong>
+        Le parametrage doit permettre d’ajouter une famille sans deploiement
+        (nouvelle categorie + groupes existants ou nouveaux).
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

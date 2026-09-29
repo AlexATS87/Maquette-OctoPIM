@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Sommaire — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Sommaire — specifications OctoPIM</h1>
+      <p class="lead">
+        Ce dossier HTML est la spec vivante du projet. Elle se lit dans le navigateur
+        (<a href="http://127.0.0.1:8767/spec/">http://127.0.0.1:8767/spec/</a>)
+        et se colle dans Confluence via le bouton en haut a droite
+        (titres, tableaux, images et schemas).
+      </p>
+      <div class="callout warn">
+        <strong>Maquette vs cible</strong>
+        Chaque page distingue le comportement deja visible dans la maquette
+        (<span class="tag tag-maq">Maquette</span>) de ce qui doit etre construit
+        (<span class="tag tag-cible">Cible</span>). Sans ce tag, un placeholder
+        de la maquette peut etre pris pour une exigence.
+      </div>
+      <h2>Comment coller dans Confluence</h2>
+      <ol>
+        <li>Ouvrir la page dans le navigateur.</li>
+        <li>Cliquer sur <strong>Copier pour Confluence</strong> (les captures sont embarquees).</li>
+        <li>Dans Confluence, editer la page cible et coller (Ctrl+V).</li>
+        <li>Les schemas SVG se collent comme images ; le bloc Mermaid replie sert si l’espace a la macro Mermaid.</li>
+      </ol>
+      <h2>Plan</h2>
+      <table class="toc">
+        <thead>
+          <tr><th>#</th><th>Page</th><th>Intention</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>01</td><td><a href="contexte.html">Contexte du projet</a></td><td>Pourquoi OctoPIM, Excel, Akeneo, SAP, Babil, Snowflake, Cosium, Osmose.</td></tr>
+          <tr><td>02</td><td><a href="produit.html">Definition d’un produit</a></td><td>Qu’est-ce qu’un produit, que porte-t-il, cycle de vie.</td></tr>
+          <tr><td>03</td><td><a href="attributs.html">Gestion des attributs</a></td><td>Contrat d’un champ, catalogue, rattachement aux groupes.</td></tr>
+          <tr><td>04</td><td><a href="groupes.html">Groupes d’attributs</a></td><td>Onglets de la fiche, ordre, appartenances multiples.</td></tr>
+          <tr><td>05</td><td><a href="categories.html">Categories de produit</a></td><td>Familles (Montures, Lentilles…), onglets exposes.</td></tr>
+          <tr><td>06</td><td><a href="liste-produits.html">Liste des produits</a></td><td>Recherche, vues synthese / detaillee, creation.</td></tr>
+          <tr><td>07</td><td><a href="conditions.html">Conditions commerciales</a></td><td>Ligne marque × fournisseur × type × segmentation.</td></tr>
+          <tr><td>08</td><td><a href="import.html">Fonction d’import</a></td><td>Ajout / maj / suppression en masse.</td></tr>
+          <tr><td>09</td><td><a href="export.html">Fonction d’export</a></td><td>Extraction Excel du perimetre filtre.</td></tr>
+          <tr><td>10</td><td><a href="dashboard.html">Dashboard</a></td><td>Volume, completude, vue fournisseur.</td></tr>
+          <tr><td>11</td><td><a href="administration.html">Administration</a></td><td>Parametrage du referentiel.</td></tr>
+          <tr><td>12</td><td><a href="roles.html">Roles et permissions</a></td><td>Menus, categories, modules, lecture / ecriture / suppression.</td></tr>
+          <tr><td>13</td><td><a href="synthese.html">Vue de synthese</a></td><td>Colonnes de la liste produits.</td></tr>
+          <tr><td>14</td><td><a href="utilisateurs.html">Gestion des utilisateurs</a></td><td>Comptes, Okta, affectation des roles.</td></tr>
+          <tr><td>15</td><td><a href="mdd.html">Modele de donnees</a></td><td>Entites et relations, sans jargon d’implementation.</td></tr>
+          <tr><td>16</td><td><a href="workflows.html">Workflows d’utilisation</a></td><td>Parcours metier avec diagrammes.</td></tr>
+        </tbody>
+      </table>
+      <h2>Principes transverses</h2>
+      <ul>
+        <li>Le PIM doit rester <strong>parametrable</strong> : attributs, groupes, categories et colonnes de liste se configurent sans redeploiement.</li>
+        <li>Un identifiant d’attribut sert a l’import, l’export et les formules — on le nomme « identifiant » dans cette spec, pas par son nom interne.</li>
+        <li>Les visuels, schemas et regles vivent <strong>dans la meme section</strong> que l’explication (pourquoi / comment).</li>
+      </ul>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

@@ -449,8 +449,8 @@ function renderAttrsTable() {
       if (_attrSortState.col === 'inCompletion') { va = a.inCompletion ? 1 : 0; vb = b.inCompletion ? 1 : 0; }
       if (_attrSortState.col === 'fill')     { va = attrFillRate(a).pct; vb = attrFillRate(b).pct; }
       if (_attrSortState.col === 'group')    {
-        const ga = getGroupById(a.groupId);
-        const gb = getGroupById(b.groupId);
+        const ga = getGroupsForAttr(a)[0];
+        const gb = getGroupsForAttr(b)[0];
         va = ga ? ga.name : ''; vb = gb ? gb.name : '';
       }
       if (typeof va === 'string')
@@ -462,7 +462,6 @@ function renderAttrsTable() {
 
   tbody.innerHTML = '';
   list.forEach(a => {
-    const group = getGroupById(a.groupId);
     const fill  = attrFillRate(a);
     const tr    = document.createElement('tr');
     tr.innerHTML = `
@@ -477,12 +476,14 @@ function renderAttrsTable() {
           : ''}
       </td>
       <td><span class="badge badge-grey">${a.type}</span></td>
-      <td>${group
-        ? `<span class="attr-chip"
-             style="background:${getGroupColor(group).bg};color:${getGroupColor(group).text}">
-             ${group.name}
-           </span>`
-        : '—'}</td>
+      <td>${(() => {
+        const gs = getGroupsForAttr(a);
+        if (!gs.length) return '—';
+        return gs.map(g => `<span class="attr-chip"
+             style="background:${getGroupColor(g).bg};color:${getGroupColor(g).text};margin:1px 2px 1px 0">
+             ${escapeHtml(g.name)}
+           </span>`).join('');
+      })()}</td>
       <td>${a.required
         ? '<span class="badge-active-on">Oui</span>'
         : '<span class="badge-active-off">Non</span>'}</td>
@@ -555,8 +556,16 @@ function editAttribute(id) {
   document.getElementById('ea-code').value     = a.code;
   document.getElementById('ea-type').value     = a.type;
   document.getElementById('ea-required').value = a.required ? '1' : '0';
-  document.getElementById('ea-completion').value = a.inCompletion ? '1' : '0';
+  const compEl = document.getElementById('ea-completion');
+  if (compEl) {
+    compEl.value = a.system ? '0' : (a.inCompletion ? '1' : '0');
+    compEl.disabled = !!a.system;
+  }
   document.getElementById('ea-formula').value  = a.formula || '';
+  const formulaEl = document.getElementById('ea-formula');
+  if (formulaEl) formulaEl.readOnly = !!a.system;
+  const maskEl = document.getElementById('ea-mask');
+  if (maskEl) maskEl.readOnly = !!a.system;
   const helpEl = document.getElementById('ea-helptext');
   if (helpEl) helpEl.value = a.helpText || '';
   document.getElementById('ea-mask').value     = a.mask || '';
@@ -565,6 +574,8 @@ function editAttribute(id) {
   document.getElementById('ea-step').value = a.step ?? '';
   document.getElementById('ea-min').value  = a.min  ?? '';
   document.getElementById('ea-max').value  = a.max  ?? '';
+  const decEl = document.getElementById('ea-decimals');
+  if (decEl) decEl.value = String(a.decimals === 1 || a.decimals === 2 ? a.decimals : 0);
 
   // Code technique : lecture seule pour non-admin
   const codeEl = document.getElementById('ea-code');
@@ -580,6 +591,16 @@ function editAttribute(id) {
     });
     gSel.disabled = !!a.system;
   }
+  const otherWrap = document.getElementById('ea-other-groups');
+  if (otherWrap) {
+    const extras = getGroupsForAttr(a).filter(g => g.id !== a.groupId);
+    otherWrap.innerHTML = extras.length
+      ? '<div style="font-size:11px;color:#607080;margin-bottom:4px">Aussi dans :</div>' +
+        extras.map(g => `<span class="attr-chip"
+          style="background:${getGroupColor(g).bg};color:${getGroupColor(g).text};margin:1px 4px 1px 0">
+          ${escapeHtml(g.name)}</span>`).join('')
+      : '';
+  }
   const optWrap = document.getElementById('ea-options-wrap');
   if (optWrap) {
     optWrap.style.display = (!a.system && (a.type === 'Simple select' || a.type === 'Multi select')) ? '' : 'none';
@@ -591,7 +612,75 @@ function editAttribute(id) {
   if (numWrap) numWrap.style.display = a.type === 'Nombre' ? '' : 'none';
   renderFormulaHelp('ea-formula-help', a.type);
   renderMaskHelp('ea-mask-help', a.type);
+  fillShowIfControls('ea', a.code, a.showIfAttr || '', a.showIfValue || '');
   showPage('admin-attribute-edit', null);
+}
+
+function onEditAttrTypeChange() {
+  const type    = document.getElementById('ea-type').value;
+  const optWrap = document.getElementById('ea-options-wrap');
+  if (optWrap) optWrap.style.display = (type === 'Simple select' || type === 'Multi select') ? '' : 'none';
+  const lenWrap = document.getElementById('ea-maxlength-wrap');
+  if (lenWrap) lenWrap.style.display = type === 'Texte long' ? '' : 'none';
+  const numWrap = document.getElementById('ea-number-wrap');
+  if (numWrap) numWrap.style.display = type === 'Nombre' ? '' : 'none';
+  renderFormulaHelp('ea-formula-help', type);
+  renderMaskHelp('ea-mask-help', type);
+}
+
+function refreshConditionalRows(p) {
+  if (!p) return;
+  document.querySelectorAll('[data-attr-row]').forEach(row => {
+    const code = row.getAttribute('data-attr-row');
+    const attr = attributes.find(a => a.code === code);
+    if (!attr) return;
+    row.style.display = isAttrShown(p, attr) ? '' : 'none';
+  });
+  updateDetailCompletion(p);
+}
+
+function showIfValueOptions(pilot) {
+  if (!pilot) return [];
+  if (pilot.type === 'Oui / Non') return ['Oui', 'Non'];
+  return pilot.options || [];
+}
+
+function fillShowIfControls(prefix, currentCode, showIfAttr, showIfValue) {
+  const sel = document.getElementById(prefix + '-show-if');
+  const wrap = document.getElementById(prefix + '-show-if-value-wrap');
+  const valSel = document.getElementById(prefix + '-show-if-value');
+  if (!sel || !wrap || !valSel) return;
+  const pilots = attributes.filter(a =>
+    a.code !== currentCode && (a.type === 'Simple select' || a.type === 'Oui / Non')
+  );
+  sel.innerHTML = '<option value="">Toujours affiche</option>' +
+    pilots.map(a => `<option value="${a.code}"${a.code === showIfAttr ? ' selected' : ''}>${escapeHtml(a.name)}</option>`).join('');
+  onShowIfAttrChange(prefix, showIfValue);
+}
+
+function onShowIfAttrChange(prefix, selectedValue) {
+  const sel = document.getElementById(prefix + '-show-if');
+  const wrap = document.getElementById(prefix + '-show-if-value-wrap');
+  const valSel = document.getElementById(prefix + '-show-if-value');
+  if (!sel || !wrap || !valSel) return;
+  const pilot = attributes.find(a => a.code === sel.value);
+  if (!pilot) {
+    wrap.style.display = 'none';
+    valSel.innerHTML = '';
+    return;
+  }
+  wrap.style.display = '';
+  const wanted = selectedValue != null ? selectedValue : valSel.value;
+  valSel.innerHTML = showIfValueOptions(pilot).map(o =>
+    `<option${o === wanted ? ' selected' : ''}>${escapeHtml(o)}</option>`
+  ).join('');
+}
+
+function readShowIf(prefix) {
+  const sel = document.getElementById(prefix + '-show-if');
+  const valSel = document.getElementById(prefix + '-show-if-value');
+  if (!sel || !sel.value) return { showIfAttr: '', showIfValue: '' };
+  return { showIfAttr: sel.value, showIfValue: valSel ? valSel.value : '' };
 }
 
 function onEditAttrTypeChange() {
@@ -632,21 +721,29 @@ function saveAttributeEdit() {
   });
   a.type     = newType;
   a.required = document.getElementById('ea-required').value === '1';
-  a.inCompletion = document.getElementById('ea-completion').value === '1';
-  a.formula  = document.getElementById('ea-formula').value.trim();
-  // Un attribut est calcule uniquement s'il porte une formule
-  a.calc     = !!a.formula;
+  a.inCompletion = a.system ? false : (document.getElementById('ea-completion').value === '1');
+  const showIf = readShowIf('ea');
+  a.showIfAttr = a.system ? '' : showIf.showIfAttr;
+  a.showIfValue = a.system ? '' : showIf.showIfValue;
+  if (!a.system) {
+    a.formula  = document.getElementById('ea-formula').value.trim();
+    a.calc     = !!a.formula;
+    a.mask     = document.getElementById('ea-mask').value.trim();
+    a.stepEnabled = document.getElementById('ea-step-enabled').value === '1';
+    a.step = numOrNull(document.getElementById('ea-step').value);
+    a.min  = numOrNull(document.getElementById('ea-min').value);
+    a.max  = numOrNull(document.getElementById('ea-max').value);
+    const dec = parseInt(document.getElementById('ea-decimals').value, 10);
+    a.decimals = dec === 1 || dec === 2 ? dec : 0;
+  }
   const helpSaveEl = document.getElementById('ea-helptext');
   a.helpText = helpSaveEl ? helpSaveEl.value.trim() : (a.helpText || '');
-  a.mask     = document.getElementById('ea-mask').value.trim();
   a.maxLength = parseInt(document.getElementById('ea-maxlength').value) || null;
-  a.stepEnabled = document.getElementById('ea-step-enabled').value === '1';
-  a.step = numOrNull(document.getElementById('ea-step').value);
-  a.min  = numOrNull(document.getElementById('ea-min').value);
-  a.max  = numOrNull(document.getElementById('ea-max').value);
-  if (newType === 'Simple select' || newType === 'Multi select') {
-    a.options = document.getElementById('ea-options').value.split('\n').map(s => s.trim()).filter(Boolean);
-  } else { a.options = []; }
+  if (!a.system) {
+    if (newType === 'Simple select' || newType === 'Multi select') {
+      a.options = document.getElementById('ea-options').value.split('\n').map(s => s.trim()).filter(Boolean);
+    } else { a.options = []; }
+  }
   if (oldGroupId !== newGroupId) {
     if (oldGroupId) { const og = getGroupById(oldGroupId); if (og) og.attrIds = og.attrIds.filter(id => id !== a.id); }
     if (newGroupId) { const ng = getGroupById(newGroupId); if (ng && !ng.attrIds.includes(a.id)) ng.attrIds.push(a.id); }
@@ -691,6 +788,8 @@ function createNewAttribute() {
   const step        = stepEl ? numOrNull(stepEl.value) : null;
   const min         = minEl  ? numOrNull(minEl.value)  : null;
   const max         = maxEl  ? numOrNull(maxEl.value)  : null;
+  const decEl       = document.getElementById('new-attr-decimals');
+  const decimals    = decEl && (decEl.value === '1' || decEl.value === '2') ? parseInt(decEl.value, 10) : 0;
   const formula  = formulaEl ? formulaEl.value.trim() : '';
   const helpText = helpEl ? helpEl.value.trim() : '';
 
@@ -734,8 +833,11 @@ function createNewAttribute() {
     step,
     min,
     max,
+    decimals,
     formula,
     helpText,
+    showIfAttr: readShowIf('new-attr').showIfAttr,
+    showIfValue: readShowIf('new-attr').showIfValue,
     // Un attribut est calcule uniquement s'il porte une formule
     calc:    !!formula,
     system:  false,
@@ -925,6 +1027,7 @@ function renderAttrGroupsList() {
         <div style="display:flex;align-items:center;gap:10px">
           <span class="drag-handle" style="cursor:grab;font-size:18px;color:#c0d0e0">&#9776;</span>
           <div class="attr-group-card-title">${g.name}</div>
+          ${audienceLabel(g)}
           ${g.system ? systemLockBadge('group') : ''}
           ${g.isBrandGroup
             ? '<span class="attr-group-badge-system" style="background:#fce4ec;color:#880e4f">Marque/Fourn.</span>'
@@ -959,6 +1062,7 @@ function editAttrGroup(id) {
   if (!g) return;
   document.getElementById('edit-group-name').value = g.name;
   document.getElementById('edit-group-code').value = g.code;
+  renderAudienceChecks('edit-group-audience', g.audienceRoleIds || []);
   renderGroupAttrToggles(g);
   showPage('admin-group-edit', null);
 }
@@ -1066,6 +1170,7 @@ function saveGroupEdit() {
   if (!g) return;
   g.name = document.getElementById('edit-group-name').value.trim() || g.name;
   g.code = document.getElementById('edit-group-code').value.trim() || g.code;
+  g.audienceRoleIds = readAudienceChecks('edit-group-audience');
   renderAll();
   showPage('admin-groups', null);
   showNotif('Groupe mis a jour');
@@ -1076,7 +1181,10 @@ function createAttrGroup() {
   const name = document.getElementById('new-group-name').value.trim();
   const code = document.getElementById('new-group-code').value.trim();
   if (!name || !code) { showNotif('Nom et code obligatoires'); return; }
-  attrGroups.push({ id: nextGroupId++, name, code, system: false, isBrandGroup: false, attrIds: [] });
+  attrGroups.push({
+    id: nextGroupId++, name, code, system: false, isBrandGroup: false, attrIds: [],
+    audienceRoleIds: readAudienceChecks('new-group-audience')
+  });
   document.getElementById('new-group-name').value = '';
   document.getElementById('new-group-code').value = '';
   closeModal('modal-create-group');
@@ -1087,6 +1195,29 @@ function createAttrGroup() {
 // ============================================================
 // ADMIN — ROLES
 // ============================================================
+function audienceLabel(g) {
+  const ids = g.audienceRoleIds || [];
+  if (!ids.length) return '';
+  const names = ids.map(id => (roles.find(r => r.id === id) || {}).name).filter(Boolean);
+  return names.map(n => `<span class="badge badge-grey">${escapeHtml(n)}</span>`).join(' ');
+}
+
+function renderAudienceChecks(containerId, selected) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const set = new Set(selected || []);
+  el.innerHTML = roles.map(r => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0">
+    <input type="checkbox" value="${r.id}" ${set.has(r.id) ? 'checked' : ''}>
+    ${escapeHtml(r.name)}
+  </label>`).join('');
+}
+
+function readAudienceChecks(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  return [...el.querySelectorAll('input:checked')].map(i => parseInt(i.value)).filter(n => !isNaN(n));
+}
+
 function renderRoles() {
   const grid = document.getElementById('roles-grid');
   if (!grid) return;
@@ -1707,7 +1838,7 @@ function editBrandSetting(i) {
   const b = brandSettings[i];
   if (!b) return;
 
-  const allMarques = [...new Set(brandSettings.map(x => x.marque))].sort();
+  const allMarques = getMarqueOptions();
   const catOptions = categories.map(c =>
     `<option value="${c.name}" ${c.name === b.type ? 'selected' : ''}>${c.name}</option>`
   ).join('');
@@ -1742,6 +1873,10 @@ function editBrandSetting(i) {
           <div class="form-label">Marque</div>
           ${autocompleteInput('eb-marque', 'eb-marque-list', b.marque,
             allMarques, '', 'Rechercher une marque')}
+        </div>
+        <div class="form-field">
+          <div class="form-label">Code IWI (3 caracteres max)</div>
+          <input class="field-input" id="eb-iwi" maxlength="3" value="${escapeHtml(b.iwiCode || '')}">
         </div>
         <div class="form-field">
           <div class="form-label">Type (categorie)</div>
@@ -1808,6 +1943,7 @@ function saveBrandSetting(i, btn) {
   b.fournisseurCode     = resolveSupplierCode(document.getElementById('eb-sup').value);
   if (!b.fournisseurCode) { showNotif('Fournisseur inconnu', 'warn'); return; }
   b.marque              = document.getElementById('eb-marque').value.trim();
+  b.iwiCode             = (document.getElementById('eb-iwi').value || '').trim().slice(0, 3);
   b.type                = document.getElementById('eb-type').value;
   b.segAttrCode         = document.getElementById('eb-seg-attr').value || null;
   const vSel            = document.getElementById('eb-seg-val');
@@ -1819,6 +1955,7 @@ function saveBrandSetting(i, btn) {
   b.conditionsLivraison = document.getElementById('eb-livraison').value.trim();
   b.commentaire         = document.getElementById('eb-commentaire').value.trim();
   applyBrandExtraForm(b, 'eb');
+  registerMarque(b.marque);
   btn.closest('.modal-overlay').remove();
   renderSuppliersPage();
   showNotif('Condition "' + b.marque + '" mise a jour');
@@ -1884,7 +2021,7 @@ function onNewBrandSegAttrChange(sel) {
 
 function openCreateBrandModal() {
   if (!requirePerm(canMod('mod_conditions', 'w'))) return;
-  const allMarques = [...new Set(brandSettings.map(x => x.marque))].sort();
+  const allMarques = getMarqueOptions();
   const catOptions = categories.map(c =>
     `<option value="${c.name}">${c.name}</option>`).join('');
 
@@ -2009,6 +2146,7 @@ function createBrandSetting(btn) {
   };
   applyBrandExtraForm(entry, 'nb');
   brandSettings.push(entry);
+  registerMarque(marque);
   btn.closest('.modal-overlay').remove();
   renderSuppliersPage();
   showNotif('Condition "' + marque + '" creee');
@@ -2116,6 +2254,7 @@ function saveBrandEditor() {
   };
   if (editingBrandIdx === -1) brandSettings.push(entry);
   else brandSettings[editingBrandIdx] = entry;
+  registerMarque(marque);
   document.getElementById('brand-editor-overlay').remove();
   renderSuppliersTable();
   showNotif(editingBrandIdx === -1 ? 'Entree creee : ' + marque : 'Entree mise a jour : ' + marque);

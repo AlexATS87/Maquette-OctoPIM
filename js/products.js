@@ -16,6 +16,12 @@ function getListColValue(p, code) {
   if (code === 'completion') return String(calcCompletion(p));
   if (code === 'createdAt' || code === 'created_at') return String(p.createdAt || '').trim();
   if (code === 'maj' || code === 'updated_at') return String(p.maj || '').trim();
+  const attr = attributes.find(a => a.code === code);
+  if (attr && isPercentAttr(attr)) {
+    const raw = p.fields && p.fields[code];
+    const d = formatPercentDisplay(raw);
+    return d === '' ? '' : d + '%';
+  }
   const v = p.fields && p.fields[code] !== undefined ? p.fields[code] : p[code];
   return v == null ? '' : String(v).trim();
 }
@@ -810,8 +816,9 @@ function applyBulkEdit(btn) {
     showNotif('Choisissez un attribut et une valeur', 'warn'); return;
   }
   const attr  = attributes.find(a => a.id === parseInt(attrSel.value));
-  const value = valEl.value;
+  let value = valEl.value;
   if (!attr) return;
+  if (isPercentAttr(attr)) value = coercePercentStored(value);
   const now = new Date().toLocaleDateString('fr-FR') + ' ' +
     new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
   selectedProductIds.forEach(id => {
@@ -972,9 +979,12 @@ function sortTableByCode(code) {
 function renderGroupFilterBar() {
   const bar = document.getElementById('group-filter-bar-container');
   if (!bar) return;
-  if (currentView !== 'detail') { bar.innerHTML = ''; return; }
+  const catName = (document.getElementById('filter-cat') || {}).value || '';
+  if (currentView !== 'detail' || !catName) { bar.innerHTML = ''; return; }
+  const cat = getCatByName(catName);
+  const groups = cat ? cat.groupIds.map(id => getGroupById(id)).filter(Boolean) : [];
+  if (!groups.length) { bar.innerHTML = ''; return; }
   initGroupFilters();
-  const groups = getVisibleGroupsForUser();
   let html = '<div class="group-filter-bar"><span style="font-size:12px;font-weight:600;color:#607080;margin-right:4px;white-space:nowrap">Groupes :</span>';
   groups.forEach(g => {
     const active = activeGroupFilters.has(g.id);
@@ -1015,14 +1025,13 @@ function createProduct() {
   const cat    = catEl.value;
   let valid    = true;
 
-  ['np-sap', 'np-ean', 'np-name', 'np-cat'].forEach(id => {
+  ['np-ean', 'np-name', 'np-cat'].forEach(id => {
     const el    = document.getElementById(id);
     const errEl = document.getElementById('err-' + id);
     if (el)    el.classList.remove('field-error');
     if (errEl) errEl.classList.remove('show');
   });
 
-  if (!sap)  { document.getElementById('np-sap').classList.add('field-error');  document.getElementById('err-np-sap').classList.add('show');  valid = false; }
   if (!ean)  { document.getElementById('np-ean').classList.add('field-error');  document.getElementById('err-np-ean').classList.add('show');  valid = false; }
   if (!name) { document.getElementById('np-name').classList.add('field-error'); document.getElementById('err-np-name').classList.add('show'); valid = false; }
   if (!cat)  { document.getElementById('np-cat').classList.add('field-error');  document.getElementById('err-np-cat').classList.add('show');  valid = false; }
@@ -1348,9 +1357,9 @@ function onDateMaskInput(el) {
 // ============================================================
 function renderTabVisuels(p) {
   const visualAttrs = [
-    { code: 'visuel_face',        name: 'Vue de face',         required: true  },
-    { code: 'visuel_tq',          name: 'Vue 3/4',             required: true  },
-    { code: 'visuel_profil',      name: 'Vue de profil',       required: true  },
+    { code: 'visuel_face',        name: 'Vue de face',         required: false },
+    { code: 'visuel_tq',          name: 'Vue 3/4',             required: false },
+    { code: 'visuel_profil',      name: 'Vue de profil',       required: false },
     { code: 'visuel_ambiance',    name: 'Visuel ambiance',     required: false },
     { code: 'visuel_fournisseur', name: 'Visuel fournisseur',  required: false },
   ];
@@ -1366,11 +1375,7 @@ function renderTabVisuels(p) {
              <span style="font-size:12px">Cliquer pour ajouter</span>
            </div>`}
       <div class="image-attr-label">${va.name}</div>
-      <div class="image-attr-badges">
-        ${va.required
-          ? '<span class="visual-badge-required">Obligatoire</span>'
-          : '<span class="visual-badge-optional">Optionnel</span>'}
-      </div>
+      ${va.required ? '<div class="image-attr-badges"><span class="visual-badge-required">Obligatoire</span></div>' : ''}
     </div>`;
   });
   return `<div style="background:#fff3e0;border-radius:8px;padding:12px 16px;margin-bottom:20px;
@@ -1394,7 +1399,7 @@ function renderTabMarque(p, g) {
   const catName = p.cat;
   const eligibleSuppliers = suppliersForProduct(p);
   const currentSup = p.fields.fournisseur_code || '';
-  const availableMarques = marquesForProduct(p);
+  const availableMarques = currentSup ? marquesForProduct(p) : getMarqueOptions();
   const brandInfo = getBrandInfoForProduct(p);
   const segBits = [...new Set(
     brandSettings.filter(b => b.segAttrCode && (!b.type || matchBrandType(b.type, catName)))
@@ -1493,6 +1498,7 @@ function onMarqueChange(productId, el) {
   if (!p) return;
   const oldVal = p.fields.marque || '';
   p.fields.marque = el.value;
+  registerMarque(el.value);
   addPendingChange(p, 'Marque', oldVal, el.value);
   productDirty = true;
   const availableSups = suppliersForProduct(p);
@@ -1555,11 +1561,7 @@ function renderTabAttrGroup(p, g) {
                <span style="font-size:28px">&#128247;</span>
                <span style="font-size:11px">Cliquer pour ajouter</span>
              </div>`}
-        <div class="image-attr-badges">
-          ${a.required
-            ? '<span class="visual-badge-required">Obligatoire</span>'
-            : '<span class="visual-badge-optional">Optionnel</span>'}
-        </div>
+        ${a.required ? '<div class="image-attr-badges"><span class="visual-badge-required">Obligatoire</span></div>' : ''}
       </div>`;
     } else if (a.calc) {
       input = calcFieldInput(p, a, val);
@@ -1626,9 +1628,10 @@ function refreshCalcFields(productId) {
   if (!p) return;
   computeCalcFields(p);
   document.querySelectorAll('[data-calc]').forEach(el => {
-    if (el === document.activeElement) return; // ne pas perturber une saisie forcee en cours
+    if (el === document.activeElement) return;
     const code = el.getAttribute('data-calc');
-    if (p.fields[code] !== undefined) el.value = p.fields[code];
+    const attr = attributes.find(a => a.code === code);
+    if (p.fields[code] !== undefined) el.value = formatCalcFieldDisplay(attr, p.fields[code]);
   });
   updateDetailCompletion(p);
 }
@@ -1640,9 +1643,10 @@ function onFieldChange(productId, el, fieldKey) {
   const p = products.find(x => x.id === productId);
   if (!p) return;
   const oldVal = p.fields[fieldKey] !== undefined ? p.fields[fieldKey] : '';
-  const newVal = el.value;
-  p.fields[fieldKey] = newVal;
   const attr = attributes.find(a => a.code === fieldKey);
+  let newVal = el.value;
+  if (attr && isPercentAttr(attr)) newVal = percentFromDisplay(el.value);
+  p.fields[fieldKey] = newVal;
   addPendingChange(p, attr ? attr.name : fieldKey, oldVal, newVal);
   productDirty = true;
   if (fieldKey === 'nom') {
@@ -1691,10 +1695,7 @@ function updateDetailCompletion(p) {
   if (barEl) { barEl.style.width = comp + '%'; barEl.style.background = color; }
   const attrs  = getCompletionAttrs(p);
   const total  = attrs.length;
-  const filled = attrs.filter(a => {
-    const v = p.fields[a.code];
-    return v !== undefined && v !== null && String(v).trim() !== '';
-  }).length;
+  const filled = attrs.filter(a => isCompletionFilled(p, a)).length;
   if (subEl) subEl.textContent = `${filled} / ${total} champs renseignes`;
 }
 

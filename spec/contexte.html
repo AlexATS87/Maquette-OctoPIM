@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Contexte du projet — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Contexte du projet</h1>
+      <p class="lead">
+        OctoPIM est le futur referentiel produit unique. Il remplace d’abord
+        le fichier Excel qui sert aujourd’hui de base, et doit pouvoir
+        remplacer a terme le PIM actuel (Akeneo). D’ou l’exigence de
+        parametrage : l’outil evolue sans tout recoder.
+      </p>
+
+      <h2>Pourquoi ce projet ?</h2>
+      <p>
+        La donnee produit vit aujourd’hui dans un Excel de travail, et dans
+        Akeneo pour une partie de la diffusion. Ce double (voire triple)
+        referentiel cree des ecarts, des saisies doubles et une dependance
+        a un outil peu maitrise en interne. OctoPIM vise un <strong>referentiel
+        unique</strong>, exploitable par les equipes metier et par le SI.
+      </p>
+      <div class="stats">
+        <div class="stat"><strong>Excel</strong><span>A remplacer en priorite</span></div>
+        <div class="stat"><strong>Akeneo</strong><span>PIM actuel, a pouvoir remplacer</span></div>
+        <div class="stat"><strong>Parametrable</strong><span>Condition pour durer</span></div>
+        <div class="stat"><strong>Referentiel unique</strong><span>Une donnee, plusieurs outils</span></div>
+      </div>
+
+      <h2>Ecosysteme cible</h2>
+      <figure>
+        <svg class="schema" viewBox="0 0 760 280" role="img" aria-label="OctoPIM au centre du SI">
+          <rect x="280" y="110" width="200" height="60" rx="10" fill="#1565c0"/>
+          <text x="380" y="145" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">OctoPIM</text>
+          <rect x="20" y="20" width="160" height="48" rx="8" fill="#fff" stroke="#c5d0dc"/>
+          <text x="100" y="48" text-anchor="middle" fill="#1a2332" font-size="13">SAP (stocks…)</text>
+          <rect x="300" y="20" width="160" height="48" rx="8" fill="#fff" stroke="#c5d0dc"/>
+          <text x="380" y="48" text-anchor="middle" fill="#1a2332" font-size="13">Babil (DAM)</text>
+          <rect x="580" y="20" width="160" height="48" rx="8" fill="#fff" stroke="#c5d0dc"/>
+          <text x="660" y="48" text-anchor="middle" fill="#1a2332" font-size="13">Snowflake</text>
+          <rect x="20" y="212" width="160" height="48" rx="8" fill="#fff" stroke="#c5d0dc"/>
+          <text x="100" y="240" text-anchor="middle" fill="#1a2332" font-size="13">Cosium (caisse)</text>
+          <rect x="300" y="212" width="160" height="48" rx="8" fill="#fff" stroke="#c5d0dc"/>
+          <text x="380" y="240" text-anchor="middle" fill="#1a2332" font-size="13">Osmose</text>
+          <rect x="580" y="212" width="160" height="48" rx="8" fill="#fff" stroke="#c5d0dc"/>
+          <text x="660" y="240" text-anchor="middle" fill="#1a2332" font-size="13">Autres outils</text>
+          <line x1="100" y1="68" x2="340" y2="110" stroke="#90a4ae"/>
+          <line x1="380" y1="68" x2="380" y2="110" stroke="#90a4ae"/>
+          <line x1="660" y1="68" x2="420" y2="110" stroke="#90a4ae"/>
+          <line x1="340" y1="170" x2="100" y2="212" stroke="#90a4ae"/>
+          <line x1="380" y1="170" x2="380" y2="212" stroke="#90a4ae"/>
+          <line x1="420" y1="170" x2="660" y2="212" stroke="#90a4ae"/>
+        </svg>
+        <figcaption>OctoPIM est le referentiel produit. Les autres outils consomment ou alimentent cette donnee.</figcaption>
+      </figure>
+      <details class="mermaid-src">
+        <summary>Diagramme Mermaid (macro Confluence)</summary>
+<pre>flowchart TB
+  SAP[SAP - stocks] --> PIM[OctoPIM - referentiel produit]
+  Babil[Babil - DAM] --> PIM
+  PIM --> Snowflake[Snowflake - exploitation data]
+  PIM --> Cosium[Cosium - caisse]
+  PIM --> Osmose[Osmose]
+  PIM --> Autres[Autres outils]</pre>
+      </details>
+      <table>
+        <thead>
+          <tr><th>Systeme</th><th>Role vis-a-vis d’OctoPIM</th><th>Statut</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Excel</td><td>Source actuelle a remplacer (saisie et referentiel de travail).</td><td><span class="tag tag-cible">Cible</span> remplacement</td></tr>
+          <tr><td>Akeneo</td><td>PIM actuel. OctoPIM doit etre assez parametrable pour le remplacer.</td><td><span class="tag tag-cible">Cible</span> remplacement possible</td></tr>
+          <tr><td>SAP</td><td>Gestion des stocks et donnees logistiques / codes article.</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
+          <tr><td>Babil</td><td>DAM : visuels produits (face, 3/4, ambiance…).</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
+          <tr><td>Snowflake</td><td>Exploitation data a partir du referentiel unique.</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
+          <tr><td>Cosium</td><td>Outil de caisse : consomme la fiche produit.</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
+          <tr><td>Osmose</td><td>Outil metier a interfacer.</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Ce que la maquette couvre (et ne couvre pas)</h2>
+      <table>
+        <thead>
+          <tr><th>Sujet</th><th>Maquette</th><th>Cible</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Saisie produit, attributs, groupes, categories</td><td>Ecrans cliquables, jeux d’essai</td><td>Meme logique, persistance et API</td></tr>
+          <tr><td>Import / export Excel</td><td>Fichier traite dans le navigateur</td><td>Traitement serveur, journal d’erreurs</td></tr>
+          <tr><td>Visuels</td><td>Depot local</td><td>Babil</td></tr>
+          <tr><td>Authentification</td><td>Changement d’utilisateur local</td><td>Okta (groupes deja nommes sur les roles)</td></tr>
+          <tr><td>Interfaces SAP / Snowflake / Cosium / Osmose</td><td>Hors maquette</td><td>A specifier par flux (in / out, frequence)</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Regle</strong>
+        RG-CTX-01 — OctoPIM est le referentiel produit unique. Les autres outils
+        ne recoivent pas une copie Excel divergente : ils s’appuient sur ce referentiel.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

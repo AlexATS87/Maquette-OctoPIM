@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Administration — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Administration</h1>
+      <p class="lead">
+        Hub de parametrage. C’est ce qui rend l’outil capable de remplacer
+        Excel puis Akeneo : on ajoute des champs, des familles, des colonnes
+        sans attendre un deploiement.
+      </p>
+
+      <h2>Qu’est-ce que l’administration ?</h2>
+      <p>
+        Un menu reserve aux profils habilites, avec une carte par module.
+        Chaque carte n’apparait que si le role a au moins la lecture du module.
+      </p>
+      <figure>
+        <img src="captures/admin-home.jpg" alt="Accueil administration">
+        <figcaption>Cartes : Categories, Groupes, Attributs, Vue synthese, Conditions commerciales, Roles, Preferences.</figcaption>
+      </figure>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Faire evoluer le modele (attributs, groupes, categories).</li>
+        <li>Configurer la liste de travail (vue synthese) et les seuils (completion, pagination).</li>
+        <li>Gerer les barèmes (conditions commerciales) et les droits.</li>
+      </ul>
+
+      <h2>Modules</h2>
+      <table>
+        <thead>
+          <tr><th>Module</th><th>Page spec</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Categories</td><td><a href="categories.html">Categories de produit</a></td></tr>
+          <tr><td>Groupes d’attributs</td><td><a href="groupes.html">Groupes d’attributs</a></td></tr>
+          <tr><td>Attributs</td><td><a href="attributs.html">Gestion des attributs</a></td></tr>
+          <tr><td>Vue synthese</td><td><a href="synthese.html">Configuration de la vue de synthese</a></td></tr>
+          <tr><td>Conditions commerciales</td><td><a href="conditions.html">Conditions commerciales</a></td></tr>
+          <tr><td>Roles &amp; permissions</td><td><a href="roles.html">Roles et permissions</a></td></tr>
+          <tr><td>Preferences application</td><td>Pagination de la liste, seuil de completion. Distinct des preferences d’affichage utilisateur (theme).</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-ADM-01 — Le menu Administration n’apparait que si au moins un module est lisible.<br>
+        RG-ADM-02 — Preferences utilisateur (theme, affichage) ≠ preferences application (seuils, pagination).<br>
+        RG-ADM-03 — Pagination : 0 a 500 produits par page, defaut 50. 0 desactive la pagination. Le seuil de completion va de 0 a 100, defaut 80. Il sert au tableau de bord et au filtre des incomplets.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

@@ -22,7 +22,6 @@ function buildEvolutionData() {
 // POINT D'ENTREE
 // ============================================================
 function renderDashboard() {
-  updateTopbarTitle('Dashboard');
   renderDashboardKpis();
   renderDashboardDonut();
   renderDashboardEvolution();
