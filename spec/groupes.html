@@ -28,8 +28,12 @@
         l’attribut apparait.
       </p>
       <figure>
-        <img src="captures/groupe-conditions-edit.jpg" alt="Edition d’un groupe">
-        <figcaption>Edition du groupe Conditions commerciales : liste ordonnee d’attributs deja existants.</figcaption>
+        <img class="shot" src="captures/admin-groupes.jpg" alt="Liste des groupes d’attributs">
+        <figcaption>Liste des groupes. La poignee reordonne les cartes. Les pastilles nomment les groupes utilisateur pour qui le groupe compte dans la completion.</figcaption>
+      </figure>
+      <figure>
+        <img class="shot" src="captures/groupe-edit.jpg" alt="Panneau d’un groupe d’attributs">
+        <figcaption>Panneau du groupe Caracteristiques monture : nom, code, completion pour, ordre des attributs.</figcaption>
       </figure>
 
       <h2>A quoi sert un groupe ?</h2>
@@ -38,6 +42,19 @@
         <li>Composer une categorie : on rattache des groupes a une categorie, pas des attributs un par un.</li>
         <li>Gerer les appartenances multiples (ajouter Marque a PEL sans recreer Marque).</li>
       </ul>
+
+      <h2>Panneau</h2>
+      <p>
+        A gauche : nom, code technique en lecture seule, cases Completion pour
+        (une par role), Annuler, Enregistrer. A droite : recherche, ordre des
+        attributs a glisser, croix pour retirer, puis les attributs a ajouter
+        par un interrupteur. L’ajout, le retrait et l’ordre s’appliquent tout
+        de suite. Le nom et les cases attendent Enregistrer.
+      </p>
+      <figure>
+        <img class="shot" src="captures/groupe-edit-ajout.jpg" alt="Ajout d’un attribut dans le groupe">
+        <figcaption>Bas du panneau : attributs pas encore dans le groupe.</figcaption>
+      </figure>
 
       <h2>Comment ça marche</h2>
       <svg class="schema" viewBox="0 0 720 160" role="img" aria-label="Categorie, groupes, attributs">
@@ -76,10 +93,25 @@
           <tr><td>Visuels</td><td>Photos (face, 3/4, profil, ambiance, fournisseur)</td><td>Cible : Babil</td></tr>
           <tr><td>Conditions commerciales</td><td>Marque, fournisseur, RF, remises…</td><td>Groupe particulier : alimente aussi la table marque × fournisseur</td></tr>
           <tr><td>Caracteristiques monture</td><td>Referencement</td><td>Compte dans la completion des roles Referencement</td></tr>
-          <tr><td>Tarification monture, Conditions commerciales</td><td>Achats</td><td>Compte dans la completion des roles Achats</td></tr>
+          <tr><td>Tarification, Conditions commerciales</td><td>Achats</td><td>Compte dans la completion des roles Achats. Tarification sert aux montures et aux accessoires. Chaque famille a ses champs : une formule ne change pas selon la categorie. Le champ de l’autre famille reste masque.</td></tr>
+          <tr><td>Tarification lentilles + PEL</td><td>Prix lentilles et PEL</td><td>Prix de vente TTC et prix de vente HT seulement, 2 decimales. Present sur Lentilles et PEL.</td></tr>
+          <tr><td>Caracteristiques lentille</td><td>Lentilles</td><td>La marque y est le meme attribut que dans les conditions commerciales.</td></tr>
           <tr><td>Sans population</td><td>Tout le monde</td><td>Informations generales, visuels, SEO…</td></tr>
         </tbody>
       </table>
+      <h2>En detail</h2>
+      <p>
+        Un groupe est un ensemble ordonne de champs deja existants. Sur la fiche
+        c’est un onglet. Dans la liste detaillee c’est un bloc de colonnes. A
+        l’export c’est un bloc de la trame. Le groupe ne duplique pas les valeurs :
+        il dit ou l’attribut apparait, et dans quel ordre.
+      </p>
+      <ul>
+        <li>On ne cree pas un attribut depuis le groupe. On rattache un attribut existant. L’ordre se regle par glisser-deposer. C’est cet ordre qui fait les colonnes et les champs. Un groupe vide le dit.</li>
+        <li>Un meme attribut peut etre dans plusieurs groupes, avec un seul identifiant. A l’export il sort si au moins un de ses groupes est coche.</li>
+        <li>Un groupe peut etre partage par plusieurs categories. Tarification est sur les montures et les accessoires : chaque famille a ses champs, les autres restent masques. Tarification lentilles + PEL n’est que sur Lentilles et PEL, et ne contient que le prix de vente TTC et le prix de vente HT.</li>
+        <li>La completion du groupe est reservee aux groupes utilisateur coches. Aucune case : tout le monde. L’admin systeme compte toujours tout. La barre du groupe est au-dessus de ses champs.</li>
+      </ul>
       <div class="callout">
         <strong>Regles</strong>
         RG-GRP-01 — L’ordre des attributs dans le groupe est l’ordre d’affichage dans l’onglet.<br>

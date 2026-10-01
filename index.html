@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <title>OctoPIM</title>
-  <link rel="stylesheet" href="css/style.css?v=21">
+  <link rel="stylesheet" href="css/style.css?v=22">
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -184,6 +184,8 @@
 
         </div>
 
+        <div id="dashboard-alerts"></div>
+
         <div class="dashboard-section-label">Vue fournisseur</div>
         <div class="dash-kpi-card" style="margin-bottom:20px">
           <div id="supplier-chart-container"></div>
@@ -205,6 +207,7 @@
             style="display:none" onclick="clearAllFilters()">
             &#10005; Effacer les filtres
           </button>
+          <span id="alert-filter-chip" style="display:none;font-size:12px;font-weight:600;color:#c62828"></span>
           <div style="flex:1"></div>
           <div class="view-toggle-pill">
             <button id="btn-view-synth" class="view-toggle-btn active"
@@ -316,6 +319,12 @@
             <div class="admin-card-sub">Gerer les acces utilisateurs</div>
             <div class="admin-card-count" id="admin-count-roles">—</div>
           </div>
+          <div class="admin-card" data-mod="mod_alerts" onclick="showPage('admin-alerts',null)">
+            <div class="admin-card-icon">&#9888;</div>
+            <div class="admin-card-title">Alertes</div>
+            <div class="admin-card-sub">Seuils numeriques sur un attribut</div>
+            <div class="admin-card-count" id="admin-count-alerts">—</div>
+          </div>
           <div class="admin-card" data-mod="mod_prefs" onclick="showPage('admin-prefs',null)">
             <div class="admin-card-icon">&#9881;</div>
             <div class="admin-card-title">Preferences application</div>
@@ -411,135 +420,139 @@
 
       <!-- ADMIN EDITION ATTRIBUT -->
       <div class="page" id="page-admin-attribute-edit">
-        <div style="margin-bottom:16px">
+        <div style="margin-bottom:12px">
           <button class="btn btn-secondary"
             onclick="showPage('admin-attributes',null)">&larr; Attributs</button>
         </div>
-        <div class="field-group" style="max-width:600px">
-          <div class="field-group-title">Modifier l'attribut</div>
-          <div class="field-row">
-            <div class="field-label">Nom *</div>
-            <input class="field-input" id="ea-name"
-              oninput="autoSlug('ea-name','ea-code')">
-          </div>
-          <div class="field-row">
-            <div class="field-label">Code technique</div>
-            <input class="field-input" id="ea-code"
-              style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
-          </div>
-          <div class="field-row">
-            <div class="field-label">Type</div>
-            <select class="form-select" id="ea-type"
-              onchange="onEditAttrTypeChange()">
-              <option>Texte</option>
-              <option>Texte long</option>
-              <option>Nombre</option>
-              <option>Simple select</option>
-              <option>Multi select</option>
-              <option>Oui / Non</option>
-              <option>Date</option>
-              <option>Image</option>
-            </select>
-          </div>
-          <div class="field-row">
-            <div class="field-label">Groupe maison</div>
-            <select class="form-select" id="ea-group"></select>
-            <div style="font-size:11px;color:#8090a0;margin-top:4px">
-              Un attribut peut aussi figurer dans d'autres groupes (meme code technique).
-              Les appartenances supplementaires se gerent dans l'edition du groupe.
-            </div>
-            <div id="ea-other-groups" style="margin-top:6px"></div>
-          </div>
-          <div class="field-row">
-            <div class="field-label">Obligatoire</div>
-            <select class="form-select" id="ea-required">
-              <option value="1">Oui</option>
-              <option value="0">Non</option>
-            </select>
-          </div>
-          <div class="field-row">
-            <div class="field-label">Compte dans la completion</div>
-            <select class="form-select" id="ea-completion">
-              <option value="1">Oui</option>
-              <option value="0">Non</option>
-            </select>
-          </div>
-          <div class="field-row">
-            <div class="field-label">Afficher seulement si</div>
-            <select class="form-select" id="ea-show-if" onchange="onShowIfAttrChange('ea')">
-              <option value="">Toujours affiche</option>
-            </select>
-            <div id="ea-show-if-value-wrap" style="display:none;margin-top:8px">
-              <select class="form-select" id="ea-show-if-value"></select>
-            </div>
-          </div>
-          <div class="field-row" id="ea-formula-wrap">
-            <div class="field-label">Formule</div>
-            <input class="field-input" id="ea-formula"
-              placeholder="ex: CONCAT(nom, &quot; - &quot;, sap)"
-              style="font-family:monospace">
-          </div>
-          <div id="ea-formula-help" style="display:none"></div>
-          <div class="field-row">
-            <div class="field-label">Texte d'aide (tooltip)</div>
-            <input class="field-input" id="ea-helptext"
-              placeholder="Affiche un ? a cote du libelle sur la fiche produit">
-          </div>
-          <div class="field-row" id="ea-maxlength-wrap" style="display:none">
-            <div class="field-label">Longueur maximale</div>
-            <input class="field-input" id="ea-maxlength" type="number" min="0"
-              placeholder="ex: 500 (vide = illimite)" onwheel="event.preventDefault();this.blur()">
-          </div>
-          <div id="ea-number-wrap" style="display:none">
+        <div id="ea-system-note" class="attr-system-note" style="display:none">
+          Attribut systeme : consultation seule.
+        </div>
+        <div class="attr-edit-layout">
+          <div class="field-group">
+            <div class="field-group-title">Identite</div>
             <div class="field-row">
-              <div class="field-label">Incrementation</div>
-              <select class="field-input form-select" id="ea-step-enabled">
-                <option value="0">Non, saisie libre sans fleches</option>
-                <option value="1">Oui, avec fleches d'increment</option>
+              <div class="field-label">Nom *</div>
+              <input class="field-input" id="ea-name"
+                oninput="autoSlug('ea-name','ea-code')">
+            </div>
+            <div class="field-row">
+              <div class="field-label">Code technique</div>
+              <input class="field-input" id="ea-code"
+                style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Type</div>
+              <select class="form-select" id="ea-type"
+                onchange="onEditAttrTypeChange()">
+                <option>Texte</option>
+                <option>Texte long</option>
+                <option>Nombre</option>
+                <option>Simple select</option>
+                <option>Multi select</option>
+                <option>Oui / Non</option>
+                <option>Date</option>
+                <option>Image</option>
               </select>
             </div>
             <div class="field-row">
-              <div class="field-label">Pas d'incrementation</div>
-              <input class="field-input" id="ea-step" type="number"
-                placeholder="ex: 1 ou 0.5" onwheel="event.preventDefault();this.blur()">
+              <div class="field-label">Groupe maison</div>
+              <select class="form-select" id="ea-group"></select>
+              <div id="ea-other-groups" style="margin-top:6px"></div>
             </div>
             <div class="field-row">
-              <div class="field-label">Valeur minimale</div>
-              <input class="field-input" id="ea-min" type="number"
-                placeholder="vide = pas de minimum" onwheel="event.preventDefault();this.blur()">
-            </div>
-            <div class="field-row">
-              <div class="field-label">Valeur maximale</div>
-              <input class="field-input" id="ea-max" type="number"
-                placeholder="vide = pas de maximum" onwheel="event.preventDefault();this.blur()">
-            </div>
-            <div class="field-row">
-              <div class="field-label">Chiffres apres la virgule</div>
-              <select class="form-select" id="ea-decimals">
-                <option value="0">0 — arrondi</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
+              <div class="field-label">Obligatoire</div>
+              <select class="form-select" id="ea-required">
+                <option value="1">Oui</option>
+                <option value="0">Non</option>
               </select>
             </div>
+            <div class="field-row">
+              <div class="field-label">Compte dans la completion</div>
+              <select class="form-select" id="ea-completion">
+                <option value="1">Oui</option>
+                <option value="0">Non</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Afficher seulement si</div>
+              <select class="form-select" id="ea-show-if" onchange="onShowIfAttrChange('ea')">
+                <option value="">Toujours affiche</option>
+              </select>
+              <div id="ea-show-if-value-wrap" style="display:none;margin-top:8px">
+                <select class="form-select" id="ea-show-if-value"></select>
+              </div>
+            </div>
           </div>
-          <div class="field-row">
-            <div class="field-label">Masque de saisie</div>
-            <input class="field-input" id="ea-mask"
-              placeholder="ex: A999999999999"
-              style="font-family:monospace">
+          <div class="field-group">
+            <div class="field-group-title">Saisie</div>
+            <div class="field-row" id="ea-formula-wrap">
+              <div class="field-label">Formule</div>
+              <input class="field-input" id="ea-formula"
+                placeholder="ex: CONCAT(nom, &quot; - &quot;, sap)"
+                style="font-family:monospace">
+            </div>
+            <div id="ea-formula-help" style="display:none"></div>
+            <div class="field-row">
+              <div class="field-label">Texte d'aide</div>
+              <input class="field-input" id="ea-helptext"
+                placeholder="? a cote du libelle">
+            </div>
+            <div class="field-row" id="ea-maxlength-wrap" style="display:none">
+              <div class="field-label">Longueur maximale</div>
+              <input class="field-input" id="ea-maxlength" type="number" min="0"
+                placeholder="vide = illimite" onwheel="event.preventDefault();this.blur()">
+            </div>
+            <div id="ea-number-wrap" style="display:none">
+              <div class="field-row">
+                <div class="field-label">Incrementation</div>
+                <select class="field-input form-select" id="ea-step-enabled">
+                  <option value="0">Saisie libre</option>
+                  <option value="1">Avec fleches</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <div class="field-label">Pas</div>
+                <input class="field-input" id="ea-step" type="number"
+                  placeholder="1 ou 0.5" onwheel="event.preventDefault();this.blur()">
+              </div>
+              <div class="field-row">
+                <div class="field-label">Minimum</div>
+                <input class="field-input" id="ea-min" type="number"
+                  placeholder="vide = aucun" onwheel="event.preventDefault();this.blur()">
+              </div>
+              <div class="field-row">
+                <div class="field-label">Maximum</div>
+                <input class="field-input" id="ea-max" type="number"
+                  placeholder="vide = aucun" onwheel="event.preventDefault();this.blur()">
+              </div>
+              <div class="field-row">
+                <div class="field-label">Decimales</div>
+                <select class="form-select" id="ea-decimals">
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Masque de saisie</div>
+              <input class="field-input" id="ea-mask"
+                placeholder="ex: A999999999999"
+                style="font-family:monospace">
+            </div>
+            <div id="ea-mask-help" style="display:none"></div>
+            <div class="field-row" id="ea-options-wrap" style="display:none">
+              <div class="field-label">Options (une par ligne)</div>
+              <textarea class="field-input" id="ea-options"
+                rows="4" style="resize:vertical"></textarea>
+            </div>
           </div>
-          <div id="ea-mask-help" style="display:none"></div>
-          <div class="field-row" id="ea-options-wrap" style="display:none">
-            <div class="field-label">Options (une par ligne)</div>
-            <textarea class="field-input" id="ea-options"
-              rows="6" style="resize:vertical"></textarea>
-          </div>
-          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
-            <button class="btn btn-secondary"
-              onclick="showPage('admin-attributes',null)">Annuler</button>
-            <button class="btn btn-primary"
-              onclick="saveAttributeEdit()">Enregistrer</button>
-          </div>
+        </div>
+        <div class="attr-edit-actions">
+          <button class="btn btn-secondary"
+            onclick="showPage('admin-attributes',null)">Annuler</button>
+          <button class="btn btn-primary" id="ea-save"
+            onclick="saveAttributeEdit()">Enregistrer</button>
         </div>
       </div>
 
@@ -623,6 +636,7 @@
 
       <!-- ADMIN PREFERENCES -->
       <div class="page" id="page-admin-prefs"></div>
+      <div class="page" id="page-admin-alerts"></div>
 
     </div>
   </div>
@@ -865,7 +879,7 @@
 <div class="modal-overlay" id="modal-unsaved">
   <div class="modal-box">
     <div class="modal-title">Modifications non sauvegardees</div>
-    <p style="font-size:13px;color:#607080;margin-bottom:8px">
+    <p id="unsaved-lead" style="font-size:13px;color:#607080;margin-bottom:8px">
       Des modifications sont en cours sur cette fiche produit.
     </p>
     <p style="font-size:13px;color:#607080">
@@ -910,13 +924,13 @@
 </div>
 
 <!-- SCRIPTS -->
-<script src="js/data.js?v=26"></script>
-<script src="js/utils.js?v=24"></script>
-<script src="js/dashboard.js?v=20"></script>
-<script src="js/products.js?v=20"></script>
-<script src="js/admin.js?v=25"></script>
-<script src="js/detail.js?v=24"></script>
-<script src="js/export.js?v=23"></script>
+<script src="js/data.js?v=36"></script>
+<script src="js/utils.js?v=31"></script>
+<script src="js/dashboard.js?v=21"></script>
+<script src="js/products.js?v=22"></script>
+<script src="js/admin.js?v=28"></script>
+<script src="js/detail.js?v=30"></script>
+<script src="js/export.js?v=25"></script>
 <script src="js/import.js?v=19"></script>
 
 <script>

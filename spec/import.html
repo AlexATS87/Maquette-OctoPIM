@@ -65,6 +65,20 @@
           <tr><td>Marques nouvelles</td><td>Ajoutees au referentiel unique.</td></tr>
         </tbody>
       </table>
+      <h2>En detail</h2>
+      <p>
+        L’import ajoute, met a jour ou retire des produits en masse, avec les
+        memes identifiants que l’export. On choisit l’action, la categorie et le
+        fichier. Seules les categories accessibles en ecriture (ou en suppression)
+        sont proposees.
+      </p>
+      <ul>
+        <li>Chaque colonne du fichier se relie a un identifiant d’attribut.</li>
+        <li>Ajout ou modification : tous les attributs obligatoires de la categorie doivent etre mappes et renseignes. EAN, nom et categorie en font partie. SAP n’en fait pas partie.</li>
+        <li>Une ligne est reconnue d’abord par l’EAN, sinon par le SAP, sinon par l’ensemble des obligatoires de la categorie. Une ligne en erreur est comptee et n’arrete pas le reste du fichier.</li>
+        <li>Suppression : l’EAN ou le SAP suffit, plus le droit de supprimer.</li>
+        <li>Un pourcentage accepte une saisie en % ou en nombre affiche et se stocke entre 0 et 1. Une marque inconnue est ajoutee au referentiel.</li>
+      </ul>
       <div class="callout">
         <strong>Regles</strong>
         RG-IMP-01 — Ajout / modification : tous les attributs obligatoires de la categorie doivent etre mappes et renseignes.<br>

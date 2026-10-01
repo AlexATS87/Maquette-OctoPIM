@@ -13,7 +13,7 @@ function renderExportPage() {
   const catFilter  = exportSnapshot.catFilter  || '';
   const searchVal  = exportSnapshot.searchVal  || '';
 
-  const filtered = getFilteredProductsFromSnapshot();
+  const filtered = exportScopeProducts();
   const total    = filtered.length;
 
   page.innerHTML = `
@@ -259,6 +259,10 @@ function iwiCell(p, col) {
   if (col.constant != null && col.constant !== '') return col.constant;
   if (col.code === '@createdAt') return p.createdAt || '';
   computeCalcFields(p);
+  if (col.code === '@nomFournisseur') {
+    const s = (suppliers || []).find(x => x.code === ((p.fields && p.fields.fournisseur_code) || ''));
+    return s ? s.name : '';
+  }
   const attr = col.code ? attributes.find(a => a.code === col.code) : null;
   const val = attr ? getAttrFieldValue(p, attr) : (col.code ? (p.fields[col.code] || '') : '');
   if (attr && (attr.type === 'Nombre' || attr.type === 'Nombre decimal')) return formatAttrNumber(attr, val);
@@ -349,12 +353,6 @@ function runExport() {
     showNotif('Export IWI bloque : des colonnes exigees sont vides', 'warn');
     return;
   }
-
-  const aoa = iwi ? iwiSheet(prods) : catalogueSheet(prods);
-  if (!aoa) return;
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const base = iwi ? 'export_iwi_' : 'export_produits_';
-  const format = exportPick.format || 'xlsx';
   if (format === 'csv') {
     downloadBlob(new Blob(['\uFEFF' + sheetToCsv(aoa)], { type: 'text/csv;charset=utf-8' }), base + dateStr + '.csv');
     showNotif('Export termine : ' + base + dateStr + '.csv');

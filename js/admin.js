@@ -500,7 +500,7 @@ function renderAttrsTable() {
       <td>
         <div class="td-actions">
           <button class="action-btn"
-            onclick="editAttribute(${a.id})">${canMod('mod_attributes','w') ? 'Modifier' : 'Voir'}</button>
+            onclick="editAttribute(${a.id})">${(!a.system && canMod('mod_attributes','w')) ? 'Modifier' : 'Voir'}</button>
           ${(!a.system && canMod('mod_attributes','d'))
             ? `<button class="action-btn-danger"
                 onclick="confirmDelete('attr',${a.id},'${a.name.replace(/'/g,"\\'")}')">
@@ -613,7 +613,27 @@ function editAttribute(id) {
   renderFormulaHelp('ea-formula-help', a.type);
   renderMaskHelp('ea-mask-help', a.type);
   fillShowIfControls('ea', a.code, a.showIfAttr || '', a.showIfValue || '');
+  lockAttrEditor(!!a.system);
+  attrFormDirty = false;
+  const editPage = document.getElementById('page-admin-attribute-edit');
+  if (editPage) {
+    editPage.oninput = a.system ? null : function () { attrFormDirty = true; };
+    editPage.onchange = a.system ? null : function () { attrFormDirty = true; };
+  }
   showPage('admin-attribute-edit', null);
+}
+
+function lockAttrEditor(locked) {
+  const note = document.getElementById('ea-system-note');
+  if (note) note.style.display = locked ? '' : 'none';
+  const save = document.getElementById('ea-save');
+  if (save) save.style.display = locked ? 'none' : '';
+  const page = document.getElementById('page-admin-attribute-edit');
+  if (!page) return;
+  page.querySelectorAll('input, select, textarea').forEach(el => {
+    if (el.id === 'ea-code') return;
+    el.disabled = !!locked;
+  });
 }
 
 function onEditAttrTypeChange() {
@@ -634,7 +654,11 @@ function refreshConditionalRows(p) {
     const code = row.getAttribute('data-attr-row');
     const attr = attributes.find(a => a.code === code);
     if (!attr) return;
-    row.style.display = isAttrShown(p, attr) ? '' : 'none';
+    const shown = isAttrShown(p, attr);
+    row.style.display = shown ? '' : 'none';
+    const missing = shown && attr.inCompletion && !attr.system && !attr.calc && !attr.readonly
+      && !isCompletionFilled(p, attr);
+    row.classList.toggle('field-missing', missing);
   });
   updateDetailCompletion(p);
 }
@@ -699,6 +723,10 @@ function saveAttributeEdit() {
   if (!requirePerm(canMod('mod_attributes', 'w'))) return;
   const a = attributes.find(x => x.id === editingAttrId);
   if (!a) return;
+  if (a.system) {
+    showNotif('Attribut systeme : modification impossible', 'warn');
+    return;
+  }
   const newName = document.getElementById('ea-name').value.trim();
   const newCode = (isTechAdmin() && !a.system)
     ? document.getElementById('ea-code').value.trim()
@@ -750,6 +778,7 @@ function saveAttributeEdit() {
     a.groupId = newGroupId;
   }
   renderAll();
+  attrFormDirty = false;
   showPage('admin-attributes', null);
   showNotif('Attribut "' + newName + '" mis a jour');
 }
@@ -904,6 +933,8 @@ const FORMULA_OPERATORS = [
   { token: '== != > < >= <=',     help: 'Comparaisons utilisables dans un SI.' },
   { token: 'VRAI / FAUX',         help: 'Valeurs booleennes. Un champ Oui / Non vaut VRAI quand il contient Oui.' },
   { token: 'DATE_MAJ(code)',      help: 'Horodate la derniere modification du champ cite. Reserve aux attributs de type Date.' },
+  { token: 'MAP(code,"A"="1")',  help: 'Remplace une valeur par une autre, sur un seul champ. Exemple : MAP(optique_solaire,"Optique"="A","Solaire"="B")' },
+  { token: 'ROUNDUP(n, 0)',      help: 'Arrondit a l entier superieur, ou au nombre de decimales indique. Exemple : ROUNDUP([prix_catalogue]*2.6, 0)' },
 ];
 
 // Guide des formules, affiche des que le champ Formule est disponible
@@ -1463,14 +1494,15 @@ function getBrandSettingsFilteredList() {
 
   let list = brandSettings.map((b, i) => {
     const sup = suppliers.find(s => s.code === b.fournisseurCode);
-    return { i, b, supName: sup ? sup.name : b.fournisseurCode };
+    return { i, b, supName: sup ? sup.name : b.fournisseurCode, trigram: sup ? (sup.trigram || '') : '' };
   });
 
   if (q) {
     list = list.filter(x =>
       condAttrs.some(a => getBrandSettingAttrValue(x.b, a).toLowerCase().includes(q)) ||
       (x.b.fournisseurCode || '').toLowerCase().includes(q) ||
-      (x.supName || '').toLowerCase().includes(q)
+      (x.supName || '').toLowerCase().includes(q) ||
+      (x.trigram || '').toLowerCase().includes(q)
     );
   }
 
@@ -1497,7 +1529,7 @@ function getBrandSettingsFilteredList() {
 
 function brandSettingsRowsHtml(list, q, condAttrs) {
   const attrs = condAttrs || getConditionAttrs();
-  const colCount = attrs.length + 1;
+  const colCount = attrs.length + 1 + (attrs.some(a => a.code === 'fournisseur_code') ? 2 : 0);
   let rows = '';
   list.forEach(x => {
     const cells = attrs.map(a => {
@@ -1517,6 +1549,13 @@ function brandSettingsRowsHtml(list, q, condAttrs) {
       }
       if (a.code === 'remiseEnseigne')
         return `<td><strong style="color:#1565c0">${raw || '—'}</strong></td>`;
+      if (a.code === 'fournisseur_code') {
+        const code = getBrandSettingAttrValue(x.b, { code: '_supplierCode' });
+        const tri = getBrandSettingAttrValue(x.b, { code: '_supplierTrigram' });
+        return `<td style="white-space:nowrap">${raw ? escapeHtml(raw) : '—'}</td>`
+          + `<td style="white-space:nowrap;font-family:monospace">${code ? escapeHtml(code) : '—'}</td>`
+          + `<td style="white-space:nowrap;font-family:monospace">${tri ? escapeHtml(tri) : '—'}</td>`;
+      }
       return `<td style="white-space:nowrap">${raw ? escapeHtml(raw) : '—'}</td>`;
     }).join('');
 
@@ -1600,7 +1639,10 @@ function renderSuppliersPage() {
       <table>
         <thead>
           <tr>
-            ${condAttrs.map(a => makeBrandSortFilterTh(a)).join('')}
+            ${condAttrs.map(a => makeBrandSortFilterTh(a) + (a.code === 'fournisseur_code'
+              ? makeBrandSortFilterTh({ code: '_supplierCode', name: 'Code fournisseur' })
+                + makeBrandSortFilterTh({ code: '_supplierTrigram', name: 'Trigramme' })
+              : '')).join('')}
             <th>Actions</th>
           </tr>
         </thead>
@@ -1719,6 +1761,11 @@ function openCreateSupplierModal() {
           <div class="form-label">Nom *</div>
           <input class="field-input" id="ns-name" placeholder="ex: ESSILOR">
         </div>
+        <div class="form-field">
+          <div class="form-label">Trigramme</div>
+          <input class="field-input" id="ns-trigram" maxlength="3" placeholder="ex: ESS"
+            style="font-family:monospace;text-transform:uppercase">
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary"
@@ -1733,11 +1780,12 @@ function createSupplier(btn) {
   if (!requirePerm(canMod('mod_conditions', 'w'))) return;
   const code = (document.getElementById('ns-code').value || '').trim().toUpperCase();
   const name = (document.getElementById('ns-name').value || '').trim();
+  const trigram = (document.getElementById('ns-trigram').value || '').trim().toUpperCase().slice(0, 3);
   if (!code || !name) { showNotif('Code et nom obligatoires', 'warn'); return; }
   if (suppliers.find(s => s.code === code)) {
     showNotif('Ce code fournisseur existe deja', 'error'); return;
   }
-  suppliers.push({ code, name });
+  suppliers.push({ code, name, trigram });
   btn.closest('.modal-overlay').remove();
   renderSuppliersPage();
   renderAdminHome();
@@ -1756,12 +1804,11 @@ function renderSuppliersTable(filter) {
     const repriseLabel = b.repriseEchange
       ? '<span class="badge badge-green" style="font-size:11px">Oui</span>'
       : '<span class="badge badge-grey" style="font-size:11px">Non</span>';
-    const commentTrunc = b.commentaire && b.commentaire.length > 40
-      ? b.commentaire.slice(0, 40) + '…'
-      : b.commentaire || '';
+    const tri = sup && sup.trigram ? sup.trigram : '—';
     tb.innerHTML += `<tr>
       <td style="font-weight:600;white-space:nowrap">${supName}</td>
       <td style="font-family:monospace;font-size:11px;color:#607080">${b.fournisseurCode}</td>
+      <td style="font-family:monospace">${tri}</td>
       <td style="white-space:nowrap">${b.marque}</td>
       <td>${catBadgeHtml(b.type)}</td>
       <td style="text-align:right">${b.rf > 0 ? (b.rf * 100).toFixed(2) + '%' : '—'}</td>
@@ -1771,8 +1818,6 @@ function renderSuppliersTable(filter) {
       </td>
       <td style="text-align:center">${repriseLabel}</td>
       <td style="font-size:12px;color:#607080;white-space:nowrap">${b.conditionsLivraison || '—'}</td>
-      <td style="font-size:11px;color:#8090a0;max-width:180px"
-        title="${b.commentaire || ''}">${commentTrunc || '—'}</td>
       <td><div class="td-actions">
         <button class="action-btn" onclick="openBrandEditor(${idx})">Editer</button>
         <button class="action-btn-danger"
@@ -1787,7 +1832,7 @@ function isBrandSpecialFormAttr(a) {
 }
 
 function brandExtraFieldsHtml(b, prefix) {
-  const known = new Set(['rf', 'rfa', 'remiseEnseigne', 'repriseEchange', 'conditionsLivraison', 'commentaire']);
+  const known = new Set(['rf', 'rfa', 'remiseEnseigne', 'repriseEchange', 'conditionsLivraison']);
   const extras = getConditionAttrs().filter(a => !isBrandSpecialFormAttr(a) && !known.has(a.code));
   if (!extras.length) return '';
   return extras.map(a => {
@@ -1822,7 +1867,7 @@ function brandExtraFieldsHtml(b, prefix) {
 }
 
 function applyBrandExtraForm(b, prefix) {
-  const known = new Set(['rf', 'rfa', 'remiseEnseigne', 'repriseEchange', 'conditionsLivraison', 'commentaire']);
+  const known = new Set(['rf', 'rfa', 'remiseEnseigne', 'repriseEchange', 'conditionsLivraison']);
   getConditionAttrs().forEach(a => {
     if (isBrandSpecialFormAttr(a) || known.has(a.code)) return;
     const el = document.getElementById(prefix + '-attr-' + a.code);
@@ -1859,7 +1904,7 @@ function editBrandSetting(i) {
   overlay.className = 'modal-overlay';
   overlay.style.display = 'flex';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:560px;width:100%">
+    <div class="modal-box" style="max-width:720px;width:100%">
       <div class="modal-title">Modifier — ${b.marque}</div>
       <div class="form-grid">
         <div class="form-field">
@@ -1921,11 +1966,8 @@ function editBrandSetting(i) {
             value="${b.conditionsLivraison || ''}">
         </div>
       </div>
-      <div class="field-row" style="margin-top:8px">
-        <div class="field-label">Commentaire</div>
-        <input class="field-input" id="eb-commentaire" value="${escapeHtml(b.commentaire || '')}">
-      </div>
       <div class="form-grid" style="margin-top:8px">${brandExtraFieldsHtml(b, 'eb')}</div>
+      ${brandHistoryHtml(b)}
       <div class="modal-footer">
         <button class="btn btn-secondary"
           onclick="this.closest('.modal-overlay').remove()">Annuler</button>
@@ -1936,10 +1978,58 @@ function editBrandSetting(i) {
   document.body.appendChild(overlay);
 }
 
+function brandChangeSnapshot(b) {
+  const pct = (n, digits) => (typeof n === 'number' ? (n * 100).toFixed(digits) + '%' : '');
+  return {
+    Fournisseur: supplierNameByCode(b.fournisseurCode) || b.fournisseurCode || '',
+    'Code fournisseur': b.fournisseurCode || '',
+    Trigramme: getBrandSettingAttrValue(b, { code: '_supplierTrigram' }),
+    Marque: b.marque || '',
+    'Code IWI': b.iwiCode || '',
+    Type: b.type || '',
+    Segmentation: getBrandSettingAttrValue(b, { code: 'segmentation' }),
+    RF: pct(b.rf, 2),
+    RFA: pct(b.rfa, 2),
+    'Remise interne': pct(b.remiseEnseigne, 0),
+    'Reprise echange': b.repriseEchange ? 'Oui' : 'Non',
+    'Conditions livraison': b.conditionsLivraison || '',
+  };
+}
+
+function pushBrandHistory(b, before) {
+  const after = brandChangeSnapshot(b);
+  if (!b.history) b.history = [];
+  const ts = typeof nowStr === 'function' ? nowStr() : '';
+  const user = typeof currentUserName === 'function' ? currentUserName() : '';
+  Object.keys(before).forEach(field => {
+    const oldVal = before[field] || '';
+    const newVal = after[field] || '';
+    if (oldVal !== newVal) b.history.push({ ts, user, field, old: oldVal, new: newVal });
+  });
+}
+
+function brandHistoryHtml(b) {
+  const history = (b && b.history) || [];
+  const title = `<div class="field-group-title" style="margin-top:16px">Historique</div>`;
+  if (!history.length) {
+    return title + `<div style="color:#a0b0c0;font-size:13px">Aucune modification enregistree.</div>`;
+  }
+  const rows = [...history].reverse().map(h => `<tr>
+      <td style="white-space:nowrap;color:#607080">${escapeHtml(h.ts || '')}</td>
+      <td>${escapeHtml(h.user || '')}</td>
+      <td>${escapeHtml(h.field || '')}</td>
+      <td><span class="history-val-old">${escapeHtml(h.old || '(vide)')}</span><span class="history-arrow">→</span><span class="history-val-new">${escapeHtml(h.new || '(vide)')}</span></td>
+    </tr>`).join('');
+  return title + `<div style="max-height:180px;overflow:auto;border:1px solid #e6edf5;border-radius:8px">
+    <table class="history-table"><thead><tr><th>Date</th><th>Utilisateur</th><th>Champ</th><th>Modification</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
 function saveBrandSetting(i, btn) {
   if (!requirePerm(canMod('mod_conditions', 'w'))) return;
   const b = brandSettings[i];
   if (!b) return;
+  const before = brandChangeSnapshot(b);
   b.fournisseurCode     = resolveSupplierCode(document.getElementById('eb-sup').value);
   if (!b.fournisseurCode) { showNotif('Fournisseur inconnu', 'warn'); return; }
   b.marque              = document.getElementById('eb-marque').value.trim();
@@ -1953,8 +2043,8 @@ function saveBrandSetting(i, btn) {
   b.remiseEnseigne        = parseFloat(document.getElementById('eb-marge').value) / 100 || 0;
   b.repriseEchange      = document.getElementById('eb-reprise').value === '1';
   b.conditionsLivraison = document.getElementById('eb-livraison').value.trim();
-  b.commentaire         = document.getElementById('eb-commentaire').value.trim();
   applyBrandExtraForm(b, 'eb');
+  pushBrandHistory(b, before);
   registerMarque(b.marque);
   btn.closest('.modal-overlay').remove();
   renderSuppliersPage();
@@ -2083,10 +2173,6 @@ function openCreateBrandModal() {
           <input class="field-input" id="nb-livraison" placeholder="ex: Franco">
         </div>
       </div>
-      <div class="field-row" style="margin-top:8px">
-        <div class="field-label">Commentaire</div>
-        <input class="field-input" id="nb-commentaire">
-      </div>
       <div class="form-grid" style="margin-top:8px">${brandExtraFieldsHtml({}, 'nb')}</div>
       <div class="modal-footer">
         <button class="btn btn-secondary"
@@ -2142,7 +2228,7 @@ function createBrandSetting(btn) {
     remiseEnseigne:        parseFloat(document.getElementById('nb-marge').value) / 100 || 0,
     repriseEchange:      document.getElementById('nb-reprise').value === '1',
     conditionsLivraison: document.getElementById('nb-livraison').value.trim(),
-    commentaire:         document.getElementById('nb-commentaire').value.trim(),
+    history: [],
   };
   applyBrandExtraForm(entry, 'nb');
   brandSettings.push(entry);
@@ -2161,7 +2247,7 @@ function openBrandEditor(idx) {
   const isNew = idx === -1;
   const b = isNew
     ? { fournisseurCode: '', marque: '', type: '', rf: 0, rfa: 0, remiseEnseigne: 0,
-        repriseEchange: false, conditionsLivraison: 'Franco', commentaire: '' }
+        repriseEchange: false, conditionsLivraison: 'Franco' }
     : brandSettings[idx];
   const existing = document.getElementById('brand-editor-overlay');
   if (existing) existing.remove();
@@ -2222,11 +2308,7 @@ function openBrandEditor(idx) {
           <input class="field-input" id="be-conditions" value="${b.conditionsLivraison || ''}">
         </div>
       </div>
-      <div class="form-field" style="margin-bottom:20px">
-        <div class="form-label">Commentaire</div>
-        <textarea class="field-input" id="be-commentaire" rows="2"
-          style="resize:vertical">${b.commentaire || ''}</textarea>
-      </div>
+      ${brandHistoryHtml(b)}
       <div style="display:flex;justify-content:flex-end;gap:10px">
         <button class="btn btn-secondary"
           onclick="document.getElementById('brand-editor-overlay').remove()">Annuler</button>
@@ -2250,7 +2332,7 @@ function saveBrandEditor() {
     remiseEnseigne:          parseFloat(document.getElementById('be-remise-enseigne').value || 0) / 100,
     repriseEchange:     document.getElementById('be-reprise').value === '1',
     conditionsLivraison:document.getElementById('be-conditions').value.trim(),
-    commentaire:        document.getElementById('be-commentaire').value.trim(),
+    history: (editingBrandIdx >= 0 && brandSettings[editingBrandIdx] && brandSettings[editingBrandIdx].history) || [],
   };
   if (editingBrandIdx === -1) brandSettings.push(entry);
   else brandSettings[editingBrandIdx] = entry;
@@ -2258,4 +2340,113 @@ function saveBrandEditor() {
   document.getElementById('brand-editor-overlay').remove();
   renderSuppliersTable();
   showNotif(editingBrandIdx === -1 ? 'Entree creee : ' + marque : 'Entree mise a jour : ' + marque);
+}
+
+function numericAlertAttrs() {
+  return attributes.filter(a => a.type === 'Nombre' || a.type === 'Nombre decimal' || isPercentAttr(a));
+}
+
+function renderAlertsPage() {
+  const page = document.getElementById('page-admin-alerts');
+  if (!page) return;
+  const canW = canMod('mod_alerts', 'w');
+  const canD = canMod('mod_alerts', 'd');
+  const rows = (alerts || []).map(alert => {
+    const attr = attributes.find(a => a.code === alert.attrCode);
+    return `<tr>
+      <td>${escapeHtml(alert.name || '')}</td>
+      <td>${escapeHtml(attr ? attr.name : alert.attrCode)}</td>
+      <td>${escapeHtml(alertOpLabel(alert.op))}</td>
+      <td>${escapeHtml(alertThresholdText(alert))}</td>
+      <td>${productsForAlert(alert).length}</td>
+      <td>${canD ? `<button class="action-btn-danger" onclick="deleteAlert(${alert.id})">Suppr.</button>` : ''}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="6" style="text-align:center;color:#a0b0c0;padding:24px">Aucune alerte.</td></tr>`;
+  page.innerHTML = `
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <button class="btn btn-secondary" onclick="showPage('admin',null)">&larr; Administration</button>
+      <span style="font-size:15px;font-weight:700;color:#1a2332">Alertes</span>
+      ${canW ? `<button class="btn btn-primary" onclick="openAlertModal()">+ Alerte</button>` : ''}
+    </div>
+    <div class="table-container"><table>
+      <thead><tr><th>Nom</th><th>Attribut</th><th>Sens</th><th>Seuil</th><th>Produits</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+function openAlertModal() {
+  if (!requirePerm(canMod('mod_alerts', 'w'))) return;
+  const opts = numericAlertAttrs().map(a =>
+    `<option value="${a.code}">${escapeHtml(a.name)}</option>`
+  ).join('');
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:460px;width:100%">
+      <div class="modal-title">Nouvelle alerte</div>
+      <div class="form-grid">
+        <div class="form-field">
+          <div class="form-label">Nom</div>
+          <input class="field-input" id="al-name" placeholder="Taux de marque faible">
+        </div>
+        <div class="form-field">
+          <div class="form-label">Attribut</div>
+          <select class="form-select" id="al-attr">${opts}</select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Sens</div>
+          <select class="form-select" id="al-op">
+            <option value="<">Inférieur à</option>
+            <option value=">">Supérieur à</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Seuil</div>
+          <input class="field-input" id="al-threshold" type="number" step="any" placeholder="20">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="createAlert(this)">Creer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function createAlert(btn) {
+  if (!requirePerm(canMod('mod_alerts', 'w'))) return;
+  const attrCode = document.getElementById('al-attr').value;
+  const attr = attributes.find(a => a.code === attrCode);
+  const op = document.getElementById('al-op').value === '>' ? '>' : '<';
+  const raw = parseFloat(String(document.getElementById('al-threshold').value).replace(',', '.'));
+  if (!attr || !isFinite(raw)) { showNotif('Attribut et seuil numeriques obligatoires', 'warn'); return; }
+  const threshold = isPercentAttr(attr) ? raw / 100 : raw;
+  const typed = (document.getElementById('al-name').value || '').trim();
+  alerts.push({
+    id: nextAlertId++,
+    name: typed,
+    attrCode,
+    op,
+    threshold,
+  });
+  btn.closest('.modal-overlay').remove();
+  renderAlertsPage();
+  renderAdminHome();
+  renderDashboard();
+  showNotif('Alerte creee');
+}
+
+function deleteAlert(id) {
+  if (!requirePerm(canMod('mod_alerts', 'd'))) return;
+  const alert = (alerts || []).find(a => a.id === id);
+  if (!alert) return;
+  if (!confirm('Supprimer l\'alerte « ' + (alert.name || alertRuleText(alert)) + ' » ?')) return;
+  const idx = alerts.findIndex(a => a.id === id);
+  if (idx >= 0) alerts.splice(idx, 1);
+  if (_filterAlertId === id) _filterAlertId = null;
+  renderAlertsPage();
+  renderAdminHome();
+  renderDashboard();
+  showNotif('Alerte supprimee');
 }

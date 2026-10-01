@@ -19,6 +19,7 @@
     ]},
     { group: "Administration", items: [
       { href: "administration.html", label: "Administration" },
+      { href: "alertes.html", label: "Alertes" },
       { href: "roles.html", label: "Roles et permissions" },
       { href: "synthese.html", label: "Vue de synthese" },
       { href: "utilisateurs.html", label: "Gestion des utilisateurs" }

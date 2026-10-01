@@ -56,6 +56,20 @@
         <li>Users Achats — lecture Montures uniquement. Population Achats.</li>
         <li>Referencement — ecriture Montures. Population Referencement. Compte L. Petit.</li>
       </ul>
+      <h2>En detail</h2>
+      <p>
+        Un role est un panier de droits : menus visibles, categories accessibles,
+        modules d’administration. Trois actions : lire, ecrire, supprimer. Ecrire
+        suppose lire. Les droits ne se posent pas sur la personne.
+      </p>
+      <ul>
+        <li>Sans lecture sur une categorie, ses produits n’apparaissent nulle part : liste, dashboard, export.</li>
+        <li>La completion suit le groupe utilisateur. Un role ne compte que les groupes d’attributs qui le citent, plus ceux qui ne citent personne. L’admin systeme compte tout.</li>
+        <li>Droits d’origine, a ajuster. Admin Systeme : tout. Admin Achats montures : ecriture Montures, pas le menu Administration, lecture sur le reste du catalogue selon le reglage. Consultation : lecture, pas d’import ni d’administration. Users Achats montures : lecture Montures. Referencement : meme panier catalogue qu’Admin Achats. Compte d’exemple L. Petit.</li>
+        <li>Une categorie nouvelle donne tout a l’admin systeme, la lecture a la consultation, et rien aux autres jusqu’a reglage.</li>
+        <li>Si une action est impossible faute de droit, l’utilisateur contacte Alexis Beranger, administrateur de la solution. On ne contourne pas le droit.</li>
+        <li><span class="tag tag-cible">Cible</span> l’authentification est Okta. Les noms de groupes Okta sont deja ceux des roles. La maquette change de compte localement.</li>
+      </ul>
       <div class="callout">
         <strong>Regles</strong>
         RG-RBAC-01 — Sans lecture sur une categorie, ses produits n’apparaissent nulle part (liste, dashboard, export).<br>

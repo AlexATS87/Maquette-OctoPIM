@@ -47,7 +47,7 @@
         </thead>
         <tbody>
           <tr><td>Identite</td><td>Categorie, nom, code EAN/GTIN, code SAP, dates de creation / mise a jour</td><td>Le code SAP n’est pas obligatoire a la creation. L’EAN, le nom et la categorie le sont.</td></tr>
-          <tr><td>Publication</td><td>Actif canal O, actif canal L, statut de publication, date de mise en ligne</td><td>Le statut de publication se deduit des canaux (calcule).</td></tr>
+          <tr><td>Publication</td><td>Actif canal O, actif canal L, statut de publication, date de mise en ligne</td><td>Le statut de publication se deduit des canaux (calcule). Un canal En attente ne compte pas comme actif.</td></tr>
           <tr><td>Qualite</td><td>Taux de completion</td><td>Champs saisissables des groupes visibles pour la population du role. Un meme champ dans deux onglets ne compte qu’une fois. La fiche detaille aussi le taux de chaque groupe.</td></tr>
           <tr><td>Valeurs metier</td><td>Caracteristiques, tarifs, SEO, conditions commerciales, visuels</td><td>Selon les onglets de la categorie.</td></tr>
           <tr><td>Historique</td><td>Ancienne / nouvelle valeur, utilisateur, horodatage</td><td>Flush a l’enregistrement, pas a chaque frappe.</td></tr>
@@ -61,6 +61,34 @@
         <strong>code SAP</strong>. Ce n’est pas un identifiant technique cache :
         c’est la cle metier d’echange avec SAP et les fichiers Excel.
       </p>
+      <h2>La fiche</h2>
+      <p>
+        Ouvrir un produit affiche une fiche : identite en tete, puis un onglet
+        par groupe rattache a sa categorie. Il n’y a pas d’onglet Synthese.
+        Les champs courts se rangent cote a cote. Un texte long ou une image
+        prend toute la largeur. Retour a la liste et Enregistrer restent
+        visibles au defilement.
+      </p>
+      <h3>Saisie et completion</h3>
+      <ul>
+        <li>A la creation, EAN, nom et categorie sont obligatoires. SAP est facultatif.</li>
+        <li>Le taux de completion ne compte qu’un champ saisissable, une seule fois, et seulement dans les groupes de la population du role. Un role sans population voit tous les groupes. Hors taux : systeme, calcules, visuels, commentaire, champ masque par une condition. Le picto de completion s’affiche sur tous les types concernes, y compris une image. Sans picto, le champ est optionnel : pas de pastille « Optionnel ». Un champ de completion encore vide a un fond rose pale. Ce n’est pas une erreur de saisie.</li>
+        <li>Chaque onglet a sa barre, au meme dessin que la barre du produit, mise a jour a la saisie. Le champ Completion n’est pas saisi : il n’apparait pas dans l’onglet.</li>
+        <li>Enregistrer refuse la fiche si un obligatoire visible est vide. Il ecrit alors la date de mise a jour et l’historique. Quitter avec des changements non enregistres demande confirmation. L’historique n’est ecrit qu’a l’enregistrement.</li>
+        <li>Un nombre s’affiche avec 0, 1 ou 2 decimales selon l’attribut. Par defaut, 0. Les prix et les PA ont 2 decimales, sauf le PVMC et le PV TTC arrondi accessoire (0). Un pourcentage s’affiche en % et se stocke entre 0 et 1.</li>
+        <li>Un champ jaune est calcule. On peut forcer une valeur, puis revenir au calcul. Une formule ne change pas selon la categorie : si la regle differe, c’est un autre champ. Le detail des prix est sur Attributs et Categories.</li>
+      </ul>
+      <h3>Canaux, conditions, alertes</h3>
+      <ul>
+        <li>Actif canal O et actif canal L valent Oui, Non ou En attente. Le statut de publication se deduit : il est publie si au moins un canal est Oui. En attente ne publie pas. La date de mise a jour du statut ne bouge que si le statut change.</li>
+        <li>Reassort automatique SAP passe a A desactiver quand les deux canaux sont Non. Un canal vide n’est pas Non. En attente n’est pas Non. Sinon la valeur saisie reste. La liste est verrouillee seulement tant que les deux canaux sont Non.</li>
+        <li>La remise interne, le RF et la RFA viennent de l’accord marque × fournisseur, sans ressaisie. La remise interne compte comme renseignee. Le panneau affiche aussi le code fournisseur et le trigramme.</li>
+        <li>Une alerte declenchee s’affiche sous le titre et sur le champ concerne.</li>
+      </ul>
+      <p>
+        On reconnait un produit a l’import d’abord par l’EAN, sinon par le SAP.
+        L’unicite de l’EAN n’est pas tranchee.
+      </p>
       <div class="callout">
         <strong>Regles</strong>
         RG-PRD-01 — Un produit a une et une seule categorie.<br>
@@ -71,8 +99,11 @@
         RG-PRD-06 — Pas d’onglet Synthese sur la fiche. Les champs courts sont en colonnes, le texte long et les images en pleine largeur. « Retour a la liste » et « Enregistrer » restent visibles au defilement. Le titre de page suit l’ecran ouvert.<br>
         RG-PRD-07 — Enregistrer refuse la fiche si un champ obligatoire visible est vide, et ecrit alors la date de mise a jour et l’historique. Quitter avec des changements non enregistres demande confirmation.<br>
         RG-PRD-08 — Le champ Completion n’est pas un champ a remplir : il n’apparait pas dans l’onglet. La barre globale et la barre de chaque groupe suffisent.<br>
-        RG-PRD-09 — La remise interne reprise de l’accord marque compte comme renseignee, sans ressaisie sur la fiche.<br>
-        RG-PRD-10 — Le statut de publication se deduit des canaux actif O et actif L. Sa date ne bouge que si ce statut change.
+        RG-PRD-09 — La remise interne, le RF et la RFA repris de l’accord marque sont reportes sur la fiche, sans ressaisie. La remise interne compte comme renseignee.<br>
+        RG-PRD-10 — Le statut de publication se deduit des canaux actif O et actif L. Sa date ne bouge que si ce statut change.<br>
+        RG-PRD-11 — Un champ qui compte dans la completion et qui est vide a un fond rose pale. Ce n’est pas une erreur de saisie.<br>
+        RG-PRD-12 — Le panneau Conditions commerciales de la fiche affiche le code fournisseur et le trigramme du fournisseur lie, en plus du bareme.<br>
+        RG-PRD-13 — Une alerte declenchee sur la fiche s’affiche sous le titre et sur le champ concerne.
       </div>
       <div class="callout cible">
         <strong>Cible</strong>

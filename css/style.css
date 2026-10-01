@@ -256,6 +256,39 @@ input, select, textarea { font-family: inherit; }
   border-color: #ef5350;
   box-shadow: 0 0 0 3px rgba(239,83,80,0.1);
 }
+.field-row.field-missing .field-input,
+.field-row.field-missing select.form-select {
+  background: #fff1f0;
+}
+.attr-edit-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 980px;
+  align-items: start;
+}
+.attr-edit-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  max-width: 980px;
+  padding: 10px 0;
+  background: #f0f4f8;
+}
+.attr-system-note {
+  max-width: 980px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f0f4f8;
+  color: #607080;
+  font-size: 13px;
+}
+@media (max-width: 860px) {
+  .attr-edit-layout { grid-template-columns: 1fr; }
+}
 .field-input[readonly] {
   background: #f8fafc;
   color: #a0b0c0;

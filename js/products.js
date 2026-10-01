@@ -188,6 +188,7 @@ function clearColFilter(code) {
 function clearAllFilters() {
   colFilters = {};
   _filterIncomplets = false;
+  _filterAlertId = null;
   const search = document.getElementById('products-search');
   if (search) search.value = '';
   const cat = document.getElementById('filter-cat');
@@ -228,6 +229,10 @@ function renderProductsTable() {
     if (searchVal && !allText.includes(searchVal.toLowerCase())) return false;
     if (!passesColFilters(p)) return false;
     if (_filterIncomplets && calcCompletion(p) >= seuilCompletion) return false;
+    if (_filterAlertId != null) {
+      const alert = (alerts || []).find(a => a.id === _filterAlertId);
+      if (!alert || !productMatchesAlert(p, alert)) return false;
+    }
     return true;
   });
 
@@ -241,6 +246,12 @@ function renderProductsTable() {
   // Bouton effacer filtres
   const clearBtn = document.getElementById('btn-clear-filters');
   if (clearBtn) clearBtn.style.display = hasActiveFilters() ? '' : 'none';
+  const chip = document.getElementById('alert-filter-chip');
+  if (chip) {
+    const alert = _filterAlertId != null ? (alerts || []).find(a => a.id === _filterAlertId) : null;
+    chip.style.display = alert ? '' : 'none';
+    chip.textContent = alert ? alertRuleText(alert) : '';
+  }
 
   renderGroupFilterBar();
 
@@ -399,6 +410,13 @@ function renderSynthRows(tbody, filtered) {
   });
 }
 
+function alertPictoHtml(p) {
+  const hits = typeof productAlertHits === 'function' ? productAlertHits(p) : [];
+  if (!hits.length) return '';
+  const title = hits.map(a => alertRuleText(a)).join(' · ');
+  return `<span title="${escapeHtml(title)}" style="color:#c62828;margin-left:6px;cursor:help">&#9888;</span>`;
+}
+
 function renderSynthCell(p, item, comp) {
   const code = item.code;
 
@@ -427,7 +445,7 @@ function renderSynthCell(p, item, comp) {
   if (isSynthTitleCode(code)) {
     return `<td class="td-name">
       <span class="product-link"
-        onclick="openProductDetail(${p.id})">${inner}</span>
+        onclick="openProductDetail(${p.id})">${inner}</span>${alertPictoHtml(p)}
     </td>`;
   }
 
@@ -484,7 +502,7 @@ function renderDetailHeader(thead) {
 
   // Colonnes groupes d'attributs
   visibleGroups.forEach(g => {
-    const groupAttrs = g.attrIds.map(id => getAttrById(id)).filter(Boolean);
+    const groupAttrs = g.attrIds.map(id => getAttrById(id)).filter(a => a && attrShownInList(a));
     if (!groupAttrs.length) return;
     const color = getGroupColor(g);
     const th = document.createElement('th');
@@ -528,7 +546,7 @@ function renderDetailRows(tbody, filtered) {
   if (compareMode && filtered.length > 1) {
     visibleGroups.forEach(g => g.attrIds.forEach(aid => {
       const attr = getAttrById(aid);
-      if (!attr) return;
+      if (!attr || !attrShownInList(attr)) return;
       allValues[attr.code] = filtered.map(p => p.fields[attr.code] || '');
     }));
   }
@@ -544,7 +562,7 @@ function renderDetailRows(tbody, filtered) {
     // Checkbox
     let cells = `<td style="width:36px;text-align:center">
       <input type="checkbox" ${isSelected ? 'checked' : ''}
-        onchange="toggleSelectProduct(${p.id},this)">
+        onchange="toggleSelectProduct(${p.id},this)">${alertPictoHtml(p)}
     </td>`;
 
     // Colonnes synthese (meme logique que renderSynthRows)
@@ -566,7 +584,7 @@ function renderDetailRows(tbody, filtered) {
     // Colonnes groupes d'attributs
     visibleGroups.forEach(g => {
       const color = getGroupColor(g);
-      g.attrIds.map(id => getAttrById(id)).filter(Boolean).forEach(attr => {
+      g.attrIds.map(id => getAttrById(id)).filter(a => a && attrShownInList(a)).forEach(attr => {
         const val  = formatAttrListValue(p, attr);
         let isDiff = false;
         if (compareMode && allValues[attr.code])
@@ -797,9 +815,10 @@ function onBulkAttrChange(sel) {
     input = `<select class="form-select" id="bulk-attr-value">
       <option value="">-- Choisir --</option>${opts}</select>`;
   } else if (attr.type === 'Oui / Non') {
+    const yn = (attr.options && attr.options.length) ? attr.options : ['Oui', 'Non'];
     input = `<select class="form-select" id="bulk-attr-value">
       <option value="">-- Choisir --</option>
-      <option>Oui</option><option>Non</option></select>`;
+      ${yn.map(o => `<option>${o}</option>`).join('')}</select>`;
   } else if (attr.type === 'Nombre' || attr.type === 'Nombre decimal') {
     input = `<input class="field-input" id="bulk-attr-value" type="number" onwheel="event.preventDefault();this.blur()">`;
   } else {
@@ -890,6 +909,7 @@ function clearSelection() {
 function onCatFilterChange() {
   const v = (document.getElementById('filter-cat') || {}).value || '';
   _filterIncomplets = false;
+  _filterAlertId = null;
   colFilters = {};
   currentPage = 1;
   if (!v && currentView === 'detail') {
@@ -939,7 +959,7 @@ function switchView(mode) {
   renderProductsTable();
 }
 
-function filterTable() { _filterIncomplets = false; currentPage = 1; renderProductsTable(); }
+function filterTable() { _filterIncomplets = false; _filterAlertId = null; currentPage = 1; renderProductsTable(); }
 
 // ============================================================
 // TRI

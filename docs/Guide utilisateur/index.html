@@ -36,7 +36,8 @@
       <li>La liste ne montre que les categories que vous avez le droit de lire.</li>
       <li>Utilisez la recherche, le filtre de categorie, le tri sur une colonne.</li>
       <li>La vue Synthese reprend les colonnes definies pour tout le monde. La vue Detaillee montre les groupes de la categorie choisie. Sans categorie, ces groupes ne s’affichent pas.</li>
-      <li>Cliquez le nom pour ouvrir la fiche.</li>
+      <li>Cliquez le nom pour ouvrir la fiche. Un picto signale un produit sous ou au-dessus d’un seuil.</li>
+      <li>Depuis le tableau de bord, une carte d’alerte ouvre la liste deja filtree sur ce seuil.</li>
       <li>Le bouton Nouveau produit n’apparait que si vous pouvez ecrire au moins une categorie. EAN, nom et categorie sont obligatoires. Le code SAP peut rester vide.</li>
     </ul>
   </section>
@@ -46,12 +47,18 @@
     <ul>
       <li>Les onglets sont les groupes de la categorie du produit. Il n’y a pas d’onglet Synthese.</li>
       <li>Les champs courts se rangent cote a cote. Un texte long ou une image prend toute la largeur.</li>
-      <li>Un champ avec un picto entre dans la completion. Sans picto, il est optionnel.</li>
+      <li>Un champ avec un picto entre dans la completion. Sans picto, il est optionnel. Un champ a completer encore vide a un fond rose pale.</li>
+      <li>Miroir, Pola, Dégradé, teinte des verres et categorie du verre apparaissent des que la monture est solaire, juste apres Optique / Solaire.</li>
       <li>La barre en haut de la fiche et la barre de chaque onglet se mettent a jour pendant la saisie.</li>
       <li>Enregistrer refuse la fiche si un champ obligatoire est vide. L’historique n’est ecrit qu’a l’enregistrement.</li>
       <li>Retour a la liste et Enregistrer restent visibles quand vous defilez. Quitter avec des changements non enregistres demande une confirmation.</li>
       <li>Un champ jaune est calcule. Vous pouvez forcer une valeur, puis revenir au calcul.</li>
-      <li>Les prix et les PA s’affichent avec deux decimales. Le prix final arrondi n’en a pas. Un pourcentage s’affiche en %.</li>
+      <li>Réassort automatique SAP passe à A désactiver quand actif canal O et actif canal L sont tous les deux Non. En attente ne compte pas comme Non. Sinon, la valeur choisie reste.</li>
+      <li>Sur un accessoire, le code SAP est le code article magasin. La désignation magasin, l’année de lancement, la matière, les dimensions et le conditionnement d’origine sont dans Caractéristiques accessoire. La couleur est la même que sur une monture. Les prix calculés de l’accessoire (PV TTC arrondi, PV HT, marge HT, taux) sont des champs à part de ceux de la monture.</li>
+      <li>Sur une lentille, la marque est dans Caractéristiques lentille. Lentilles et PEL partagent l’onglet Tarification lentilles + PEL : prix de vente TTC et prix de vente HT, avec deux décimales.</li>
+      <li>Les prix et les PA s’affichent avec deux decimales. Le PVMC et le PV TTC arrondi n’en ont pas. Un pourcentage s’affiche en %.</li>
+      <li>Le panneau Conditions commerciales montre le code fournisseur et le trigramme, avec le bareme de l’accord.</li>
+      <li>Si un seuil est depasse, la fiche l’indique sous le titre et sur le champ.</li>
     </ul>
   </section>
 
@@ -69,9 +76,9 @@
   <section>
     <h2>Exporter</h2>
     <ul>
-      <li>Le perimetre est celui des filtres de la liste. S’il y a une selection, elle est indiquee, avec « Tout exporter ».</li>
+      <li>Le nombre de produits est celui du fichier. Une selection dans la liste le reduit. « Tout exporter » ignore la selection.</li>
       <li>Catalogue, IWI ou une trame enregistree : cochez un groupe, depliez-le pour retirer un champ.</li>
-      <li>IWI propose les 76 colonnes de la trame. Un nombre en rouge sur une colonne exigee bloque le fichier tant que des produits n’ont pas la valeur.</li>
+      <li>IWI propose les 76 colonnes de la trame. Une colonne exigee encore vide indique en rouge le nombre de valeurs manquantes. Le fichier part quand meme.</li>
       <li>Le format (.xlsx, .csv ou .zip) se choisit a cote du bouton Exporter. Le fichier tient sur un seul onglet.</li>
     </ul>
   </section>
@@ -79,7 +86,9 @@
   <section>
     <h2>Administration</h2>
     <p>Le menu Administration n’apparait que si votre role peut ouvrir au moins un module (attributs, groupes, categories, roles, conditions, preferences). La pagination de la liste et le seuil de completion se reglent dans les preferences de l’application. Le theme d’affichage, lui, est personnel.</p>
-    <p>Creer un attribut, un groupe ou une categorie est reserve aux roles qui ont ce droit. Sinon, demandez-le a Alexis Béranger.</p>
+    <p>Creer un attribut, un groupe ou une categorie est reserve aux roles qui ont ce droit. Sinon, demandez-le a Alexis Béranger. Un attribut systeme se consulte, il ne se modifie pas. Quitter l’edition d’un attribut sans enregistrer demande une confirmation.</p>
+    <p>Un fournisseur se cree avec un code, un nom, et un trigramme facultatif. La liste des conditions montre le nom, le code et le trigramme. Il n’y a pas de commentaire. L’historique d’une ligne est dans Modifier, et il s’ecrit a l’enregistrement.</p>
+    <p>Les alertes se reglent dans Administration. Une alerte compare un attribut numerique a un seuil, en dessous ou au-dessus. Le taux de marque est alerte en dessous de 20 %. Creer ou supprimer une alerte demande ce droit. Sinon, demandez-le a Alexis Béranger.</p>
   </section>
 </main>
 </body>

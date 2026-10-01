@@ -26,7 +26,40 @@ function renderDashboard() {
   renderDashboardDonut();
   renderDashboardEvolution();
   renderDashboardCompletion();
+  renderDashboardAlerts();
   renderDashboardSuppliers();
+}
+
+function showAlertProducts(alertId) {
+  _filterAlertId = alertId;
+  _filterIncomplets = false;
+  currentPage = 1;
+  const navEl = document.querySelector('.nav-item[data-nav="products"]');
+  showPage('products', navEl);
+  renderProductsTable();
+}
+
+function renderDashboardAlerts() {
+  const box = document.getElementById('dashboard-alerts');
+  if (!box) return;
+  const list = alerts || [];
+  if (!list.length) {
+    box.innerHTML = '';
+    return;
+  }
+  const cards = list.map(alert => {
+    const n = productsForAlert(alert).length;
+    const rule = escapeHtml(alertRuleText(alert));
+    const detail = escapeHtml((attributes.find(a => a.code === alert.attrCode) || {}).name || '')
+      + ' ' + escapeHtml(alertOpLabel(alert.op)) + ' ' + escapeHtml(alertThresholdText(alert));
+    return `<div class="dash-kpi-card" style="cursor:pointer" onclick="showAlertProducts(${alert.id})">
+      <div class="kpi-label">${rule}</div>
+      <div class="kpi-value" style="color:${n ? '#c62828' : '#607080'};font-size:40px;line-height:1.1;margin-top:4px">${n}</div>
+      <div style="font-size:12px;color:#607080;margin-top:8px">${detail}</div>
+    </div>`;
+  }).join('');
+  box.innerHTML = `<div class="dashboard-section-label">Alertes</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:20px">${cards}</div>`;
 }
 
 // ============================================================
@@ -61,6 +94,7 @@ function renderDashboardKpis() {
 
 function showIncomplets() {
   _filterIncomplets = true;
+  _filterAlertId = null;
   currentPage = 1;
   const navEl = document.querySelector('.nav-item[data-nav="products"]');
   showPage('products', navEl);

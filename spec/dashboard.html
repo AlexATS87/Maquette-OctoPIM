@@ -15,47 +15,61 @@
     <article id="spec-article">
       <h1>Dashboard</h1>
       <p class="lead">
-        Vue de pilotage : volume du catalogue, completude, repartition par
-        categorie et par fournisseur.
+        Page d’accueil. Chaque indicateur ne compte que les produits que
+        l’utilisateur a le droit de voir dans la liste.
       </p>
 
-      <h2>Qu’est-ce que le dashboard ?</h2>
+      <h2>A quoi sert le dashboard</h2>
       <p>
-        La page d’accueil. Elle ne sert pas a saisir : elle alerte (produits
-        incomplets) et donne un ordre de grandeur.
+        Le dashboard est la page par defaut sur laquelle tout utilisateur arrive
+        en se connectant a OctoPIM. Il rassemble les indicateurs utiles a cet
+        utilisateur, selon ses droits de visibilite. Un produit absent de la liste
+        n’entre dans aucun reporting.
       </p>
       <figure>
         <img src="captures/dashboard.jpg" alt="Dashboard">
-        <figcaption>Volume, donut categories, evolution 6 mois, incompletude, completion par famille, vue fournisseur.</figcaption>
+        <figcaption>Analyse, qualite, alertes, vue fournisseur.</figcaption>
       </figure>
+      <p>
+        Un clic sur un reporting ouvre la liste deja filtree sur ce que le
+        reporting montrait. RG-DSH-04.
+      </p>
 
-      <h2>A quoi ça sert ?</h2>
+      <h2>Analyse des produits</h2>
       <ul>
-        <li>Savoir combien de references sont dans le perimetre de l’utilisateur.</li>
-        <li>Mesurer la qualite (taux de completion vs seuil, defaut 80 %).</li>
-        <li>Entrer dans la liste des incomplets en un clic.</li>
-        <li>Voir le poids des fournisseurs dans le catalogue.</li>
+        <li>Le total de produits visibles dans l’outil. Le clic ouvre la liste, sans autre filtre.</li>
+        <li>La decoupe de ces produits selon les categories visibles. Representation en camembert. Une categorie sans produit visible n’apparait pas. La couleur est celle de la categorie.</li>
+        <li>L’evolution recente : cumul des produits existants, a partir de la date de creation dans l’outil, decoupe par mois, en histogramme. <span class="tag tag-maq">Maquette</span> les six derniers mois sont dessines ; seul le mois courant est le stock reel. Les mois passes sont illustratifs, pas un historique de creations. RG-DSH-03.</li>
       </ul>
 
-      <h2>Comment ça marche</h2>
-      <table>
-        <thead>
-          <tr><th>Indicateur</th><th>Lecture</th><th>Statut</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Total produits</td><td>Produits des categories accessibles. Clic → liste.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
-          <tr><td>Repartition par categorie</td><td>Donut du catalogue visible.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
-          <tr><td>Evolution 6 mois</td><td>Le mois courant = stock reel. Les mois passes sont illustratifs.</td><td><span class="tag tag-maq">Maquette</span> <span class="tag tag-cible">Cible</span> source temporelle reelle a specifier</td></tr>
-          <tr><td>Produits incomplets</td><td>Completion &lt; seuil. Clic → liste filtree.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
-          <tr><td>Completion globale / par categorie</td><td>Moyenne des taux, hors attributs systeme.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
-          <tr><td>Vue fournisseur</td><td>Volume par fournisseur et part du catalogue.</td><td><span class="tag tag-maq">Maquette</span></td></tr>
-        </tbody>
-      </table>
+      <h2>Qualite des produits</h2>
+      <ul>
+        <li>Le nombre de produits incomplets : completion strictement inferieure au seuil parametre dans Administration, Preferences. Defaut 80 %. Le clic ouvre la liste des incomplets. RG-DSH-02.</li>
+        <li>Le taux de completion global : moyenne des taux de completion de tous les produits visibles. En dessous, la meme moyenne par categorie visible, en histogramme horizontal. La couleur suit les seuils de completion parametres dans l’administration. Le taux ne compte que les champs que l’utilisateur peut remplir (hors systeme, calcules, visuels, commentaire, champ masque).</li>
+      </ul>
+
+      <h2>Alertes</h2>
+      <p>
+        Chaque alerte est un widget : son libelle, le nombre de produits visibles
+        qui la declenchent, et la regle (attribut, sens, seuil). Le clic ouvre la
+        liste filtree sur cette alerte. Une alerte ne bloque ni l’enregistrement
+        ni l’export. Le detail est sur la page Alertes.
+      </p>
+
+      <h2>Vue fournisseur</h2>
+      <p>
+        Un histogramme horizontal empile par categorie, une barre par fournisseur,
+        avec le nombre de produits. Les couleurs sont celles des categories. A
+        droite de la barre : le nombre total et la part du catalogue visible, en %.
+        Le clic sur une barre ouvre la liste filtree sur ce fournisseur. Le survol
+        rappelle les marques liees (produits et lignes d’accord).
+      </p>
       <div class="callout">
         <strong>Regles</strong>
-        RG-DSH-01 — Tous les indicateurs respectent le perimetre de droits de l’utilisateur.<br>
-        RG-DSH-02 — Le seuil de completion est parametrable (Administration &gt; Preferences), defaut 80 %.<br>
-        RG-DSH-03 — <span class="tag tag-maq">Maquette</span> La courbe sur 6 mois illustre. Les mois passes ne sont pas un historique reel.
+        RG-DSH-01 — Tous les indicateurs respectent le perimetre de droits. Un produit invisible dans la liste n’est compte nulle part.<br>
+        RG-DSH-02 — Le seuil d’incomplet est parametrable (Administration, Preferences), de 0 a 100, defaut 80 %. Il sert au compteur et au filtre des incomplets.<br>
+        RG-DSH-03 — L’evolution est un cumul par mois a partir de la date de creation. <span class="tag tag-maq">Maquette</span> les mois passes sont illustratifs ; le mois courant est le stock reel.<br>
+        RG-DSH-04 — Un clic sur un reporting ouvre la liste prefiltree. En place : total, incomplets, alerte, barre fournisseur. <span class="tag tag-maq">Maquette</span> le camembert, l’histogramme d’evolution et les barres de completion n’ouvrent pas encore la liste.
       </div>
     </article>
   </main>

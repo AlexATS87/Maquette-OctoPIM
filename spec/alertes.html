@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Alertes — OctoPIM</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="nav" id="spec-nav"></aside>
+  <main class="main">
+    <div class="page-toolbar">
+      <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
+    </div>
+    <article id="spec-article">
+      <h1>Alertes</h1>
+      <p class="lead">
+        Une alerte signale les produits dont un attribut numerique passe
+        sous ou au-dessus d’un seuil. Elle ne bloque pas la saisie.
+      </p>
+
+      <h2>A quoi ça sert ?</h2>
+      <ul>
+        <li>Repérer un écart de tarif sans ouvrir chaque fiche.</li>
+        <li>Entrer dans la liste déjà filtrée depuis le tableau de bord.</li>
+        <li>Voir le même signal sur la liste (picto) et sur la fiche.</li>
+      </ul>
+
+      <h2>Comment ça marche</h2>
+      <p>
+        Une alerte est une regle de surveillance, pas un statut du produit.
+        Elle compare un attribut numerique a un seuil, en dessous ou au-dessus.
+        Elle ne bloque ni l’enregistrement, ni l’export, ni la publication.
+      </p>
+      <ul>
+        <li>Chaque alerte a un nom, un attribut numerique, un sens (inferieur a ou superieur a) et un seuil. On la cree et on la supprime dans Administration, Alertes. La voir sur le dashboard, la liste et la fiche ne demande pas ce droit.</li>
+        <li>Un pourcentage se saisit comme a l’ecran (20 pour 20 %) et se compare a la valeur stockee entre 0 et 1. Une valeur vide ne declenche rien.</li>
+        <li>Sur le dashboard, chaque alerte est un widget : libelle, nombre de produits visibles concernes, regle. Le clic ouvre la liste deja filtree. Le libelle reste affiche tant que le filtre est actif.</li>
+        <li>Sur la liste, le produit porte un picto sur son nom. Sur la fiche, le signal est sous le titre et sur le champ.</li>
+        <li>Alerte en place : taux de marque inferieur a 20 %. Ce taux est celui de la monture (prix arrondi HT et PA opticien). Le taux accessoire est un autre champ : il n’entre pas dans cette alerte.</li>
+        <li><span class="tag tag-maq">Maquette</span> le compte parcourt le catalogue charge. <span class="tag tag-cible">Cible</span> a 100 000 produits, le filtre et le compte se calculent cote serveur.</li>
+      </ul>
+      <div class="callout">
+        <strong>Regles</strong>
+        RG-ALR-01 — Une alerte compare un attribut numerique a un seuil, en dessous ou au-dessus. Elle ne bloque ni l’enregistrement ni l’export.<br>
+        RG-ALR-02 — Le module Administration &gt; Alertes cree et supprime les alertes. Les voir sur le tableau de bord, la liste et la fiche ne demande pas ce droit.<br>
+        RG-ALR-03 — <span class="tag tag-maq">Maquette</span> Le compte parcours le catalogue charge. <span class="tag tag-cible">Cible</span> A 100 000 produits, le filtre et le compte sont calcules cote serveur.
+      </div>
+    </article>
+  </main>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

@@ -44,7 +44,9 @@ function safeShowPage(id,navEl){
 function confirmLeaveUnsaved(){
   const p=products.find(x=>x.id===currentProductId);
   if(p)p.pendingChanges=[];
-  productDirty=false;currentProductId=null;
+  productDirty=false;
+  attrFormDirty=false;
+  currentProductId=null;
   closeModal('modal-unsaved');
   if(pendingNavTarget){showPage(pendingNavTarget.id,pendingNavTarget.navEl);pendingNavTarget=null;}
 }
@@ -88,6 +90,20 @@ function summaryVisual(p) {
     </div>`;
 }
 
+function productAlertLine(p) {
+  const hits = typeof productAlertHits === 'function' ? productAlertHits(p) : [];
+  if (!hits.length) return '';
+  const text = hits.map(a => escapeHtml(alertRuleText(a))).join(' · ');
+  return `<div style="font-size:12px;color:#c62828;margin-top:4px">${text}</div>`;
+}
+
+function fieldAlertMark(p, a) {
+  const hits = typeof productAlertHits === 'function' ? productAlertHits(p) : [];
+  if (!hits.some(h => h.attrCode === a.code)) return '';
+  const title = hits.filter(h => h.attrCode === a.code).map(alertRuleText).join(' · ');
+  return `<span title="${escapeHtml(title)}" style="color:#c62828;margin-left:4px;cursor:help">&#9888;</span>`;
+}
+
 function renderProductHeader(p, cat) {
   const headerLeft = document.getElementById('product-header-left');
   if (!headerLeft) return;
@@ -105,7 +121,8 @@ function renderProductHeader(p, cat) {
     <div style="display:flex;align-items:flex-start;gap:16px">
       ${summaryVisual(p)}
       <div style="flex:1">
-        <div class="product-title">${title}</div>
+        <div class="product-title">${title}${alertPictoHtml(p)}</div>
+        ${productAlertLine(p)}
         <div class="product-meta">${metaHtml}</div>
       </div>
     </div>`;
@@ -341,7 +358,9 @@ function renderAttrFieldHtml(p,a,labelOverride){
     const opts=(a.options||[]).map(o=>`<option${o===val?' selected':''}>${o}</option>`).join('');
     input=`<select class="field-input form-select" onchange="onFieldChange(${p.id},this,'${a.code}')"><option value="">-- Choisir --</option>${opts}</select>`;
   }else if(a.type==='Oui / Non'){
-    input=`<select class="field-input form-select" onchange="onFieldChange(${p.id},this,'${a.code}')"><option value="">-- Choisir --</option><option${val==='Oui'?' selected':''}>Oui</option><option${val==='Non'?' selected':''}>Non</option></select>`;
+    const yn=(a.options&&a.options.length)?a.options:['Oui','Non'];
+    const opts=yn.map(o=>`<option${o===val?' selected':''}>${o}</option>`).join('');
+    input=`<select class="field-input form-select" onchange="onFieldChange(${p.id},this,'${a.code}')"><option value="">-- Choisir --</option>${opts}</select>`;
   }else if(a.type==='Texte long'){
     input=`<textarea class="field-input" rows="3" oninput="onFieldChange(${p.id},this,'${a.code}')">${val}</textarea>`;
   }else{
@@ -415,9 +434,13 @@ function renderBrandInfoPanel(brandInfo) {
       </div>`;
   }
   const skip = new Set(['fournisseur_code', 'marque', 'cat', 'segmentation']);
-  const rows = getConditionAttrs()
+  const sup = (suppliers || []).find(s => s.code === brandInfo.fournisseurCode);
+  const rows = [
+    { label: 'Code fournisseur', val: brandInfo.fournisseurCode || '—' },
+    { label: 'Trigramme', val: (sup && sup.trigram) || '—' },
+  ].concat(getConditionAttrs()
     .filter(a => !skip.has(a.code))
-    .map(a => ({ label: a.name, val: getBrandSettingAttrValue(brandInfo, a) || '—' }));
+    .map(a => ({ label: a.name, val: getBrandSettingAttrValue(brandInfo, a) || '—' })));
   let html = `<div class="field-group-title">Conditions — ${escapeHtml(brandInfo.marque || '')}</div>`;
   rows.forEach(r => {
     html += `<div class="field-row" style="display:flex;justify-content:space-between;
@@ -529,7 +552,7 @@ function renderTabAttrGroup(p, g) {
     return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
 
   computeCalcFields(p);
-  const shown = attrs.filter(a => a.code !== 'completion' && isAttrShown(p, a));
+  const shown = attrs.filter(a => a.code !== 'completion');
   let html = '<div class="fields-flow">';
   html += groupCompletionHtml(p, g);
   if (g.code === 'infos_generales') html += `<div class="field-group-title field-span">${g.name}</div>`;
@@ -558,19 +581,22 @@ function renderTabAttrGroup(p, g) {
              </div>`}
         ${a.required ? '<div class="image-attr-badges"><span class="visual-badge-required">Obligatoire</span></div>' : ''}
       </div>`;
+    } else if (a.type === 'Simple select') {
+      const locked = selectFormulaLock(p, a);
+      const shown = locked ? 'A désactiver' : val;
+      const opts = (a.options || []).map(o =>
+        `<option${o === shown ? ' selected' : ''}>${o}</option>`
+      ).join('');
+      input = `<select class="field-input form-select" data-field-code="${a.code}"
+        ${locked ? 'disabled data-formula-lock="1" title="A désactiver tant que les deux canaux sont Non"' : ''}
+        onchange="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">
+        <option value="">-- Choisir --</option>${opts}
+      </select>`;
     } else if (a.calc || (a.formula && !a.readonly)) {
       input = calcFieldInput(p, a, val);
     } else if (a.readonly) {
       input = `<input class="field-input"
         style="background:#f0f4f8;color:#a0b0c0" value="${val}" readonly>`;
-    } else if (a.type === 'Simple select') {
-      const opts = (a.options || []).map(o =>
-        `<option${o === val ? ' selected' : ''}>${o}</option>`
-      ).join('');
-      input = `<select class="field-input form-select" data-field-code="${a.code}"
-        onchange="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">
-        <option value="">-- Choisir --</option>${opts}
-      </select>`;
     } else if (a.type === 'Multi select') {
       const opts = (a.options || []).map(o =>
         `<option${(val || '').includes(o) ? ' selected' : ''}>${o}</option>`
@@ -578,11 +604,11 @@ function renderTabAttrGroup(p, g) {
       input = `<select class="field-input form-select" multiple data-field-code="${a.code}"
         onchange="onMultiSelectChange(${p.id},this,'${a.code}')">${opts}</select>`;
     } else if (a.type === 'Oui / Non') {
+      const yn = (a.options && a.options.length) ? a.options : ['Oui', 'Non'];
+      const opts = yn.map(o => `<option${o === val ? ' selected' : ''}>${o}</option>`).join('');
       input = `<select class="field-input form-select" data-field-code="${a.code}"
         onchange="onFieldChange(${p.id},this,'${a.code}')">
-        <option value="">-- Choisir --</option>
-        <option${val === 'Oui' ? ' selected' : ''}>Oui</option>
-        <option${val === 'Non' ? ' selected' : ''}>Non</option>
+        <option value="">-- Choisir --</option>${opts}
       </select>`;
     } else if (a.type === 'Texte long') {
       input = longTextInput(p, a, val);
@@ -600,9 +626,10 @@ function renderTabAttrGroup(p, g) {
 
     const wide = a.type === 'Texte long' || a.type === 'Image';
     const shownRow = isAttrShown(p, a);
-    html += `<div class="field-row${wide ? ' field-span' : ''}" data-attr-row="${a.code}" style="${shownRow ? '' : 'display:none'}">
+    const missing = shownRow && a.inCompletion && !a.system && !a.calc && !a.readonly && !isCompletionFilled(p, a);
+    html += `<div class="field-row${wide ? ' field-span' : ''}${missing ? ' field-missing' : ''}" data-attr-row="${a.code}" style="${shownRow ? '' : 'display:none'}">
       <div class="field-label">
-        ${attrLabelHtml(a)}
+        ${attrLabelHtml(a)}${fieldAlertMark(p, a)}
         ${a.formula
           ? `<span style="display:inline-flex;align-items:center;justify-content:center;
                width:14px;height:14px;border-radius:50%;background:#ffd54f;color:#5d4037;
@@ -645,6 +672,18 @@ function evaluateFormula(formula, fields) {
   // au moment ou le champ surveille change, pas recalculee a chaque rendu.
   if (isEventFormula(expr)) return '';
   if (/^TODAY\s*\(\s*\)$/i.test(expr)) return todayStr();
+
+  const roundup = expr.match(/^ROUNDUP\s*\(\s*([\s\S]+)\s*,\s*(-?\d+)\s*\)$/i);
+  if (roundup) {
+    const raw = evaluateFormula(roundup[1], fields);
+    const n = parseFloat(raw);
+    if (!isFinite(n)) return '';
+    const digits = parseInt(roundup[2], 10);
+    const factor = Math.pow(10, Math.max(0, digits));
+    const shifted = n * factor;
+    const rounded = n >= 0 ? Math.ceil(shifted - 1e-9) : Math.floor(shifted + 1e-9);
+    return String(parseFloat((rounded / factor).toFixed(Math.max(0, digits))));
+  }
 
   const brand = expr.match(/^IWI_MARQUE\s*\(\s*([A-Za-z0-9_]+)\s*\)$/i);
   if (brand) return iwiMarqueLabel(fields[brand[1]]);
@@ -700,14 +739,36 @@ function evalConcat(argsStr, fields) {
   }).join('');
 }
 
+function selectFormulaLock(p, a) {
+  if (!p || !a || a.code !== 'reassort_sap') return false;
+  return String(p.fields.active_o || '') === 'Non' && String(p.fields.active_l || '') === 'Non';
+}
+
 function refreshCalcFields(productId){
   const p=products.find(x=>x.id===productId);if(!p)return;
+  const reassortBefore = p.fields.reassort_sap ?? '';
   computeCalcFields(p);
+  if (String(reassortBefore) !== String(p.fields.reassort_sap ?? '')) {
+    const attr = attributes.find(a => a.code === 'reassort_sap');
+    addPendingChange(p, attr ? attr.name : 'Réassort automatique SAP', reassortBefore, p.fields.reassort_sap || '');
+    productDirty = true;
+  }
   document.querySelectorAll('[data-calc]').forEach(el=>{
     if(el===document.activeElement)return;
     const code=el.getAttribute('data-calc');
     const attr=attributes.find(a=>a.code===code);
     if(p.fields[code]!==undefined)el.value=formatCalcFieldDisplay(attr,p.fields[code]);
+  });
+  document.querySelectorAll('select[data-field-code]').forEach(el=>{
+    const code=el.getAttribute('data-field-code');
+    const attr=attributes.find(a=>a.code===code);
+    if(!attr || !attr.formula)return;
+    const locked=selectFormulaLock(p, attr);
+    el.value=locked ? 'A désactiver' : (p.fields[code] || '');
+    el.disabled=locked;
+    if (locked) el.setAttribute('data-formula-lock', '1');
+    else el.removeAttribute('data-formula-lock');
+    el.title=locked ? 'A désactiver tant que les deux canaux sont Non' : '';
   });
   updateDetailCompletion(p);
 }
@@ -722,10 +783,23 @@ function onFieldChange(productId, el, fieldKey) {
   const attr = attributes.find(a => a.code === fieldKey);
   let newVal = el.value;
   if (attr && isPercentAttr(attr)) newVal = percentFromDisplay(el.value);
+  if (fieldKey === 'optique_solaire' && newVal === 'Solaire') {
+    const teinteAttr = attributes.find(a => a.code === 'teinte_verres');
+    const cur = p.fields.teinte_verres || '';
+    if (teinteAttr && cur && !(teinteAttr.options || []).includes(cur)) {
+      p.fields.teinte_verres = '';
+      const teinteEl = document.querySelector('[data-attr-row="teinte_verres"] [data-field-code="teinte_verres"]');
+      if (teinteEl) teinteEl.value = '';
+    }
+  }
   p.fields[fieldKey] = newVal;
   addPendingChange(p, attr ? attr.name : fieldKey, oldVal, newVal);
   productDirty = true;
   if (String(newVal).trim() !== '') el.classList.remove('field-error');
+  const row = el.closest('[data-attr-row]');
+  if (row && attr && attr.inCompletion && !attr.system && !attr.calc && !attr.readonly) {
+    row.classList.toggle('field-missing', !isCompletionValueFilled(newVal));
+  }
   if (fieldKey === 'nom') {
     const t = document.querySelector('.product-title');
     if (t) t.textContent = newVal;

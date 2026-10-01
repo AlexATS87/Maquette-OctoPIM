@@ -120,14 +120,16 @@
       <div class="callout">
         <strong>Regles</strong>
         RG-A10 — Un attribut peut appartenir a plusieurs groupes sans dupliquer l’identifiant. Le groupe choisi a la creation ou a l’edition le rattache tout de suite a ce groupe.<br>
-        RG-A11 — Un champ peut n’apparaitre que si un autre champ a une valeur donnee (« Afficher seulement si »). Sans condition, il est toujours visible. Masque, il ne compte pas dans la completion.<br>
-        RG-A12 — Une nouvelle caracteristique de monture rejoint « Caracteristiques monture ». Un champ qui ne sert qu’a l’export IWI rejoint le groupe « IWI ».<br>
+        RG-A11 — Un champ peut n’apparaitre que si un autre champ a une valeur donnee (« Afficher seulement si »). Sans condition, il est toujours visible. Masque, il ne compte pas dans la completion. Le champ apparait des le changement de la valeur pilote, sans quitter la fiche. Miroir, Pola, Dégradé, Teinte des verres et Catégorie du verre ne s’affichent que si Optique / Solaire vaut Solaire, et ils se placent juste apres ce champ.<br>
+        RG-A12 — Une nouvelle caracteristique de monture rejoint « Caracteristiques monture ». Une caracteristique qui n’existe que pour l’accessoire (matiere, dimensions, conditionnement d’origine, annee de lancement, designation magasin) rejoint « Caracteristiques accessoire ». Couleur est le meme attribut dans les deux groupes. La marque des lentilles est ce meme attribut Marque, en tete de Caracteristiques lentille. Un champ qui ne sert qu’a l’export IWI rejoint le groupe « IWI ».<br>
         RG-A04 — « Obligatoire » est le seul flag d’obligation. SAP n’est pas obligatoire.<br>
         RG-A05 — Le taux de completion ne compte que les champs saisissables, une fois chacun. Hors taux : systeme, calcules, visuels, commentaire. Le picto vaut pour tous les types, images comprises.<br>
         RG-A06 — Marque est le referentiel unique de marques, liste extensible a la saisie. Son code IWI fait 3 caracteres au maximum et sert uniquement a l’export IWI.<br>
         RG-A09 — Les pourcentages s’affichent en % et se stockent en decimal entre 0 et 1.<br>
-        RG-A13 — Un nombre a 0, 1 ou 2 chiffres apres la virgule. Par defaut, 0 (arrondi). Prix catalogue, PA interne, marge interne et PA opticien ont 2 chiffres. Le prix final arrondi reste a 0.<br>
-        RG-A14 — Les codes IWI (type, sous-type, matiere, forme, utilisateur, marque, date de modification) sont des attributs calcules du groupe IWI. La date de modification vaut la date du jour au moment de l’affichage et de l’export. Action vaut toujours 1 : c’est une constante de la trame, pas un attribut. La matiere de branche reprend la matiere de face tant qu’il n’existe pas de champ branche. Le libelle « rondes/ovales/pantos » ne produit pas de code forme : il melange plusieurs codes IWI.
+        RG-A13 — Un nombre a 0, 1 ou 2 chiffres apres la virgule. Par defaut, 0 (arrondi). Prix catalogue, PA interne HT, marge interne HT, PA opticien HT et prix arrondi HT ont 2 chiffres. Le PVMC est arrondi a l’euro superieur (0 chiffre).<br>
+        RG-A14 — Les codes IWI (type, sous-type, matiere, forme, utilisateur, marque, date de modification, code douanier, prescription, code marquage) sont des attributs calcules du groupe IWI. La date de modification vaut la date du jour au moment de l’affichage et de l’export. Action vaut toujours 1 : c’est une constante de la trame, pas un attribut. La matiere de branche reprend la matiere de face tant qu’il n’existe pas de champ branche. Le libelle « rondes/ovales/pantos » ne produit pas de code forme : il melange plusieurs codes IWI.<br>
+        RG-A19 — Un attribut systeme s’ouvre en consultation. Aucun champ du panneau n’est modifiable, et Enregistrer n’est pas propose.<br>
+        RG-A20 — Quitter l’edition d’un attribut avec des changements non enregistres demande confirmation.
       </div>
       <figure>
         <img src="captures/fiche-tarification-percent.jpg" alt="Pourcentages a l’ecran">
@@ -140,20 +142,45 @@
         Sans choix, la valeur est arrondie (0 chiffre). Le meme format sert a l’ecran et a l’export.
       </p>
       <ul>
-        <li>Prix catalogue, PA interne, marge interne, PA opticien : 2 chiffres.</li>
-        <li>Prix final arrondi : 0 chiffre.</li>
-        <li>Un pourcentage reste affiche en % et stocke entre 0 et 1. Ce n’est pas un nombre a decimales.</li>
-      </ul>
+        <li>Prix catalogue, PA interne HT, marge interne HT, PA opticien HT, prix arrondi HT : 2 chiffres.</li>
+        <li>Prix de vente TTC et prix de vente HT (lentilles et PEL) : 2 chiffres.</li>
+        <li>Coefficient accessoire : 1 chiffre. La grille BDD va de 2 a 5, avec un pas de 0,1 (2,5, 3,4, 3,5).</li>
 
       <h2>Champs calcules pour IWI</h2>
       <p>
+      <h2>Listes et champs deduits</h2>
+      <ul>
+        <li>Matiere : Acetate, Métal, Titane, Plastique, Bois, Carbone. « Metal » et « Métal » sont la meme valeur, ecrite Métal.</li>
+        <li>Style : Classique, Fashion, Sport.</li>
+        <li>Profil de caractere : PFL0010 : Homme, PFL0030 : Mixte, PFL0020 : Femme, PFL0040 : Enfant.</li>
+        <li>Teinte des verres, seulement en solaire : Brun, Gris, Rose, Vert.</li>
+        <li>Catégorie du verre, seulement en solaire : Catégorie 1 a 4. A l’export IWI, seul le chiffre sort (1, 2, 3 ou 4).</li>
+        <li>Groupe de marchandise : SI imbriques sur Optique / Solaire, la famille de matiere et le cerclage, avec le libelle de la table BDD (GM0010 a GM0180). MAP ne lit qu’un champ, CONCAT n’en choisit pas un parmi plusieurs : ils ne portent pas cette table. Bois et carbone n’y figurent pas : le champ reste vide. Cerclage : Cercle = cercle, nylor et semi-cercle = fils, sans cerclage = percee.</li>
+        <li>Nom fournisseur est le fournisseur lie au produit (le nom, pas le code). Il n’y a pas d’attribut separe « Nom du fournisseur » dans le groupe IWI. Le code fabricant est le trigramme porte par ce fournisseur. Un MAP des codes figerait la liste et divergerait des qu’on modifie un trigramme.</li>
+        <li>Remise sur facture et RFA ne sont pas des champs de tarification. Le PA opticien HT lit le prix catalogue, le RF et la RFA de l’accord : prix catalogue × (1 − RF) × (1 − RFA). C’est la formule de la colonne PA OPTICIEN de la BDD.</li>
+        <li>Une formule ne change pas selon la categorie. Si la regle differe, c’est un champ dedie.</li>
+        <li>La marge interne HT est PA opticien HT − PA interne HT. Le PVMC est le prix catalogue × 2,6 en optique, × 1,9 sinon, arrondi a l’euro superieur. Le prix arrondi HT est PVMC / 1,2. Ces quatre champs (avec le taux de marque) ne s’affichent que sur une monture.</li>
+        <li>Sur un accessoire, le PV TTC arrondi est le prix opticien unitaire × coefficient, a l’euro superieur. Le PV HT est ce montant / 1,2. La marge HT est PV HT − prix opticien unitaire. Le taux accessoire est cette marge / PV HT.</li>
+        <li>PA unitaire, PA par lot, prix opticien unitaire et prix opticien par lot sont saisis. Ils ne s’affichent que sur un accessoire. Prix catalogue, PA interne HT et PA opticien HT ne s’affichent que sur une monture.</li>
+        <li>Prix de vente TTC et prix de vente HT sont les seuls prix du groupe Tarification lentilles + PEL. Le HT est le TTC / 1,2. Les deux ont 2 decimales.</li>
+        <li>Actif canal O et actif canal L valent Oui, Non ou En attente. En attente n’est ni Oui ni Non : il ne publie pas le canal et ne force pas le reassort.</li>
+        <li>Réassort automatique SAP (Activé, Désactivé, A désactiver), commande d’implantation envoyée (Oui / Non) et date de disponibilité produit sont dans les informations generales. Ils ne comptent pas dans la completion.</li>
+        <li>Réassort automatique SAP passe à « A désactiver » quand actif canal O et actif canal L valent tous les deux Non. Un canal vide n’est pas Non. Dans les autres cas, la valeur choisie (Activé ou Désactivé) reste. La liste est verrouillée seulement le temps que les deux canaux sont Non.</li>
+      </ul>
+      <p>
+        L’edition d’un attribut tient sur deux colonnes (identite, saisie) pour limiter le defilement. Quitter sans enregistrer demande confirmation. Un attribut systeme reste en lecture seule.
+      </p>
+
         Les codes attendus par IWI sont des attributs calcules du groupe IWI.
         Ils se deduisent du champ metier, ils ne se saisissent pas.
       </p>
       <ul>
         <li>Type : Optique = A, Solaire = B.</li>
         <li>Sous-type : Cercle = A, semi-cercle et nylor = B, sans cerclage = C (percee dans la legende IWI).</li>
-        <li>Matiere de la face : plastique et acetate = A, metal = C, titane = F, carbone = G, bois = H.</li>
+        <li>Type : Optique = A, Solaire = B, Clip = C, Masque = D, Prémontée = E. Ces cinq valeurs sont celles de la legende IWI.</li>
+        <li>Code marquage : reference monture, espace, code couleur, espace, calibre et nez colles. Exemple : 33513 545 4821.</li>
+        <li>Prescription : 0 pour une monture solaire, 1 pour une monture optique ou premontée.</li>
+        <li>Code douanier IWI, 10 chiffres, en SI sur le type de monture et la matiere : optique ou premontée plastique 9003110010, optique ou premontée metal ou titane 9003190030, optique ou premontée bois ou carbone 9003190090, solaire plastique 9004109100, solaire metal, titane, bois ou carbone 9004109900. MAP et CONCAT ne portent pas un croisement de deux champs. Le champ « Code douanier » a 8 chiffres de la fiche BDD reste un attribut a part.</li>
         <li>Matiere de la branche : meme lettre que la face, tant qu’il n’existe pas de champ branche.</li>
         <li>Utilisateur : Homme = A, Femme = B, Enfant et Junior = C, Mixte = D (unisexe chez IWI).</li>
         <li>Forme : aviateur 1, carree 2, clubmaster 3, masque 4, ovale 5, papillon 8, rectangle 9, ronde 10. Le libelle « rondes/ovales/pantos » reste vide : il melange plusieurs codes.</li>
@@ -186,7 +213,7 @@
           <tr><td>Lecture seule</td><td>Valeur affichee, non saisissable (dates systeme).</td></tr>
           <tr><td>Formule</td><td>CONCAT, SI, operations sur d’autres champs, DATE_MAJ (horodate le changement d’un champ), MAP (correspondance de valeurs), TODAY (date du jour). Deux passages pour les formules qui dependent d’une autre formule.</td></tr>
           <tr><td>Champ calcule</td><td>Fond jaune, non saisi. On peut forcer une valeur produit par produit, puis revenir au calcul. Une valeur forcee prime sur la formule.</td></tr>
-          <tr><td>Afficher seulement si</td><td>Sans condition, toujours visible. Condition vide ou non remplie : le champ est masque et sort de la completion.</td></tr>
+          <tr><td>Formule</td><td>CONCAT, SI, operations sur d’autres champs, DATE_MAJ (horodate le changement d’un champ), MAP (correspondance de valeurs), ROUNDUP (arrondi a l’entier superieur), TODAY (date du jour). Deux passages pour les formules qui dependent d’une autre formule.</td></tr>
           <tr><td>Agencement fiche</td><td>Les champs courts se rangent sur plusieurs colonnes. Texte long et image prennent toute la largeur. L’ordre est celui du groupe.</td></tr>
           <tr><td>Ouvrir la fiche</td><td>Un attribut peut etre marque « clic pour ouvrir » : dans la liste, cliquer sa valeur ouvre le produit. Le nom l’est.</td></tr>
         </tbody>

@@ -59,14 +59,37 @@
           <tr><td>Groupes</td><td>En vue detaillee, une fois une categorie choisie, seuls les groupes de cette categorie apparaissent. On masque un groupe pour retirer ses colonnes. Sans categorie, pas de barre de groupes.</td></tr>
         </tbody>
       </table>
+      <h2>En detail</h2>
+      <p>
+        La liste est l’ecran ou l’on retrouve un produit, comme dans l’Excel
+        qu’OctoPIM remplace. Elle ne montre que les produits des categories
+        en lecture. Un produit hors droit n’apparait ni ici, ni au dashboard,
+        ni a l’export.
+      </p>
+      <h3>Deux presentations</h3>
+      <ul>
+        <li>Synthese : colonnes choisies dans Administration, Vue de synthese. Identiques pour tous les roles. Les droits filtrent les lignes, pas les colonnes. Une colonne marquee « clic pour ouvrir » ouvre la fiche. Le nom le fait deja.</li>
+        <li>Detaillee : une categorie est obligatoire. La barre n’affiche que les groupes de cette categorie, dans l’ordre regle sur la categorie. Sans categorie choisie, la barre est masquee. Masquer un groupe retire ses colonnes. Un champ masque par une condition ou reserve a une autre categorie n’est pas une colonne.</li>
+      </ul>
+      <h3>Retrouver, agir</h3>
+      <ul>
+        <li>La recherche et les filtres de colonnes reduisent le tableau. Le filtre de colonne enumere les valeurs deja affichees. A 100 000 produits, cette enumeration ne tient pas : la cible est une recherche par saisie, pas une liste de toutes les valeurs.</li>
+        <li>Le tri se fait en cliquant l’en-tete, croissant puis decroissant.</li>
+        <li>La pagination est une preference d’application : defaut 50 lignes, 0 affiche tout, plafond de saisie 500. A 100 000 produits, la page ne charge pas le catalogue entier.</li>
+        <li>Nouveau produit n’apparait que si l’utilisateur peut ecrire au moins une categorie. La modale demande l’EAN, le nom et la categorie. Le code SAP peut rester vide. La fiche s’ouvre ensuite.</li>
+        <li>La selection permet de comparer (au moins deux produits, une categorie, ecarts en jaune en vue detaillee), de modifier en masse (la meme valeur, seulement la ou le droit d’ecriture existe) ou de supprimer en masse (confirmation, les produits sans droit de suppression sont ignores).</li>
+        <li>La jauge de completion ne compte que les champs saisissables : hors systeme, calcules, visuels et commentaire.</li>
+        <li>Un produit qui declenche une alerte porte un picto sur son nom. Le filtre venu du dashboard ne garde que ces produits, et le libelle de l’alerte reste visible tant que le filtre est actif.</li>
+      </ul>
       <div class="callout">
         <strong>Regles</strong>
         RG-LST-01 — L’utilisateur ne voit que les produits des categories en lecture.<br>
         RG-LST-02 — Le bouton Nouveau produit n’apparait que s’il a au moins une categorie en ecriture.<br>
         RG-LST-03 — La jauge de completion ne compte que les champs saisissables (hors systeme, calcules, visuels, commentaire).<br>
-        RG-LST-04 — La vue detaillee n’affiche que les groupes de la categorie filtree. « Toutes categories » masque cette barre.<br>
+        RG-LST-04 — La vue detaillee demande une categorie. Elle n’affiche que les groupes de cette categorie, dans l’ordre defini sur la categorie. Sans categorie, la barre n’apparait pas.<br>
         RG-LST-05 — Une modification ou une suppression de masse ne touche que les produits sur lesquels le droit correspondant existe.<br>
-        RG-LST-06 — <span class="tag tag-maq">Maquette</span> Le filtre de colonne enumere les valeurs visibles. <span class="tag tag-cible">Cible</span> A 100 000 produits, retrouver une reference se fait par saisie, pas par une liste de toutes les valeurs.
+        RG-LST-06 — <span class="tag tag-maq">Maquette</span> Le filtre de colonne enumere les valeurs visibles. <span class="tag tag-cible">Cible</span> A 100 000 produits, retrouver une reference se fait par saisie, pas par une liste de toutes les valeurs.<br>
+        RG-LST-07 — Un produit qui declenche une alerte porte un picto sur son nom. Le filtre venu du tableau de bord ne garde que ces produits, et le libelle de l’alerte reste visible tant que le filtre est actif.
       </div>
     </article>
   </main>

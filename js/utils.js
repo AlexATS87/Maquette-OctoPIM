@@ -5,6 +5,18 @@
 // ============================================================
 // NAVIGATION — PAGES
 // ============================================================
+function setUnsavedPrompt(kind) {
+  const lead = document.getElementById('unsaved-lead');
+  const stay = document.getElementById('unsaved-stay');
+  if (kind === 'attribut') {
+    if (lead) lead.textContent = 'Des modifications sont en cours sur cet attribut.';
+    if (stay) stay.textContent = 'Rester sur l\'attribut';
+  } else {
+    if (lead) lead.textContent = 'Des modifications sont en cours sur cette fiche produit.';
+    if (stay) stay.textContent = 'Rester sur la fiche';
+  }
+}
+
 function showPage(id, navEl) {
   // Interception dirty check si on quitte une fiche produit
   if (productDirty && currentProductId && id !== 'product-detail') {
@@ -46,6 +58,7 @@ function showPage(id, navEl) {
     'admin-suppliers': 'Conditions commerciales',
     'admin-prefs': 'Preferences',
     'admin-roles': 'Roles & permissions',
+    'admin-alerts': 'Alertes',
     'product-detail': 'Produit',
   };
   if (pageTitles[id]) updateTopbarTitle(pageTitles[id]);
@@ -61,6 +74,7 @@ function showPage(id, navEl) {
       renderProductsTable();
       break;
     case 'exports':
+      exportIgnoreSelection = false;
       renderExportPage();
       break;
     case 'imports':
@@ -99,6 +113,9 @@ function showPage(id, navEl) {
     case 'admin-group-edit':
       // Rendu géré par editAttrGroup()
       break;
+    case 'admin-alerts':
+      renderAlertsPage();
+      break;
     case 'admin-attribute-edit':
       // Rendu géré par editAttribute()
       break;
@@ -107,18 +124,59 @@ function showPage(id, navEl) {
   }
 }
 
+function alertOpLabel(op) {
+  return op === '>' ? 'supérieur à' : 'inférieur à';
+}
+
+function alertThresholdText(alert) {
+  const a = attributes.find(x => x.code === alert.attrCode);
+  if (a && isPercentAttr(a)) {
+    const shown = formatPercentDisplay(alert.threshold);
+    return (shown === '' ? '' : shown + ' %');
+  }
+  return String(alert.threshold);
+}
+
+function alertRuleText(alert) {
+  if (!alert) return '';
+  if (alert.name) return alert.name;
+  const a = attributes.find(x => x.code === alert.attrCode);
+  return (a ? a.name : alert.attrCode) + ' ' + alertOpLabel(alert.op) + ' ' + alertThresholdText(alert);
+}
+
+function productMatchesAlert(p, alert) {
+  if (!p || !alert) return false;
+  computeCalcFields(p);
+  const raw = p.fields ? p.fields[alert.attrCode] : '';
+  if (raw === undefined || raw === null || String(raw).trim() === '') return false;
+  const n = parseFloat(String(raw).replace(',', '.'));
+  if (!isFinite(n)) return false;
+  const limit = Number(alert.threshold);
+  if (alert.op === '>') return n > limit;
+  return n < limit;
+}
+
+function productAlertHits(p) {
+  return (alerts || []).filter(a => productMatchesAlert(p, a));
+}
+
+function productsForAlert(alert) {
+  return getAccessibleProducts().filter(p => productMatchesAlert(p, alert));
+}
+
 function renderAdminHome() {
-  // Mise à jour des compteurs sur la page d'accueil admin
   const elCats   = document.getElementById('admin-count-cats');
   const elGroups = document.getElementById('admin-count-groups');
   const elAttrs  = document.getElementById('admin-count-attrs');
   const elRoles  = document.getElementById('admin-count-roles');
   const elSup    = document.getElementById('admin-count-suppliers');
+  const elAlerts = document.getElementById('admin-count-alerts');
   if (elCats)   elCats.textContent   = categories.length;
   if (elGroups) elGroups.textContent = attrGroups.length;
   if (elAttrs)  elAttrs.textContent  = attributes.length;
   if (elRoles)  elRoles.textContent  = roles.length;
   if (elSup)    elSup.textContent    = suppliers.length;
+  if (elAlerts) elAlerts.textContent = (alerts || []).length;
 }
 
 // ============================================================
@@ -140,6 +198,7 @@ function renderAll() {
     case 'admin-synthese':     renderSyntheseAdmin();   break;
     case 'admin-suppliers':    renderSuppliersPage();   break;
     case 'admin-prefs':        renderPrefsPage();       break;
+    case 'admin-alerts':       renderAlertsPage();      break;
     case 'admin-roles':        renderRoles();           break;
     case 'product-detail':
       if (currentProductId) {
@@ -281,7 +340,12 @@ function getCompletionAttrs(product) {
 }
 
 function isAttrShown(product, attr) {
-  if (!attr || !attr.showIfAttr) return true;
+  if (!attr) return true;
+  if (attr.showIfCat) {
+    const allowed = Array.isArray(attr.showIfCat) ? attr.showIfCat : [attr.showIfCat];
+    if (!product || !allowed.includes(product.cat)) return false;
+  }
+  if (!attr.showIfAttr) return true;
   const pilot = attributes.find(a => a.code === attr.showIfAttr);
   if (!pilot) return true;
   const current = product && product.fields ? (product.fields[attr.showIfAttr] || '') : '';
@@ -445,6 +509,11 @@ function getBrandSettingAttrValue(b, attr) {
     const label = sa ? sa.name : b.segAttrCode;
     return b.segAttrValue ? (label + ' = ' + b.segAttrValue) : label;
   }
+  if (attr.code === '_supplierCode') return b.fournisseurCode || '';
+  if (attr.code === '_supplierTrigram') {
+    const s = (suppliers || []).find(x => x.code === b.fournisseurCode);
+    return (s && s.trigram) || '';
+  }
   const key = brandAttrStorageKey(attr);
   const v = b[key];
   if (isPercentBrandAttr(attr)) {
@@ -460,8 +529,8 @@ function getBrandSettingAttrValue(b, attr) {
 
 function getBrandSettingSortValue(b, attr) {
   if (!b || !attr) return '';
-  if (attr.code === 'fournisseur_code')
-    return supplierNameByCode(b.fournisseurCode) || b.fournisseurCode || '';
+  if (attr.code === 'fournisseur_code' || attr.code === '_supplierCode' || attr.code === '_supplierTrigram')
+    return getBrandSettingAttrValue(b, attr);
   if (attr.code === 'marque') return b.marque || '';
   if (attr.code === 'cat') return b.type || '';
   if (attr.code === 'segmentation') return getBrandSettingAttrValue(b, attr);
@@ -664,12 +733,24 @@ function eligibleBrandRows(p) {
   return brandSettings.filter(b => brandRowMatchesProduct(b, p));
 }
 
+function attrShownInList(attr) {
+  if (!attr || !attr.showIfCat) return true;
+  const catFilter = (document.getElementById('filter-cat') || {}).value || '';
+  if (!catFilter) return true;
+  const allowed = Array.isArray(attr.showIfCat) ? attr.showIfCat : [attr.showIfCat];
+  return allowed.includes(catFilter);
+}
+
 function suppliersForProduct(p) {
   let rows = eligibleBrandRows(p);
   const marque = ((p.fields || {}).marque || '').trim();
   if (marque) rows = rows.filter(b => b.marque === marque);
-  const codes = [...new Set(rows.map(b => b.fournisseurCode))];
-  return suppliers.filter(s => codes.includes(s.code));
+  const codes = new Set(rows.map(b => b.fournisseurCode));
+  const unscoped = suppliers.filter(s => !brandSettings.some(b => b.fournisseurCode === s.code));
+  unscoped.forEach(s => codes.add(s.code));
+  const current = (p.fields || {}).fournisseur_code || '';
+  if (current) codes.add(current);
+  return suppliers.filter(s => codes.has(s.code));
 }
 
 function marquesForProduct(p) {
@@ -936,6 +1017,7 @@ function lockProductSheet(p) {
   const locked = !(p && canEditProduct(p));
   root.classList.toggle('sheet-readonly', locked);
   root.querySelectorAll('input:not([type=hidden]), select, textarea').forEach(el => {
+    if (el.getAttribute('data-formula-lock') === '1') { el.disabled = true; return; }
     el.disabled = locked;
   });
 }
@@ -1344,6 +1426,7 @@ function visualThumb(product, size, code) {
 // ============================================================
 function onSearchInput() {
   _filterIncomplets = false;
+  _filterAlertId = null;
   currentPage = 1;
   renderProductsTable();
 }

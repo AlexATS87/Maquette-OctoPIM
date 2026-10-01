@@ -49,9 +49,22 @@
           <tr><td>Vue synthese</td><td><a href="synthese.html">Configuration de la vue de synthese</a></td></tr>
           <tr><td>Conditions commerciales</td><td><a href="conditions.html">Conditions commerciales</a></td></tr>
           <tr><td>Roles &amp; permissions</td><td><a href="roles.html">Roles et permissions</a></td></tr>
+          <tr><td>Alertes</td><td><a href="alertes.html">Alertes</a></td></tr>
           <tr><td>Preferences application</td><td>Pagination de la liste, seuil de completion. Distinct des preferences d’affichage utilisateur (theme).</td></tr>
         </tbody>
       </table>
+      <h2>En detail</h2>
+      <p>
+        L’administration parametre le referentiel sans redeploiement. Le menu
+        n’apparait que si au moins un module est lisible. Chaque carte ouvre un
+        module : categories, groupes, attributs, conditions, roles, alertes, vue
+        de synthese, preferences.
+      </p>
+      <ul>
+        <li>Les preferences utilisateur (theme, affichage) ne sont pas les preferences d’application (pagination, seuil de completion).</li>
+        <li>Pagination de la liste : 0 a 500, defaut 50. 0 desactive la pagination.</li>
+        <li>Seuil de completion : 0 a 100, defaut 80. Il sert au dashboard (produits incomplets) et au filtre de la liste. La couleur des barres de completion suit les seuils parametres ici.</li>
+      </ul>
       <div class="callout">
         <strong>Regles</strong>
         RG-ADM-01 — Le menu Administration n’apparait que si au moins un module est lisible.<br>

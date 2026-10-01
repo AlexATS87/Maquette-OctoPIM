@@ -62,6 +62,18 @@
   G --> R[Role OctoPIM]
   R --> D[Droits : menus, categories, admin]</pre>
       </details>
+      <h2>En detail</h2>
+      <p>
+        Un utilisateur est un compte rattache a un role. Les droits (menus,
+        categories, modules, lecture, ecriture, suppression) viennent du role,
+        jamais de la personne. Dans la maquette, on change de compte localement.
+        La cible est Okta : OctoPIM n’est pas l’annuaire, il n’y a pas de mot de
+        passe local, et les groupes Okta portent deja les noms des roles.
+      </p>
+      <p>
+        Si les droits ne permettent pas de modifier ou de supprimer, l’utilisateur
+        contacte Alexis Beranger, administrateur de la solution.
+      </p>
       <div class="callout">
         <strong>Regles</strong>
         RG-USR-01 — Les droits ne se posent pas sur la personne, uniquement sur le role.<br>
