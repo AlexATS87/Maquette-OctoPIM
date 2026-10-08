@@ -47,14 +47,14 @@
           <tr><th>Action</th><th>Comportement</th></tr>
         </thead>
         <tbody>
-          <tr><td>Retrouver un produit</td><td>Besoin : identifier une reference parmi un catalogue qui visera plus de 100 000 produits, avec la meme facilite que les filtres par colonne d’Excel. La maquette propose une recherche globale et des filtres de colonne. A challenger : afficher toutes les valeurs distinctes d’une colonne ne tiendra pas a ce volume.</td></tr>
+          <tr><td>Retrouver un produit</td><td>Un champ de recherche, a partir de deux caracteres : code article magasin, code article web, EAN, designation web, designation magasin, marque. Le serveur renvoie les correspondances, deja limitees aux categories lisibles.</td></tr>
           <tr><td>Filtre categorie</td><td>Restreint a une famille. Le tri/filtre colonne Categorie reste possible en synthese.</td></tr>
           <tr><td>Vue synthese</td><td>Colonnes definies dans Administration &gt; Vue de synthese (visuel, nom, SAP, EAN, categorie, dates, completion…).</td></tr>
           <tr><td>Vue detaillee</td><td>Colonnes des groupes de la categorie filtree. Sans categorie choisie, la barre de groupes est masquee.</td></tr>
           <tr><td>Completion</td><td>Jauge a gauche du nom. Seuil parametrable (defaut 80 %).</td></tr>
           <tr><td>Nouveau produit</td><td>Modale : EAN, nom, categorie obligatoires. Redirige vers la fiche.</td></tr>
           <tr><td>Tri</td><td>Clic sur l’en-tete d’une colonne, croissant puis decroissant.</td></tr>
-          <tr><td>Pagination</td><td>Preference d’application. Defaut 50 lignes. 0 affiche toute la liste. Plafond de saisie 500. <span class="tag tag-cible">Cible</span> a 100 000 produits, la page ne charge pas tout le catalogue d’un coup.</td></tr>
+          <tr><td>Pagination</td><td>Une page a la fois. Defaut 50 lignes. L’administrateur choisit 25, 50 ou 100. Il n’y a pas d’option pour afficher tout le catalogue.</td></tr>
           <tr><td>Selection</td><td>Cases a cocher. Comparer demande au moins deux produits et une categorie (vue detaillee, ecarts en jaune). Modifier en masse ecrit la meme valeur sur la selection, seulement la ou l’utilisateur a le droit d’ecrire. Supprimer en masse demande confirmation et ignore les produits sans droit de suppression.</td></tr>
           <tr><td>Groupes</td><td>En vue detaillee, une fois une categorie choisie, seuls les groupes de cette categorie apparaissent. On masque un groupe pour retirer ses colonnes. Sans categorie, pas de barre de groupes.</td></tr>
         </tbody>
@@ -73,9 +73,12 @@
       </ul>
       <h3>Retrouver, agir</h3>
       <ul>
-        <li>La recherche et les filtres de colonnes reduisent le tableau. Le filtre de colonne enumere les valeurs deja affichees. A 100 000 produits, cette enumeration ne tient pas : la cible est une recherche par saisie, pas une liste de toutes les valeurs.</li>
-        <li>Le tri se fait en cliquant l’en-tete, croissant puis decroissant.</li>
-        <li>La pagination est une preference d’application : defaut 50 lignes, 0 affiche tout, plafond de saisie 500. A 100 000 produits, la page ne charge pas le catalogue entier.</li>
+        <li>Le catalogue vise depasse 100&nbsp;000 produits. La liste ne le charge jamais en entier. Chaque affichage est une demande au serveur : recherche, filtres, tri, numero de page, taille de page, colonnes de la vue. La reponse contient le nombre de correspondances et les lignes de cette page seulement.</li>
+        <li>La recherche porte sur le code article magasin, le code article web, l’EAN, la designation web, la designation magasin et la marque. Elle demarre a deux caracteres.</li>
+        <li>Un filtre dont les valeurs sont peu nombreuses (categorie, canal Oui / Non / En attente, alerte, incomplet) se choisit dans une liste. Ces listes ne grandissent pas avec le nombre de produits.</li>
+        <li>Un filtre sur une colonne libre (couleur, dimensions, designation, code) est une saisie « contient ». On n’affiche pas la liste de toutes les valeurs distinctes de la colonne. Le fournisseur se cherche par son nom ou son code.</li>
+        <li>Le tri se fait en cliquant l’en-tete, croissant puis decroissant. Il s’applique au resultat, cote serveur, puis la page affichee suit.</li>
+        <li>La page fait 50 lignes par defaut. L’administrateur choisit 25, 50 ou 100 dans les preferences d’application. Ouvrir une fiche charge ce produit, pas la page de liste.</li>
         <li>Nouveau produit n’apparait que si l’utilisateur peut ecrire au moins une categorie. La modale demande l’EAN, le nom et la categorie. Le code SAP peut rester vide. La fiche s’ouvre ensuite.</li>
         <li>La selection permet de comparer (au moins deux produits, une categorie, ecarts en jaune en vue detaillee), de modifier en masse (la meme valeur, seulement la ou le droit d’ecriture existe) ou de supprimer en masse (confirmation, les produits sans droit de suppression sont ignores).</li>
         <li>La jauge de completion ne compte que les champs saisissables : hors systeme, calcules, visuels et commentaire.</li>
@@ -88,7 +91,7 @@
         RG-LST-03 — La jauge de completion ne compte que les champs saisissables (hors systeme, calcules, visuels, commentaire).<br>
         RG-LST-04 — La vue detaillee demande une categorie. Elle n’affiche que les groupes de cette categorie, dans l’ordre defini sur la categorie. Sans categorie, la barre n’apparait pas.<br>
         RG-LST-05 — Une modification ou une suppression de masse ne touche que les produits sur lesquels le droit correspondant existe.<br>
-        RG-LST-06 — <span class="tag tag-maq">Maquette</span> Le filtre de colonne enumere les valeurs visibles. <span class="tag tag-cible">Cible</span> A 100 000 produits, retrouver une reference se fait par saisie, pas par une liste de toutes les valeurs.<br>
+        RG-LST-06 — La liste demande une page au serveur. Elle ne charge pas le catalogue. La recherche, a partir de deux caracteres, porte sur le code article magasin, le code article web, l’EAN, les designations et la marque. Une colonne libre se filtre par saisie. Une colonne a peu de valeurs se filtre par liste. La page fait 25, 50 ou 100 lignes (defaut 50). Il n’existe pas d’affichage de tout le catalogue.<br>
         RG-LST-07 — Un produit qui declenche une alerte porte un picto sur son nom. Le filtre venu du tableau de bord ne garde que ces produits, et le libelle de l’alerte reste visible tant que le filtre est actif.
       </div>
     </article>

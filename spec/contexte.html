@@ -13,12 +13,11 @@
       <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
     </div>
     <article id="spec-article">
-      <h1>Contexte du projet</h1>
+      <h1>Systèmes et évolutivité</h1>
       <p class="lead">
-        OctoPIM est le futur referentiel produit unique. Il remplace d’abord
+        OctoPIM est le référentiel produit unique. Il remplace d’abord
         le fichier Excel qui sert aujourd’hui de base, et doit pouvoir
-        remplacer a terme le PIM actuel (Akeneo). D’ou l’exigence de
-        parametrage : l’outil evolue sans tout recoder.
+        remplacer le PIM actuel (Akeneo).
       </p>
 
       <h2>Pourquoi ce projet ?</h2>
@@ -77,33 +76,36 @@
           <tr><th>Systeme</th><th>Role vis-a-vis d’OctoPIM</th><th>Statut</th></tr>
         </thead>
         <tbody>
-          <tr><td>Excel</td><td>Source actuelle a remplacer (saisie et referentiel de travail).</td><td><span class="tag tag-cible">Cible</span> remplacement</td></tr>
-          <tr><td>Akeneo</td><td>PIM actuel. OctoPIM doit etre assez parametrable pour le remplacer.</td><td><span class="tag tag-cible">Cible</span> remplacement possible</td></tr>
-          <tr><td>SAP</td><td>Gestion des stocks et donnees logistiques / codes article.</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
-          <tr><td>Babil</td><td>DAM : visuels produits (face, 3/4, ambiance…).</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
-          <tr><td>Snowflake</td><td>Exploitation data a partir du referentiel unique.</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
-          <tr><td>Cosium</td><td>Outil de caisse : consomme la fiche produit.</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
-          <tr><td>Osmose</td><td>Outil metier a interfacer.</td><td><span class="tag tag-cible">Cible</span> interface</td></tr>
+          <tr><td>Excel</td><td>Source actuelle de saisie. OctoPIM la remplace.</td><td>Remplacement</td></tr>
+          <tr><td>Akeneo</td><td>PIM actuel. OctoPIM doit pouvoir le remplacer, parce qu’il se paramètre.</td><td>Remplacement possible</td></tr>
+          <tr><td>SAP</td><td>Stocks, logistique, codes article.</td><td>Alimente le référentiel</td></tr>
+          <tr><td>Babil</td><td>Visuels produits (face, trois-quarts, ambiance).</td><td>Fournit les visuels</td></tr>
+          <tr><td>Snowflake</td><td>Exploitation de la donnée du référentiel.</td><td>Lit le référentiel</td></tr>
+          <tr><td>Cosium</td><td>Caisse. Consomme la fiche produit.</td><td>Lit le référentiel</td></tr>
+          <tr><td>Osmose</td><td>Outil métier relié au référentiel.</td><td>Lit ou alimente le référentiel</td></tr>
+          <tr><td>Okta</td><td>Comptes. Le groupe porte le nom du rôle OctoPIM.</td><td>Connexion</td></tr>
         </tbody>
       </table>
 
-      <h2>Ce que la maquette couvre (et ne couvre pas)</h2>
-      <table>
-        <thead>
-          <tr><th>Sujet</th><th>Maquette</th><th>Cible</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Saisie produit, attributs, groupes, categories</td><td>Ecrans cliquables, jeux d’essai</td><td>Meme logique, persistance et API</td></tr>
-          <tr><td>Import / export Excel</td><td>Fichier traite dans le navigateur</td><td>Traitement serveur, journal d’erreurs</td></tr>
-          <tr><td>Visuels</td><td>Depot local</td><td>Babil</td></tr>
-          <tr><td>Authentification</td><td>Changement d’utilisateur local</td><td>Okta (groupes deja nommes sur les roles)</td></tr>
-          <tr><td>Interfaces SAP / Snowflake / Cosium / Osmose</td><td>Hors maquette</td><td>A specifier par flux (in / out, frequence)</td></tr>
-        </tbody>
-      </table>
+      <h2>Évoluer sans développement</h2>
+      <p>
+        La solution doit permettre d’évoluer facilement sans passer par du
+        développement. Une grande importance est donc mise sur le paramétrage
+        et l’administration : lorsqu’une règle change (un champ, une famille,
+        une colonne de liste, un seuil, un droit), un administrateur la prend
+        en compte dans l’outil, sans attendre une évolution logicielle.
+      </p>
       <div class="callout">
-        <strong>Regle</strong>
-        RG-CTX-01 — OctoPIM est le referentiel produit unique. Les autres outils
-        ne recoivent pas une copie Excel divergente : ils s’appuient sur ce referentiel.
+        <strong>Règle</strong>
+        RG-CTX-01 — OctoPIM est le référentiel produit unique. Les autres outils
+        s’appuient sur ce référentiel. Ils ne reçoivent pas une copie Excel divergente.<br>
+        RG-CTX-02 — Un administrateur fait évoluer le modèle (attribut, groupe,
+        catégorie, colonne, seuil, alerte, droit) sans déploiement.<br>
+        RG-CTX-03 — Les visuels viennent de Babil. Les comptes viennent d’Okta :
+        le groupe Okta porte le nom du rôle. Le catalogue visé est d’environ
+        100&nbsp;000 produits. La façon de les retrouver est décrite sur la liste des produits.<br>
+        RG-CTX-04 — Cette spécification décrit le référentiel et son usage.
+        Elle ne décrit pas les flux d’échange avec SAP, Snowflake, Cosium et Osmose.
       </div>
     </article>
   </main>

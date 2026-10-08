@@ -13,20 +13,14 @@
       <button type="button" class="btn-copy" onclick="copySpecForConfluence()">Copier pour Confluence</button>
     </div>
     <article id="spec-article">
-      <h1>Sommaire — specifications OctoPIM</h1>
+      <h1>Sommaire — spécifications OctoPIM</h1>
       <p class="lead">
-        Ce dossier HTML est la spec vivante du projet. Elle se lit dans le navigateur
-        (<a href="http://127.0.0.1:8767/spec/">http://127.0.0.1:8767/spec/</a>)
-        et se colle dans Confluence via le bouton en haut a droite
-        (titres, tableaux, images et schemas).
+        Deux lectures. Le cadrage dit pourquoi OctoPIM existe et à quels
+        systèmes il se relie. Le fonctionnement de l’outil est la partie
+        à lire pour construire : d’abord les propriétés (de quoi est fait
+        un produit, et comment on le paramètre), ensuite les fonctionnalités
+        (ce que l’utilisateur fait, dans l’ordre de son arrivée dans l’outil).
       </p>
-      <div class="callout warn">
-        <strong>Maquette vs cible</strong>
-        Chaque page distingue le comportement deja visible dans la maquette
-        (<span class="tag tag-maq">Maquette</span>) de ce qui doit etre construit
-        (<span class="tag tag-cible">Cible</span>). Sans ce tag, un placeholder
-        de la maquette peut etre pris pour une exigence.
-      </div>
       <h2>Comment coller dans Confluence</h2>
       <ol>
         <li>Ouvrir la page dans le navigateur.</li>
@@ -40,27 +34,31 @@
           <tr><th>#</th><th>Page</th><th>Intention</th></tr>
         </thead>
         <tbody>
-          <tr><td>01</td><td><a href="contexte.html">Contexte du projet</a></td><td>Pourquoi OctoPIM, Excel, Akeneo, SAP, Babil, Snowflake, Cosium, Osmose.</td></tr>
-          <tr><td>02</td><td><a href="produit.html">Definition d’un produit</a></td><td>Qu’est-ce qu’un produit, que porte-t-il, cycle de vie.</td></tr>
-          <tr><td>03</td><td><a href="attributs.html">Gestion des attributs</a></td><td>Contrat d’un champ, catalogue, rattachement aux groupes.</td></tr>
+          <tr><td colspan="3"><strong>Cadrage</strong></td></tr>
+          <tr><td>01</td><td><a href="contexte.html">Systèmes et évolutivité</a></td><td>Référentiel unique, systèmes reliés, paramétrage sans développement.</td></tr>
+          <tr><td colspan="3"><strong>Fonctionnement — Propriétés</strong></td></tr>
+          <tr><td>02</td><td><a href="produit.html">Définition d’un produit</a></td><td>Ce qu’est une fiche, ce qu’elle porte, comment on la reconnaît.</td></tr>
+          <tr><td>03</td><td><a href="attributs.html">Gestion des attributs</a></td><td>Contrat d’un champ, rattachement aux groupes.</td></tr>
           <tr><td>04</td><td><a href="groupes.html">Groupes d’attributs</a></td><td>Onglets de la fiche, ordre, appartenances multiples.</td></tr>
-          <tr><td>05</td><td><a href="categories.html">Categories de produit</a></td><td>Familles (Montures, Lentilles…), onglets exposes.</td></tr>
-          <tr><td>06</td><td><a href="liste-produits.html">Liste des produits</a></td><td>Recherche, vues synthese / detaillee, creation.</td></tr>
-          <tr><td>07</td><td><a href="conditions.html">Conditions commerciales</a></td><td>Ligne marque × fournisseur × type × segmentation.</td></tr>
-          <tr><td>08</td><td><a href="import.html">Fonction d’import</a></td><td>Ajout / maj / suppression en masse.</td></tr>
-          <tr><td>09</td><td><a href="export.html">Fonction d’export</a></td><td>Extraction Excel du perimetre filtre.</td></tr>
-          <tr><td>10</td><td><a href="dashboard.html">Dashboard</a></td><td>Volume, completude, vue fournisseur.</td></tr>
-          <tr><td>11</td><td><a href="administration.html">Administration</a></td><td>Parametrage du referentiel.</td></tr>
-          <tr><td>12</td><td><a href="roles.html">Roles et permissions</a></td><td>Menus, categories, modules, lecture / ecriture / suppression.</td></tr>
-          <tr><td>13</td><td><a href="synthese.html">Vue de synthese</a></td><td>Colonnes de la liste produits.</td></tr>
-          <tr><td>14</td><td><a href="utilisateurs.html">Gestion des utilisateurs</a></td><td>Comptes, Okta, affectation des roles.</td></tr>
-          <tr><td>15</td><td><a href="mdd.html">Modele de donnees</a></td><td>Entites et relations, sans jargon d’implementation.</td></tr>
-          <tr><td>16</td><td><a href="workflows.html">Workflows d’utilisation</a></td><td>Parcours metier avec diagrammes.</td></tr>
+          <tr><td>05</td><td><a href="categories.html">Catégories de produit</a></td><td>Familles, onglets exposés.</td></tr>
+          <tr><td>06</td><td><a href="conditions.html">Conditions commerciales</a></td><td>Ligne marque × fournisseur × type × segmentation.</td></tr>
+          <tr><td>07</td><td><a href="alertes.html">Alertes</a></td><td>Seuil sur un attribut numérique, sans bloquer la saisie.</td></tr>
+          <tr><td>08</td><td><a href="synthese.html">Vue de synthèse</a></td><td>Colonnes de travail de la liste, communes à tous.</td></tr>
+          <tr><td>09</td><td><a href="roles.html">Rôles et permissions</a></td><td>Menus, catégories, modules, lecture, écriture, suppression.</td></tr>
+          <tr><td>10</td><td><a href="utilisateurs.html">Gestion des utilisateurs</a></td><td>Connexion Okta, rôle porté par le groupe.</td></tr>
+          <tr><td>11</td><td><a href="administration.html">Administration</a></td><td>Où l’on paramètre le référentiel.</td></tr>
+          <tr><td>12</td><td><a href="mdd.html">Modèle de données</a></td><td>Entités et relations.</td></tr>
+          <tr><td colspan="3"><strong>Fonctionnement — Fonctionnalités</strong></td></tr>
+          <tr><td>13</td><td><a href="dashboard.html">Dashboard</a></td><td>Page d’arrivée : volume, qualité, alertes, fournisseurs.</td></tr>
+          <tr><td>14</td><td><a href="liste-produits.html">Liste des produits</a></td><td>Retrouver un produit parmi 100&nbsp;000, ouvrir la fiche, créer.</td></tr>
+          <tr><td>15</td><td><a href="import.html">Fonction d’import</a></td><td>Ajout, mise à jour, suppression en masse.</td></tr>
+          <tr><td>16</td><td><a href="export.html">Fonction d’export</a></td><td>Extraction du périmètre filtré.</td></tr>
+          <tr><td>17</td><td><a href="workflows.html">Workflows d’utilisation</a></td><td>Qui fait quoi, dans quel ordre.</td></tr>
         </tbody>
       </table>
       <h2>Principes transverses</h2>
       <ul>
-        <li>Le PIM doit rester <strong>parametrable</strong> : attributs, groupes, categories et colonnes de liste se configurent sans redeploiement.</li>
+        <li>La solution évolue sans développement. Attributs, groupes, catégories, colonnes, seuils et droits se règlent dans l’administration.</li>
         <li>Un identifiant d’attribut sert a l’import, l’export et les formules — on le nomme « identifiant » dans cette spec, pas par son nom interne.</li>
         <li>Les visuels, schemas et regles vivent <strong>dans la meme section</strong> que l’explication (pourquoi / comment).</li>
       </ul>

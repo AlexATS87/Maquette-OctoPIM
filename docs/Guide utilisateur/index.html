@@ -34,7 +34,7 @@
     <h2>Retrouver un produit</h2>
     <ul>
       <li>La liste ne montre que les categories que vous avez le droit de lire.</li>
-      <li>Utilisez la recherche, le filtre de categorie, le tri sur une colonne.</li>
+      <li>Saisissez au moins deux caracteres : code magasin, code web, EAN, designation ou marque. Un seul caractere ne lance pas la recherche. La liste affiche une page de resultats (50 lignes par defaut, 25, 50 ou 100 selon le reglage). Une colonne a liste fermee (categorie, canal, matiere) se coche. Une colonne libre se filtre en tapant un extrait. La marque et le fournisseur se choisissent dans des suggestions.</li>
       <li>La vue Synthese reprend les colonnes definies pour tout le monde. La vue Detaillee montre les groupes de la categorie choisie. Sans categorie, ces groupes ne s’affichent pas.</li>
       <li>Cliquez le nom pour ouvrir la fiche. Un picto signale un produit sous ou au-dessus d’un seuil.</li>
       <li>Depuis le tableau de bord, une carte d’alerte ouvre la liste deja filtree sur ce seuil.</li>
@@ -45,6 +45,7 @@
   <section>
     <h2>Completer une fiche</h2>
     <ul>
+      <li>Une liste deroulante se remplit en tapant le debut de la valeur. Les suggestions se reduisent a mesure que vous saisissez. C’est le moyen de trouver une marque, une matiere ou toute autre liste longue.</li>
       <li>Les onglets sont les groupes de la categorie du produit. Il n’y a pas d’onglet Synthese.</li>
       <li>Les champs courts se rangent cote a cote. Un texte long ou une image prend toute la largeur.</li>
       <li>Un champ avec un picto entre dans la completion. Sans picto, il est optionnel. Un champ a completer encore vide a un fond rose pale.</li>
@@ -67,7 +68,7 @@
     <ul>
       <li>Choisissez ajout, modification ou suppression, puis la categorie et le fichier.</li>
       <li>Chaque colonne se relie a un identifiant d’attribut. EAN, nom et categorie doivent etre presents pour un ajout ou une modification.</li>
-      <li>Un produit deja connu est reconnu d’abord par l’EAN, sinon par le SAP.</li>
+      <li>Un produit deja connu est reconnu d’abord par l’EAN, sinon par le code article magasin. Un EAN, un code magasin ou un code web ne peut pas etre porte par deux produits.</li>
       <li>La suppression exige l’EAN ou le SAP, et le droit de supprimer.</li>
       <li>Si l’import est refuse, c’est un droit ou un champ obligatoire : contactez Alexis Béranger si le droit vous manque.</li>
     </ul>

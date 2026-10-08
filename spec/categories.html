@@ -39,7 +39,7 @@
         <li>Clef des conditions commerciales (avec marque, fournisseur, segmentation).</li>
       </ul>
 
-      <h2>Composition (maquette)</h2>
+      <h2>Composition</h2>
       <table>
         <thead>
           <tr><th>Categorie</th><th>Onglets (groupes)</th></tr>
@@ -88,7 +88,7 @@
       <h3>Accessoires</h3>
       <p>
         Memes onglets Conditions commerciales, Tarification et SEO que les montures,
-        plus Caracteristiques accessoire. Le jeu d’essai vient de la BDD Accessoires.
+        plus Caracteristiques accessoire.
         Le nom est la designation web. L’EAN est le GTIN. Le code e-commerce est le
         code article web. Le code SAP est le code article magasin. Les canaux
         reprennent l’etat Optic 2000 et Lissac : Active = Oui, Desactive = Non,
@@ -107,13 +107,9 @@
         RG-CAT-01 — Un produit a une seule categorie.<br>
         RG-CAT-02 — Les onglets de la fiche et la barre de la liste detaillee sont les groupes rattaches a la categorie. L’ordre se regle en glissant les groupes dans l’edition de la categorie. La vue detaillee demande une categorie.<br>
         RG-CAT-03 — Une nouvelle categorie recoit des droits par defaut (admin systeme : tout ; consultation : lecture ; les autres : rien) — a ajuster ensuite.<br>
-        RG-CAT-04 — Accessoires expose les memes onglets Conditions commerciales, Tarification et SEO que les montures. Le jeu d’essai vient de la BDD Accessoires : nom = designation web, EAN = GTIN, code e-commerce = code article web, code SAP = code article magasin, canaux O/L = etat Optic 2000 / Lissac (Activé = Oui, Désactivé = Non, En attente = En attente). Couleur est le meme attribut que sur la monture. Matiere accessoire, dimensions, conditionnement d’origine, annee de lancement et designation magasin restent dans Caracteristiques accessoire. Les prix calcules de l’accessoire sont des attributs a part (PV TTC arrondi, PV HT, marge HT, taux accessoire) : une formule ne change pas selon la categorie.<br>
-        RG-CAT-05 — Lentilles et PEL partagent le groupe « Tarification lentilles + PEL ». Il ne contient que le prix de vente TTC et le prix de vente HT, tous deux a 2 decimales. La marque des lentilles est le meme attribut que les conditions commerciales, en tete de Caracteristiques lentille.
-      </div>
-      <div class="callout cible">
-        <strong>Cible</strong>
-        Le parametrage doit permettre d’ajouter une famille sans deploiement
-        (nouvelle categorie + groupes existants ou nouveaux).
+        RG-CAT-04 — Accessoires expose les memes onglets Conditions commerciales, Tarification et SEO que les montures. Le nom est la designation web. L’EAN est le GTIN. Le code e-commerce est le code article web. Le code SAP est le code article magasin. Les canaux O et L reprennent l’etat Optic 2000 et Lissac : Activé = Oui, Désactivé = Non, En attente = En attente. Couleur est le meme attribut que sur la monture. Matiere accessoire, dimensions, conditionnement d’origine, annee de lancement et designation magasin restent dans Caracteristiques accessoire. Les prix calcules de l’accessoire sont des attributs a part (PV TTC arrondi, PV HT, marge HT, taux accessoire) : une formule ne change pas selon la categorie.<br>
+        RG-CAT-05 — Lentilles et PEL partagent le groupe « Tarification lentilles + PEL ». Il ne contient que le prix de vente TTC et le prix de vente HT, tous deux a 2 decimales. La marque des lentilles est le meme attribut que les conditions commerciales, en tete de Caracteristiques lentille.<br>
+        RG-CAT-06 — Une nouvelle famille s’ajoute sans développement : on crée la catégorie, on y rattache des groupes existants ou nouveaux, puis on ajuste les droits.
       </div>
     </article>
   </main>

@@ -1433,18 +1433,12 @@ function renderPrefsPage() {
       <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:20px">Preferences application</div>
 
       <div class="field-row" style="margin-bottom:20px">
-        <div class="field-label" style="margin-bottom:6px">
-          Nombre de produits par page
-          <span style="font-size:11px;color:#a0b0c0;margin-left:6px">(0 = tout afficher)</span>
-        </div>
+        <div class="field-label" style="margin-bottom:6px">Nombre de produits par page</div>
         <div style="display:flex;gap:10px;align-items:center">
-          <input type="number" class="field-input" id="pref-page-size"
-            value="${appPrefs.pageSize}" min="0" max="500" step="10"
-            style="width:120px" onwheel="event.preventDefault();this.blur()">
+          <select class="field-input form-select" id="pref-page-size" style="width:120px">
+            ${[25, 50, 100].map(n => `<option value="${n}" ${Number(appPrefs.pageSize) === n ? 'selected' : ''}>${n}</option>`).join('')}
+          </select>
           <span style="font-size:12px;color:#a0b0c0">produits / page</span>
-        </div>
-        <div style="font-size:11px;color:#a0b0c0;margin-top:4px">
-          Valeurs recommandees : 25, 50, 100. Mettre 0 pour desactiver la pagination.
         </div>
       </div>
 
@@ -1469,7 +1463,7 @@ function savePrefs() {
   if (!requirePerm(canMod('mod_prefs', 'w'))) return;
   const ps = parseInt(document.getElementById('pref-page-size').value);
   const sc = parseInt(document.getElementById('pref-seuil').value);
-  if (!isNaN(ps) && ps >= 0) { appPrefs.pageSize = ps; currentPage = 1; }
+  if (ps === 25 || ps === 50 || ps === 100) { appPrefs.pageSize = ps; currentPage = 1; }
   if (!isNaN(sc) && sc >= 0 && sc <= 100) seuilCompletion = sc;
   showPage('admin', null);
   renderAll();

@@ -86,8 +86,10 @@
         <li>Une alerte declenchee s’affiche sous le titre et sur le champ concerne.</li>
       </ul>
       <p>
-        On reconnait un produit a l’import d’abord par l’EAN, sinon par le SAP.
-        L’unicite de l’EAN n’est pas tranchee.
+        On reconnait un produit a l’import d’abord par l’EAN, sinon par le code
+        article magasin. Un EAN n’appartient qu’a un seul produit. Un code article
+        magasin renseigne n’appartient qu’a un seul produit. Un code article web
+        renseigne non plus. Creer ou importer un doublon est refuse.
       </p>
       <div class="callout">
         <strong>Regles</strong>
@@ -103,12 +105,8 @@
         RG-PRD-10 — Le statut de publication se deduit des canaux actif O et actif L. Sa date ne bouge que si ce statut change.<br>
         RG-PRD-11 — Un champ qui compte dans la completion et qui est vide a un fond rose pale. Ce n’est pas une erreur de saisie.<br>
         RG-PRD-12 — Le panneau Conditions commerciales de la fiche affiche le code fournisseur et le trigramme du fournisseur lie, en plus du bareme.<br>
-        RG-PRD-13 — Une alerte declenchee sur la fiche s’affiche sous le titre et sur le champ concerne.
-      </div>
-      <div class="callout cible">
-        <strong>Cible</strong>
-        Unicite EAN a confirmer (flag d’unicite). Cycle de vie referentiel
-        (brouillon / valide / archive) n’est pas dans la maquette.
+        RG-PRD-13 — Une alerte declenchee sur la fiche s’affiche sous le titre et sur le champ concerne.<br>
+        RG-PRD-14 — Un EAN identifie un seul produit. Un code article magasin renseigne aussi. Un code article web renseigne aussi. Un doublon est refuse a la creation et a l’import.
       </div>
     </article>
   </main>

@@ -132,13 +132,8 @@ function getFilteredProductsFromSnapshot() {
     if (!canCat(p.cat, 'r')) return false;
     if (catFilter && p.cat !== catFilter) return false;
     computeCalcFields(p);
-    const allText = Object.values(p.fields).join(' ').toLowerCase() + ' ' + (p.cat || '').toLowerCase();
-    if (searchVal && !allText.includes(searchVal.toLowerCase())) return false;
-    for (const code in snap.colFilters) {
-      const allowed = snap.colFilters[code];
-      const val     = (p.fields[code] !== undefined ? p.fields[code] : p[code] || '').toString().trim();
-      if (!allowed.has(val)) return false;
-    }
+    if (!productMatchesSearch(p, searchVal)) return false;
+    if (!productPassesColFilters(p, snap.colFilters)) return false;
     return true;
   });
 }

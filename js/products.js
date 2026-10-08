@@ -26,30 +26,182 @@ function getListColValue(p, code) {
   return v == null ? '' : String(v).trim();
 }
 
+const PRODUCT_SEARCH_FIELDS = ['sap', 'code_ecommerce', 'ean', 'nom', 'designation_magasin', 'marque'];
+
+function productMatchesSearch(p, raw) {
+  const q = String(raw || '').trim().toLowerCase();
+  if (q.length < 2) return true;
+  return PRODUCT_SEARCH_FIELDS.some(code => getListColValue(p, code).toLowerCase().includes(q));
+}
+
+function colFilterMode(code) {
+  if (code === 'fournisseur_code' || code === 'marque') return 'suggest';
+  if (code === 'cat') return 'list';
+  const attr = (attributes || []).find(a => a.code === code);
+  if (!attr) return 'contains';
+  if (attr.type === 'Simple select' || attr.type === 'Multi select' || attr.type === 'Oui / Non') {
+    if (listOptions(code).length) return 'list';
+  }
+  return 'contains';
+}
+
+function listOptions(code) {
+  if (code === 'cat') return getReadableCategories().map(c => c.name).sort((a, b) => a.localeCompare(b, 'fr'));
+  const attr = (attributes || []).find(a => a.code === code);
+  if (!attr) return [];
+  if (attr.type === 'Oui / Non') return (attr.options && attr.options.length) ? attr.options.slice() : ['Oui', 'Non'];
+  return (attr.options || []).slice();
+}
+
+function suggestSource(code) {
+  if (code === 'fournisseur_code') return (suppliers || []).map(s => s.name).filter(Boolean);
+  if (code === 'marque') return [...new Set((brandSettings || []).map(b => b.marque).filter(Boolean))];
+  return [];
+}
+
+function displayedColValue(p, code) {
+  const raw = getListColValue(p, code);
+  if (code !== 'fournisseur_code') return raw;
+  const s = (suppliers || []).find(x => x.code === raw || x.name === raw);
+  return s ? s.name : raw;
+}
+
+function valueMatchesColFilter(code, value, filter) {
+  if (filter == null) return true;
+  const text = value == null ? '' : String(value);
+  const asSet = filter instanceof Set ? filter : (Array.isArray(filter) ? new Set(filter) : null);
+  if (asSet) return asSet.has(text.trim());
+  if (filter.kind === 'list') {
+    const set = filter.values instanceof Set ? filter.values : new Set(filter.values || []);
+    const attr = (attributes || []).find(a => a.code === code);
+    if (attr && attr.type === 'Multi select') return [...set].some(opt => text.includes(opt));
+    return set.has(text.trim());
+  }
+  if (filter.kind === 'contains') {
+    const q = String(filter.q || '').trim().toLowerCase();
+    if (!q) return true;
+    return text.toLowerCase().includes(q);
+  }
+  if (filter.kind === 'suggest') {
+    const q = String(filter.q || '').trim().toLowerCase();
+    if (!q) return true;
+    return text.trim().toLowerCase() === q;
+  }
+  return true;
+}
+
+function productPassesColFilters(p, filters) {
+  const map = filters || colFilters;
+  for (const code in map) {
+    if (!valueMatchesColFilter(code, displayedColValue(p, code), map[code])) return false;
+  }
+  return true;
+}
+
 function getColUniqueValues(code) {
-  const vals = new Set();
-  const searchVal = (document.getElementById('products-search') || {}).value || '';
-  const catFilter = (document.getElementById('filter-cat') || {}).value || '';
-  products.filter(p => {
-    if (!canCat(p.cat, 'r')) return false;
-    if (catFilter && p.cat !== catFilter) return false;
-    computeCalcFields(p);
-    const allText = Object.values(p.fields).join(' ').toLowerCase() + ' ' + (p.cat || '').toLowerCase();
-    if (searchVal && !allText.includes(searchVal.toLowerCase())) return false;
-    for (const c in colFilters) {
-      if (c === code) continue;
-      const allowed = colFilters[c];
-      if (!allowed.has(getListColValue(p, c))) return false;
-    }
-    return true;
-  }).forEach(p => {
-    const v = getListColValue(p, code);
-    if (v) vals.add(v);
-  });
-  return [...vals].sort((a, b) => a.localeCompare(b, 'fr'));
+  return listOptions(code);
+}
+
+function closeColFilter() {
+  document.removeEventListener('click', colFilterOutsideClick);
+  if (activeColFilterDropdown) { activeColFilterDropdown.remove(); activeColFilterDropdown = null; }
+}
+
+function placeColFilter(iconEl) {
+  const rect = iconEl.getBoundingClientRect();
+  const dd = document.createElement('div');
+  dd.className = 'col-filter-dropdown';
+  dd.style.top = (rect.bottom + 4) + 'px';
+  dd.style.left = Math.min(rect.left, window.innerWidth - 270) + 'px';
+  return dd;
+}
+
+function openContainsFilter(code, label, iconEl) {
+  closeColFilter();
+  const current = colFilters[code];
+  const q = current && current.kind === 'contains' ? current.q : '';
+  const dd = placeColFilter(iconEl);
+  dd.innerHTML = `
+    <div class="col-filter-dropdown-header">
+      <span>${escapeHtml(label)}</span>
+      <button onclick="clearColFilter('${code}')">Effacer</button>
+    </div>
+    <div class="col-filter-search-wrap">
+      <input type="text" class="col-filter-search" placeholder="Contient…"
+        value="${escapeHtml(q)}"
+        oninput="setColContains('${code}', this.value)">
+    </div>`;
+  document.body.appendChild(dd);
+  activeColFilterDropdown = dd;
+  setTimeout(() => {
+    const si = dd.querySelector('.col-filter-search');
+    if (si) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
+    document.addEventListener('click', colFilterOutsideClick);
+  }, 0);
+}
+
+function openSuggestFilter(code, label, iconEl) {
+  closeColFilter();
+  const current = colFilters[code];
+  const q = current && current.kind === 'suggest' ? current.q : '';
+  const dd = placeColFilter(iconEl);
+  dd.innerHTML = `
+    <div class="col-filter-dropdown-header">
+      <span>${escapeHtml(label)}</span>
+      <button onclick="clearColFilter('${code}')">Effacer</button>
+    </div>
+    <div class="col-filter-search-wrap">
+      <input type="text" class="col-filter-search" placeholder="Au moins 2 caractères"
+        value="${escapeHtml(q)}"
+        oninput="onColSuggestInput('${code}', this.value)">
+    </div>
+    <div class="col-filter-list" id="col-suggest-list"></div>`;
+  document.body.appendChild(dd);
+  activeColFilterDropdown = dd;
+  if (q.length >= 2) onColSuggestInput(code, q);
+  setTimeout(() => {
+    const si = dd.querySelector('.col-filter-search');
+    if (si) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
+    document.addEventListener('click', colFilterOutsideClick);
+  }, 0);
+}
+
+function setColContains(code, q) {
+  const text = String(q || '');
+  if (!text.trim()) delete colFilters[code];
+  else colFilters[code] = { kind: 'contains', q: text };
+  currentPage = 1;
+  renderProductsTable();
+}
+
+function onColSuggestInput(code, q) {
+  const box = document.getElementById('col-suggest-list');
+  const text = String(q || '').trim();
+  if (text.length < 2) {
+    if (box) box.innerHTML = '';
+    return;
+  }
+  const hits = suggestSource(code)
+    .filter(n => n.toLowerCase().includes(text.toLowerCase()))
+    .sort((a, b) => a.localeCompare(b, 'fr'))
+    .slice(0, 8);
+  if (!box) return;
+  box.innerHTML = hits.length
+    ? hits.map(n => `<div class="col-filter-item" onclick="pickColSuggest('${code}','${n.replace(/'/g, "\\'")}')">${escapeHtml(n)}</div>`).join('')
+    : '<div class="col-filter-empty">Aucun résultat</div>';
+}
+
+function pickColSuggest(code, name) {
+  colFilters[code] = { kind: 'suggest', q: name };
+  currentPage = 1;
+  closeColFilter();
+  renderProductsTable();
 }
 
 function openColFilter(code, label, iconEl) {
+  const mode = colFilterMode(code);
+  if (mode === 'contains') { openContainsFilter(code, label, iconEl); return; }
+  if (mode === 'suggest') { openSuggestFilter(code, label, iconEl); return; }
   document.removeEventListener('click', colFilterOutsideClick);
   if (activeColFilterDropdown) { activeColFilterDropdown.remove(); activeColFilterDropdown = null; }
   const vals   = getColUniqueValues(code);
@@ -201,17 +353,13 @@ function isColFilterActive(code) { return colFilters[code] !== undefined; }
 
 function passesColFilters(product) {
   computeCalcFields(product);
-  for (const code in colFilters) {
-    const allowed = colFilters[code];
-    if (!allowed.has(getListColValue(product, code))) return false;
-  }
-  return true;
+  return productPassesColFilters(product, colFilters);
 }
 
 function hasActiveFilters() {
   const search = (document.getElementById('products-search') || {}).value || '';
   const cat    = (document.getElementById('filter-cat') || {}).value || '';
-  return search !== '' || cat !== '' || Object.keys(colFilters).length > 0 || _filterIncomplets;
+  return search.trim().length >= 2 || cat !== '' || Object.keys(colFilters).length > 0 || _filterIncomplets;
 }
 
 // ============================================================
@@ -225,8 +373,7 @@ function renderProductsTable() {
     if (!canCat(p.cat, 'r')) return false;
     if (!(!catFilter || p.cat === catFilter)) return false;
     computeCalcFields(p);
-    const allText = Object.values(p.fields).join(' ').toLowerCase() + ' ' + (p.cat || '').toLowerCase();
-    if (searchVal && !allText.includes(searchVal.toLowerCase())) return false;
+    if (!productMatchesSearch(p, searchVal)) return false;
     if (!passesColFilters(p)) return false;
     if (_filterIncomplets && calcCompletion(p) >= seuilCompletion) return false;
     if (_filterAlertId != null) {
@@ -238,6 +385,20 @@ function renderProductsTable() {
 
   if (compareMode && selectedProductIds.length > 0)
     filtered = filtered.filter(p => selectedProductIds.includes(p.id));
+
+  if (sortState.code) {
+    const code = sortState.code;
+    const dir = sortState.dir === 'desc' ? -1 : 1;
+    const attr = (attributes || []).find(a => a.code === code);
+    filtered.sort((a, b) => {
+      if (code === 'completion' || (attr && attr.type === 'Nombre')) {
+        const na = parseFloat(String(getListColValue(a, code)).replace('%', '').replace(',', '.'));
+        const nb = parseFloat(String(getListColValue(b, code)).replace('%', '').replace(',', '.'));
+        if (!isNaN(na) && !isNaN(nb)) return (na - nb) * dir;
+      }
+      return displayedColValue(a, code).localeCompare(displayedColValue(b, code), 'fr', { numeric: true }) * dir;
+    });
+  }
 
   const thead = document.getElementById('products-thead');
   const tbody = document.getElementById('products-tbody');
@@ -312,10 +473,7 @@ function renderPagination(totalRows, totalPages) {
 }
 
 function goToPage(n) {
-  const pageSize   = appPrefs.pageSize || 0;
-  if (pageSize === 0) return;
-  const totalPages = Math.ceil(products.length / pageSize);
-  currentPage = Math.max(1, Math.min(n, totalPages));
+  currentPage = n;
   renderProductsTable();
 }
 
@@ -965,32 +1123,9 @@ function filterTable() { _filterIncomplets = false; _filterAlertId = null; curre
 // TRI
 // ============================================================
 function sortTableByCode(code) {
-  const tb = document.getElementById('products-tbody');
-  if (!tb) return;
-  const rows = Array.from(tb.querySelectorAll('tr'));
-  const dir  = (sortState.code === code && sortState.dir === 'asc') ? 'desc' : 'asc';
-  sortState  = { code, dir };
-  rows.sort((a, b) => {
-    const getCb = row => row.querySelector('input[type=checkbox]');
-    const ma = getCb(a) && getCb(a).getAttribute('onchange') && getCb(a).getAttribute('onchange').match(/\d+/);
-    const mb = getCb(b) && getCb(b).getAttribute('onchange') && getCb(b).getAttribute('onchange').match(/\d+/);
-    const pa = ma ? products.find(p => p.id === parseInt(ma[0])) : null;
-    const pb = mb ? products.find(p => p.id === parseInt(mb[0])) : null;
-    if (!pa || !pb) return 0;
-    let va, vb;
-    if (code === 'completion') {
-      va = calcCompletion(pa); vb = calcCompletion(pb);
-      return dir === 'asc' ? va - vb : vb - va;
-    }
-    va = getListColValue(pa, code);
-    vb = getListColValue(pb, code);
-    const na = parseFloat(va), nb = parseFloat(vb);
-    if (!isNaN(na) && !isNaN(nb)) return dir === 'asc' ? na - nb : nb - na;
-    return dir === 'asc'
-      ? va.toString().localeCompare(vb.toString(), 'fr')
-      : vb.toString().localeCompare(va.toString(), 'fr');
-  });
-  rows.forEach(r => tb.appendChild(r));
+  const dir = (sortState.code === code && sortState.dir === 'asc') ? 'desc' : 'asc';
+  sortState = { code, dir };
+  renderProductsTable();
 }
 
 // ============================================================

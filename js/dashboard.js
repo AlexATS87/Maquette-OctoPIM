@@ -427,10 +427,14 @@ function filterBySupplier(codeOrName) {
 // SNAPSHOT EXPORT (appelé avant navigation vers exports)
 // ============================================================
 function captureExportSnapshot() {
+  const filters = {};
+  Object.entries(colFilters || {}).forEach(([k, v]) => {
+    filters[k] = v instanceof Set ? { kind: 'list', values: [...v] } : v;
+  });
   exportSnapshot = {
     catFilter:    (document.getElementById('filter-cat')      || {}).value || '',
     searchVal:    (document.getElementById('products-search') || {}).value || '',
-    colFilters:   { ...colFilters },
+    colFilters:   filters,
     syntheseItems: [...syntheseItems],
   };
 }

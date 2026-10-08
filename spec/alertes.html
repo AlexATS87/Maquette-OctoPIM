@@ -38,13 +38,13 @@
         <li>Sur le dashboard, chaque alerte est un widget : libelle, nombre de produits visibles concernes, regle. Le clic ouvre la liste deja filtree. Le libelle reste affiche tant que le filtre est actif.</li>
         <li>Sur la liste, le produit porte un picto sur son nom. Sur la fiche, le signal est sous le titre et sur le champ.</li>
         <li>Alerte en place : taux de marque inferieur a 20 %. Ce taux est celui de la monture (prix arrondi HT et PA opticien). Le taux accessoire est un autre champ : il n’entre pas dans cette alerte.</li>
-        <li><span class="tag tag-maq">Maquette</span> le compte parcourt le catalogue charge. <span class="tag tag-cible">Cible</span> a 100 000 produits, le filtre et le compte se calculent cote serveur.</li>
+        <li>Le nombre de produits concernes et le filtre de la liste sont calcules cote serveur, sur le perimetre visible. On ne parcourt pas les fiches dans le navigateur.</li>
       </ul>
       <div class="callout">
         <strong>Regles</strong>
         RG-ALR-01 — Une alerte compare un attribut numerique a un seuil, en dessous ou au-dessus. Elle ne bloque ni l’enregistrement ni l’export.<br>
         RG-ALR-02 — Le module Administration &gt; Alertes cree et supprime les alertes. Les voir sur le tableau de bord, la liste et la fiche ne demande pas ce droit.<br>
-        RG-ALR-03 — <span class="tag tag-maq">Maquette</span> Le compte parcours le catalogue charge. <span class="tag tag-cible">Cible</span> A 100 000 produits, le filtre et le compte sont calcules cote serveur.
+        RG-ALR-03 — Le nombre de produits concernes et le filtre associe sont calcules cote serveur, sur les produits visibles.
       </div>
     </article>
   </main>

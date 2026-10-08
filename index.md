@@ -2,7 +2,8 @@
 
 Fichier de continuite. A lire en debut de session, a mettre a jour a chaque changement avec les pages `spec/*.html` concernees.
 
-- `spec/` : la spec seulement (pages HTML, styles, scripts, captures). Langage metier. Collage Confluence via le bouton de chaque page.
+- Confluence (espace OctoPim, partie Fonctionnement de l’outil) est la spec de travail. Le HTML `spec/` n’est plus tenu a jour.
+- `docs/` : le reste (references, cahier de test, guide, canvases).
 - `docs/` : le reste (references, cahier de test, guide, canvases).
 - Ce fichier, a la racine : decisions, points ouverts, derniere evolution. Pas un journal de conversation.
 
@@ -12,9 +13,10 @@ Fichier de continuite. A lire en debut de session, a mettre a jour a chaque chan
 2. En cas de doute sur le besoin ou la mise en oeuvre, challenger avant de coder.
 3. Choix d'ergonomie : expert UI. Pas de texte qui repete une evidence.
 4. Chaque directive globale d'une conversation est reportee ici, en ligne datee.
-5. Chaque regle de gestion (agencement, caracteristiques d'attribut, limites, contraintes) est ecrite dans la page `spec/*.html` du sujet, dans le meme geste que la maquette. Le guide utilisateur (`docs/Guide utilisateur/index.html`) suit le meme geste des qu'un parcours ou un droit change.
-6. Ecrire le besoin avant la solution. Si le volume vise (100 000 produits) ou un systeme cible (SAP, Babil, Okta) rend la maquette fragile, le dire dans la spec au lieu de figer ce comportement.
+5. Chaque regle de gestion est ecrite dans la page Confluence du sujet (Fonctionnement de l’outil). Le guide utilisateur suit des qu’un parcours ou un droit change. Le HTML `spec/` n’est plus la source.
+6. Ecrire le besoin avant la solution. L'outil est dimensionne pour un grand catalogue, sans seuil numerique. Si la maquette ou un systeme cible (SAP, Babil, Okta) ne tient pas ce comportement, le dire dans la spec au lieu de le figer.
 7. A chaque PR sur `main` : mettre a jour les captures `spec/captures` si l'ecran a change, tenir `docs/Cahier de test/Cahier de test OctoPIM.xlsx` (Ok ? vide tant que le test n'est pas joue), et tenir le guide utilisateur. Si un droit manque pour modifier ou supprimer, le guide renvoie a Alexis Beranger, administrateur de la solution.
+8. Un libelle d'ecran (bouton, menu, onglet) s'ecrit entre crochets, en gras, tel qu'il est sur l'ecran. Un code technique reste en police code. Un mot nu est le concept. Une capture globale montre l'organisation ou l'initialisation. Une zone decrite est cadree en rouge, le reste est voile.
 
 ## Decisions en vigueur
 
@@ -37,17 +39,6 @@ Fichier de continuite. A lire en debut de session, a mettre a jour a chaque chan
 - 2026-09-24 — Produits BDD : uniquement l'onglet Table. On ignore les colonnes qui n'existent pas, sauf celles de l'exemple IWI, qui sont a creer.
 - 2026-09-24 — Nouvel attribut : caracteristique produit dans « Caracteristiques monture ». Champ utile seulement a IWI dans un groupe « IWI ».
 - 2026-09-24 — Le CSV des codes marque ne sert qu'a la correspondance IWI.
-
-## Points ouverts
-
-- Recherche liste : le besoin est de retrouver un produit comme dans Excel, sur un catalogue vise a plus de 100 000 lignes. La maquette filtre par les valeurs affichees d'une colonne. Cette liste de valeurs ne tiendra pas a ce volume. A trancher : recherche par saisie, pas enumeration.
-- Unicite EAN : non tranchee.
-- Pas de cycle de vie brouillon / valide / archive. Le PDF FGP sert d'exemple de parcours (qui, quand, comment), pas de statuts a recopier.
-- Evolution du dashboard sur 6 mois : mois passes illustratifs.
-- Visuels : maquette = fichier local. Cible = Babil.
-- Comptes : maquette = switch local. Cible = Okta.
-- 2026-09-29 — Depot GitHub public. Preference : n’y laisser que le code (spec, docs, index.md hors de GitHub). Pas execute : un commit qui retire les fichiers laisse l’historique, et reecrire l’historique demande un accord explicite. La spec publiee vise Confluence, une fois le MCP Atlassian connecte.
-- 2026-09-29 — Ne pas passer le depot en prive tant que GitHub Pages sert le site. L’URL https://alexats87.github.io/Maquette-OctoPIM/ publie aussi spec/ et le guide, sans connexion. Sur GitHub Free, un depot prive coupe Pages. Sur Pro, l’URL reste publique. Un site Pages prive demande GitHub Enterprise Cloud.
 - Code marque IWI : 3 caracteres maximum, pose sur la marque. Exemples charges : Esprit 43, Saint Laurent SLX, MontBlanc MMM, Julbo JUL.
 - Prix 2 IWI = prix catalogue. Prix 1 IWI = PA ATS.
 - IWI : code et nom du distributeur sont des constantes d’export (ATS / Audioptic Trade Services). Le code fabricant varie et reste un attribut du groupe IWI.
@@ -55,7 +46,15 @@ Fichier de continuite. A lire en debut de session, a mettre a jour a chaque chan
 - 2026-09-28 — Export : toujours un onglet. Format a cote du bouton (.xlsx, .csv, .zip). Toute trame (Catalogue, IWI, enregistree) se regle avec les memes cases. IWI propose ses 76 colonnes, qu’on peut decocher ensuite. Manque en rouge sur chaque colonne exigee encore cochee. Une selection est indiquee, avec « Tout exporter ».
 - 2026-09-28 — Nombre : 0, 1 ou 2 decimales, defaut arrondi. Prix et PA a 2 decimales, prix final arrondi a 0.
 - 2026-09-28 — Date de modification IWI = attribut calcule, date du jour a l'export. Action = constante 1 de la trame, pas un attribut.
-- 2026-09-28 — Le cycle de vie FGP n'est pas un statut OctoPIM. La spec decrit un parcours type (qui, quand, comment), exemple Admin Achats.
+
+## Points ouverts
+
+Aucun.
+
+## Hors spec
+
+- 2026-09-29 — Depot GitHub public. Preference : n’y laisser que le code (spec, docs, index.md hors de GitHub). Pas execute : un commit qui retire les fichiers laisse l’historique, et reecrire l’historique demande un accord explicite.
+- 2026-09-29 — Ne pas passer le depot en prive tant que GitHub Pages sert le site. L’URL https://alexats87.github.io/Maquette-OctoPIM/ publie aussi spec/ et le guide, sans connexion. Sur GitHub Free, un depot prive coupe Pages. Sur Pro, l’URL reste publique. Un site Pages prive demande GitHub Enterprise Cloud.
 
 ## Derniere evolution
 
@@ -80,4 +79,20 @@ Fichier de continuite. A lire en debut de session, a mettre a jour a chaque chan
 - 2026-10-01 — Accessoires : couleur partagee avec la monture, sans groupe general. Matiere accessoire a part, la liste monture alimente IWI. Dimensions, conditionnement d’origine, annee de lancement et designation magasin dans Caracteristiques accessoire. Code article magasin = code SAP. Fournisseurs PACIFIC, TRADECON, CLASSICPACKING, sans accord. Tarification et SEO renommes. Canaux : Oui, Non, En attente.
 - 2026-10-01 — Une formule ne change pas selon la categorie. Si la regle differe, champ dedie. Tarification monture : PVMC, prix arrondi HT, marge interne, taux de marque. Tarification accessoire : PV TTC arrondi, PV HT, marge HT, taux accessoire. Groupe « Tarification lentilles + PEL » : prix de vente TTC et HT seulement, 2 decimales, sur Lentilles et PEL. Marque en tete des caracteristiques lentille.
 - 2026-10-01 — Le fichier BDD Accessoires reste en local. Il sert au contexte et aux regles. Il ne va pas sur GitHub.
-- 2026-10-01 — La spec decrit chaque ecran au meme niveau que le dashboard : a quoi il sert, ce que l’utilisateur voit selon ses droits, chaque section, le calcul, le dessin, le clic. Le HTML reste la source. Confluence reprend ces pages. Le clic de tous les reportings vers la liste est le besoin ; la maquette ne le fait pas encore sur le camembert, l’evolution et les barres de completion. L’evolution mensuelle vise le cumul des dates de creation ; les mois passes de la maquette restent illustratifs.
+- 2026-10-01 — La spec decrit chaque ecran au meme niveau que le dashboard : a quoi il sert, ce que l’utilisateur voit selon ses droits, chaque section, le calcul, le dessin, le clic. Le HTML reste la source. Confluence reprend ces pages.
+- 2026-10-05 — La spec de travail est Confluence (Fonctionnement de l’outil). Le HTML spec n’est plus tenu. Chaque propriete s’ecrit en quatre temps : a quoi ca sert, comment ca fonctionne, regles, donnees a initialiser. Une liste deroulante se filtre en tapant.
+- 2026-10-05 — Preferences : la taille de page est une liste fermee 25, 50 ou 100 (defaut 50). Le 0 « tout afficher » n’existe plus.
+- 2026-10-05 — Les pages famille Montures, Lentilles et PEL, Accessoires sont retirees de l’arborescence. Le tableau d’initialisation d’une categorie porte ses groupes. Celui d’un groupe porte ses attributs, dans l’ordre. Celui des attributs liste chaque attribut.
+- 2026-10-05 — Un developpeur lit Fonctionnement de l’outil dans l’ordre : produit, attributs, groupes, categories, conditions, alertes, synthese, roles, utilisateurs, administration, puis dashboard, liste, import, export, workflows. Les schemas restent sur leur page. L’index est sur la page mere. Le modele de juillet n’est pas la spec a implementer.
+- 2026-10-05 — Langue des formules sur Gestion des attributs : opérateurs, champ vide, recalcul, formule qui relit son champ, DATE_MAJ, masque de saisie. La maquette arrondit un calcul à 4 décimales et efface un texte « 0 » : ce n’est pas le besoin. Alerte : comparaison stricte, valeur vide ignorée. RG-ATT-11 à 13, RG-ALR-05.
+- 2026-10-05 — La liste d'initialisation des attributs reprend le contrat de l'administration : obligatoire, complétion, formule. Rempli n'est pas une donnée à charger. C'est la part des produits sur lesquels l'attribut s'affiche et qui ont une valeur. 0 % signale un attribut inutilisé, sans le supprimer. Sur 100 000 produits le taux se calcule côté serveur. RG-ATT-10, page Gestion des attributs.
+- 2026-10-05 — Les fonctionnalites suivent le meme plan que les proprietes : a quoi ca sert, comment ca fonctionne, regles, donnees a initialiser. Dashboard RG-DSH-05 a 07. Liste RG-LST-08 a 10. Import RG-IMP-06 a 10. Export RG-EXP-09 et les 76 colonnes IWI. Workflows : parcours de creation, fiche, forcage, canaux, accord, import, export, parametrage, Okta, Babil. Le schema draw.io reste.
+- 2026-10-05 — Racine Confluence : Cadrage, Fonctionnement de l’outil, Technique et securite. Les coquilles Referentiel, Usages et Administration et acces sont archivees. Les droits et l’administration se lisent dans Fonctionnement (etapes 8 a 10). Acteurs et roles reste dans Cadrage.
+- 2026-10-05 — Workflows fonctionnels est un chapitre de Fonctionnement, a cote des fonctionnalites, et non plus une etape a l'interieur. Diagrammes de flux : modifier une fiche, creer un produit, ajout en masse, nouvel attribut sur une monture, publier un canal, forcer un champ calcule. Le schema metier de Creation d’un produit n’est pas recopie. Fournisseur, Okta, Babil et export restent en texte : le parcours est lineaire.
+- 2026-10-05 — Les diagrammes de flux partagent la legende de Creation d’un produit : bleu Achats, vert OctoPIM, jaune Administration, losange rose pour une decision ou un refus. Chaque parcours commence a la connexion, puis un clic par etape (menu, action). Le schema metier de Creation d’un produit n’est pas repeint.
+- 2026-10-05 — Un workflow est une page : objectif et etapes, comme Creation d’un produit. Pas de section Regles ni Donnees a initialiser sur un parcours. Ces deux sections restent sur une propriete, et sur une fonctionnalite qui porte vraiment une regle ou un jeu (export IWI, attributs, categories). Elles sont retirees du dashboard, de la liste et de l’import, qui disaient n’avoir aucun jeu propre. Le geste Nouveau produit est ajoute en bas de Creation d’un produit, sans reprendre le parcours metier.
+- 2026-10-05 — Creation d’un produit : les points ouverts et le pic des conventions sont retires. Akeneo reste dans les acteurs, les equipes y travaillent encore. SAP, Babil, IWI, Magento et les autres briques du schema « demain » du cadrage sont prevus pour la solution cible. Le contrat de chaque echange n’est pas ecrit. La carte est sur Architecture technique. RG-CTX-04 ne les declare plus hors spec. Snowflake est cite comme lecteur et n’est pas sur ce schema.
+- 2026-10-06 — Un libelle d'ecran (bouton, menu, onglet) s'ecrit entre crochets, en gras. Un code technique reste en police code. Un mot nu est le concept. Une capture globale montre l'organisation ou l'initialisation. Une zone decrite est cadree en rouge, le reste est voile. Premiere application : la recherche de la liste.
+- 2026-10-06 — L'outil est dimensionne pour un grand catalogue. Les regles ne citent plus un seuil de 100 000 produits. La liste, les comptes du dashboard et le taux Rempli se calculent sans charger le catalogue a l'ecran. La maquette reste sur son echantillon.
+- 2026-10-06 — La liste se comporte comme sur un grand catalogue, meme sur l'echantillon local. Recherche a partir de deux caracteres sur code magasin, code web, EAN, designations et marque. Une liste fermee (categorie, canal, select court) se coche sans parcourir les produits. Une colonne libre se filtre par « contient ». Marque et fournisseur : suggestion a partir de deux caracteres, huit propositions. Le tri porte sur le resultat filtre, avant la page.
+- 2026-10-05 — La spec decrit le besoin, sans notes de conversation. Liste : recherche par saisie (code magasin, code web, EAN, designations, marque) a partir de deux caracteres ; filtres a liste seulement quand les valeurs sont peu nombreuses ; page de 25, 50 ou 100 (defaut 50) ; pas d’affichage de tout le catalogue ; tri et comptes cote serveur. EAN, code magasin et code web sont uniques des qu’ils sont renseignes. Visuels = Babil. Comptes = Okta. Les flux SAP, Snowflake, Cosium et Osmose sont hors de cette spec. Evolution du dashboard : cumul des produits visibles crees jusqu’a la fin de chaque mois, six mois, clic vers la liste. Tout reporting ouvre la liste filtree. Confluence : Cadrage a part ; le reste du fonctionnement s’appelle « Fonctionnement de l’outil », avec Proprietes puis Fonctionnalites. La maquette charge encore son echantillon en local.

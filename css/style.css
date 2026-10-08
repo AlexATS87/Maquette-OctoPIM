@@ -309,6 +309,43 @@ input, select, textarea { font-family: inherit; }
 }
 .form-select:focus { border-color: #1565c0; box-shadow: 0 0 0 3px rgba(21,101,192,0.1); }
 
+.combo { position: relative; width: 100%; }
+.combo-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.combo-input { cursor: text; padding-right: 28px; }
+.combo-list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 240px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #dde3ea;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(26,35,50,.12);
+}
+.combo-opt, .combo-empty {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: #fff;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1a2332;
+  cursor: pointer;
+}
+.combo-opt:hover, .combo-opt.is-active { background: #e8f0fe; }
+.combo-opt.is-current { font-weight: 700; }
+.combo-empty { color: #90a4ae; cursor: default; }
+
 .search-input {
   padding: 8px 14px;
   border: 1px solid #dde3ea;

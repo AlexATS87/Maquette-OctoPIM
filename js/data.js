@@ -6,7 +6,7 @@
 // PREFERENCES APPLICATION
 // ============================================================
 let appPrefs = {
-  pageSize: 50, // Nombre de produits par page (0 = illimité)
+  pageSize: 50, // 25, 50 ou 100. Pas d'affichage de tout le catalogue.
 };
 
 let userPrefs = {
@@ -1122,7 +1122,10 @@ let exportSnapshot = {
 function captureExportSnapshot() {
   exportSnapshot = {
     colFilters:    JSON.parse(JSON.stringify(
-      Object.fromEntries(Object.entries(colFilters).map(([k,v]) => [k, [...v]]))
+      Object.fromEntries(Object.entries(colFilters).map(([k, v]) => [
+        k,
+        v instanceof Set ? { kind: 'list', values: [...v] } : v
+      ]))
     )),
     catFilter:     (document.getElementById('filter-cat') || {}).value || '',
     searchVal:     (document.getElementById('products-search') || {}).value || '',

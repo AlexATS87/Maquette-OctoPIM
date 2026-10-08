@@ -48,7 +48,7 @@
           <tr><td>Module admin</td><td>Attributs, Roles, Conditions…</td><td>Ouvrir la carte et editer le parametrage.</td></tr>
         </tbody>
       </table>
-      <p>Roles de la maquette (exemples, pas une liste figee) :</p>
+      <p>Rôles d’origine, à ajuster ensuite. La liste n’est pas figée : un administrateur en ajoute.</p>
       <ul>
         <li>Admin Systeme — tout, toutes categories.</li>
         <li>Admin Achats — catalogue Montures en ecriture, pas d’administration globale.</li>
@@ -68,13 +68,13 @@
         <li>Droits d’origine, a ajuster. Admin Systeme : tout. Admin Achats montures : ecriture Montures, pas le menu Administration, lecture sur le reste du catalogue selon le reglage. Consultation : lecture, pas d’import ni d’administration. Users Achats montures : lecture Montures. Referencement : meme panier catalogue qu’Admin Achats. Compte d’exemple L. Petit.</li>
         <li>Une categorie nouvelle donne tout a l’admin systeme, la lecture a la consultation, et rien aux autres jusqu’a reglage.</li>
         <li>Si une action est impossible faute de droit, l’utilisateur contacte Alexis Beranger, administrateur de la solution. On ne contourne pas le droit.</li>
-        <li><span class="tag tag-cible">Cible</span> l’authentification est Okta. Les noms de groupes Okta sont deja ceux des roles. La maquette change de compte localement.</li>
+        <li>La connexion est Okta. Le groupe Okta porte le nom du rôle.</li>
       </ul>
       <div class="callout">
         <strong>Regles</strong>
         RG-RBAC-01 — Sans lecture sur une categorie, ses produits n’apparaissent nulle part (liste, dashboard, export).<br>
         RG-RBAC-02 — Ecrire sans lire n’a pas de sens : la lecture est le socle.<br>
-        RG-RBAC-03 — <span class="tag tag-cible">Cible</span> Authentification Okta ; les noms de groupes sont deja poses sur les roles.<br>
+        RG-RBAC-03 — La connexion est Okta. Le groupe Okta porte le nom du rôle.<br>
         RG-RBAC-04 — La completion suit le groupe utilisateur : un role ne compte que les groupes d’attributs qui le citent, plus ceux qui ne citent personne. L’admin systeme compte tout.<br>
         RG-RBAC-05 — Droits d’origine, a ajuster ensuite. Admin Systeme : tout. Admin Achats : Montures en ecriture, pas les autres familles, pas le menu Administration, lecture sur les autres menus. Consultation : lecture de toutes les familles, pas d’import ni d’administration. Users Achats : lecture Montures seulement, pas d’import ni d’administration. Referencement : memes droits catalogue qu’Admin Achats. Compte d’exemple L. Petit.<br>
         RG-RBAC-06 — Une categorie nouvelle donne tout a l’admin systeme, la lecture a la consultation, et rien aux autres roles jusqu’a reglage.

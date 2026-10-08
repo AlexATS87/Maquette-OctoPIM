@@ -38,14 +38,14 @@
       <h2>Analyse des produits</h2>
       <ul>
         <li>Le total de produits visibles dans l’outil. Le clic ouvre la liste, sans autre filtre.</li>
-        <li>La decoupe de ces produits selon les categories visibles. Representation en camembert. Une categorie sans produit visible n’apparait pas. La couleur est celle de la categorie.</li>
-        <li>L’evolution recente : cumul des produits existants, a partir de la date de creation dans l’outil, decoupe par mois, en histogramme. <span class="tag tag-maq">Maquette</span> les six derniers mois sont dessines ; seul le mois courant est le stock reel. Les mois passes sont illustratifs, pas un historique de creations. RG-DSH-03.</li>
+        <li>La decoupe de ces produits selon les categories visibles. Representation en camembert. Une categorie sans produit visible n’apparait pas. La couleur est celle de la categorie. Le clic sur une part ouvre la liste de cette categorie.</li>
+        <li>L’evolution recente : histogramme des six derniers mois. Chaque barre est le cumul des produits visibles dont la date de creation est antérieure ou égale à la fin de ce mois. Le clic ouvre cette liste. RG-DSH-03.</li>
       </ul>
 
       <h2>Qualite des produits</h2>
       <ul>
         <li>Le nombre de produits incomplets : completion strictement inferieure au seuil parametre dans Administration, Preferences. Defaut 80 %. Le clic ouvre la liste des incomplets. RG-DSH-02.</li>
-        <li>Le taux de completion global : moyenne des taux de completion de tous les produits visibles. En dessous, la meme moyenne par categorie visible, en histogramme horizontal. La couleur suit les seuils de completion parametres dans l’administration. Le taux ne compte que les champs que l’utilisateur peut remplir (hors systeme, calcules, visuels, commentaire, champ masque).</li>
+        <li>Le taux de completion global : moyenne des taux de completion de tous les produits visibles. En dessous, la meme moyenne par categorie visible, en histogramme horizontal. La couleur suit les seuils de completion parametres dans l’administration. Le clic sur une barre ouvre la liste de cette categorie. Le taux ne compte que les champs que l’utilisateur peut remplir (hors systeme, calcules, visuels, commentaire, champ masque).</li>
       </ul>
 
       <h2>Alertes</h2>
@@ -68,8 +68,8 @@
         <strong>Regles</strong>
         RG-DSH-01 — Tous les indicateurs respectent le perimetre de droits. Un produit invisible dans la liste n’est compte nulle part.<br>
         RG-DSH-02 — Le seuil d’incomplet est parametrable (Administration, Preferences), de 0 a 100, defaut 80 %. Il sert au compteur et au filtre des incomplets.<br>
-        RG-DSH-03 — L’evolution est un cumul par mois a partir de la date de creation. <span class="tag tag-maq">Maquette</span> les mois passes sont illustratifs ; le mois courant est le stock reel.<br>
-        RG-DSH-04 — Un clic sur un reporting ouvre la liste prefiltree. En place : total, incomplets, alerte, barre fournisseur. <span class="tag tag-maq">Maquette</span> le camembert, l’histogramme d’evolution et les barres de completion n’ouvrent pas encore la liste.
+        RG-DSH-03 — L’evolution montre les six derniers mois. Chaque barre compte les produits visibles crees jusqu’a la fin de ce mois. Le clic ouvre cette liste.<br>
+        RG-DSH-04 — Un clic sur un reporting ouvre la liste deja filtree sur ce que le reporting montrait : total, categorie du camembert, mois de l’histogramme, incomplets, barre de completion d’une categorie, alerte, fournisseur.
       </div>
     </article>
   </main>

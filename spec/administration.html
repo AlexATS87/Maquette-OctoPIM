@@ -15,9 +15,9 @@
     <article id="spec-article">
       <h1>Administration</h1>
       <p class="lead">
-        Hub de parametrage. C’est ce qui rend l’outil capable de remplacer
-        Excel puis Akeneo : on ajoute des champs, des familles, des colonnes
-        sans attendre un deploiement.
+        Hub de paramétrage. La solution doit évoluer sans développement :
+        un administrateur ajoute un champ, une famille ou une colonne,
+        et la règle est prise en compte tout de suite.
       </p>
 
       <h2>Qu’est-ce que l’administration ?</h2>
@@ -62,14 +62,14 @@
       </p>
       <ul>
         <li>Les preferences utilisateur (theme, affichage) ne sont pas les preferences d’application (pagination, seuil de completion).</li>
-        <li>Pagination de la liste : 0 a 500, defaut 50. 0 desactive la pagination.</li>
+        <li>Taille de page de la liste : 25, 50 ou 100, defaut 50. Le catalogue n’est jamais affiche en entier.</li>
         <li>Seuil de completion : 0 a 100, defaut 80. Il sert au dashboard (produits incomplets) et au filtre de la liste. La couleur des barres de completion suit les seuils parametres ici.</li>
       </ul>
       <div class="callout">
         <strong>Regles</strong>
         RG-ADM-01 — Le menu Administration n’apparait que si au moins un module est lisible.<br>
         RG-ADM-02 — Preferences utilisateur (theme, affichage) ≠ preferences application (seuils, pagination).<br>
-        RG-ADM-03 — Pagination : 0 a 500 produits par page, defaut 50. 0 desactive la pagination. Le seuil de completion va de 0 a 100, defaut 80. Il sert au tableau de bord et au filtre des incomplets.
+        RG-ADM-03 — Taille de page : 25, 50 ou 100 produits, defaut 50. Pas d’affichage de tout le catalogue. Le seuil de completion va de 0 a 100, defaut 80. Il sert au tableau de bord et au filtre des incomplets.
       </div>
     </article>
   </main>

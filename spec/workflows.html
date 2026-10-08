@@ -36,8 +36,8 @@
 
       <h2 id="wf-achat">Parcours Admin Achats</h2>
       <p>
-        Ce n’est pas un cycle de vie produit (brouillon, valide, archive).
-        C’est un comportement type : qui fait quoi, quand, et avec quels droits.
+        Ce parcours décrit qui fait quoi, quand, et avec quels droits,
+        pour ajouter des produits dont un attribut manque.
       </p>
       <p>
         Exemple. Un Admin Achats doit ajouter des produits dont un attribut manque.
@@ -93,14 +93,14 @@
       <div class="callout">RG-WF-02 — L’historique n’est ecrit qu’a l’enregistrement. Quitter la fiche avec des changements non sauves demande confirmation.</div>
 
       <h2 id="wf-force">Forcer une valeur calculee</h2>
-      <p>Objectif : ecarter exceptionnellement une formule (ex. PA interne). Priorite basse si complexite trop forte en cible.</p>
+      <p>On peut ecarter une formule pour une fiche, par exemple un PA interne. La valeur saisie reste jusqu’a ce qu’on rende la main a la formule. L’enregistrement ecrit l’historique.</p>
       <details class="mermaid-src"><summary>Mermaid</summary>
 <pre>flowchart LR
   A[Champ calcule] --> B[Saisie manuelle]
   B --> C[Valeur forcee conservee]
   C --> D[Enregistrer]
   D --> E[La formule ne s'applique plus tant que le forçage n'est pas leve]</pre></details>
-      <div class="callout warn">RG-WF-03 — <span class="tag tag-maq">Maquette</span> Les champs calcules sont forcables. <span class="tag tag-cible">Cible</span> A arbitrer : conserver un levier d’exception, avec trace.</div>
+      <div class="callout">RG-WF-03 — Un champ calcule peut etre force. La formule reprend des qu’on leve le forcage. L’enregistrement trace l’ancienne et la nouvelle valeur.</div>
 
       <h2 id="wf-pub">Activer un canal de publication</h2>
       <p>Objectif : rendre le produit actif sur Optic 2000 (O) et/ou Lissac (L).</p>
@@ -189,7 +189,7 @@
   E --> F[Les utilisateurs habilites peuvent creer des produits dans cette famille]</pre></details>
 
       <h2 id="wf-role">Donner un role a un utilisateur</h2>
-      <p><span class="tag tag-cible">Cible</span> La maquette se contente d’un switch de compte.</p>
+      <p>Le rôle est donné dans Okta, en affectant le groupe qui porte le nom de ce rôle. À la connexion, les menus et les catégories s’appliquent.</p>
       <details class="mermaid-src"><summary>Mermaid</summary>
 <pre>flowchart LR
   A[Compte dans Okta] --> B[Affecter le groupe Okta]
@@ -197,14 +197,11 @@
   C --> D[A la connexion, menus et categories s'appliquent]</pre></details>
 
       <h2 id="wf-visual">Ajouter un visuel</h2>
-      <p><span class="tag tag-maq">Maquette</span> Depot de fichier local. <span class="tag tag-cible">Cible</span> Selection depuis Babil (DAM).</p>
+      <p>Le visuel se choisit dans Babil. On l’associe au produit (face, trois-quarts, profil, ambiance, fournisseur), puis on enregistre la fiche.</p>
       <details class="mermaid-src"><summary>Mermaid</summary>
 <pre>flowchart TD
-  A[Fiche - onglet Visuels] --> B{Cible}
-  B -->|Maquette| C[Telecharger un fichier]
-  B -->|Cible| D[Chercher l'asset dans Babil]
+  A[Fiche - onglet Visuels] --> D[Chercher l'asset dans Babil]
   D --> E[Associer face / 3-4 / profil / ambiance / fournisseur]
-  C --> E
   E --> F[Enregistrer la fiche]</pre></details>
     </article>
   </main>

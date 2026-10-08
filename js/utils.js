@@ -1446,6 +1446,132 @@ function autoSlug(sourceId, targetId) {
 // ============================================================
 // INITIALISATION APPLICATION
 // ============================================================
+function comboNorm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function comboLabel(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || opt.value === '') return '';
+  return opt.text;
+}
+
+function syncComboFromSelect(sel) {
+  if (!sel || !sel.dataset || !sel.dataset.combo) return;
+  const input = sel.parentElement && sel.parentElement.querySelector('.combo-input');
+  if (!input || input === document.activeElement) return;
+  input.value = comboLabel(sel);
+  input.disabled = sel.disabled;
+  input.title = sel.title || '';
+}
+
+function comboRenderList(sel, input, list, query) {
+  const q = comboNorm(query);
+  const items = [];
+  for (let i = 0; i < sel.options.length; i++) {
+    const o = sel.options[i];
+    const text = o.text || '';
+    if (q && !comboNorm(text).includes(q) && !comboNorm(o.value).includes(q)) continue;
+    items.push(o);
+  }
+  const shown = items.slice(0, 50);
+  list.innerHTML = '';
+  if (!shown.length) {
+    const empty = document.createElement('div');
+    empty.className = 'combo-empty';
+    empty.textContent = 'Aucun resultat';
+    list.appendChild(empty);
+  }
+  shown.forEach(function(o, idx) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'combo-opt' + (o.value === sel.value ? ' is-current' : '') + (idx === 0 ? ' is-active' : '');
+    b.textContent = o.value === '' ? '— Aucun —' : (o.text || o.value);
+    b.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      sel.value = o.value;
+      input.value = comboLabel(sel);
+      list.hidden = true;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    list.appendChild(b);
+  });
+  if (items.length > shown.length) {
+    const more = document.createElement('div');
+    more.className = 'combo-empty';
+    more.textContent = 'Continuez a saisir pour affiner';
+    list.appendChild(more);
+  }
+  list.hidden = false;
+}
+
+function enhanceSelect(sel) {
+  if (!sel || sel.dataset.combo || sel.multiple || !sel.parentNode) return;
+  if (sel.closest && sel.closest('.combo')) return;
+  sel.dataset.combo = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'combo';
+  sel.parentNode.insertBefore(wrap, sel);
+  wrap.appendChild(sel);
+  sel.classList.add('combo-native');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'field-input combo-input';
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  input.placeholder = 'Rechercher…';
+  input.value = comboLabel(sel);
+  input.disabled = sel.disabled;
+  input.title = sel.title || '';
+  const list = document.createElement('div');
+  list.className = 'combo-list';
+  list.hidden = true;
+  wrap.appendChild(input);
+  wrap.appendChild(list);
+  input.addEventListener('focus', function() {
+    input.select();
+    comboRenderList(sel, input, list, '');
+  });
+  input.addEventListener('input', function() {
+    comboRenderList(sel, input, list, input.value);
+  });
+  input.addEventListener('keydown', function(e) {
+    const opts = Array.from(list.querySelectorAll('.combo-opt'));
+    if (!opts.length) return;
+    let i = opts.findIndex(function(b) { return b.classList.contains('is-active'); });
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (i < 0) i = 0;
+      else i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      opts.forEach(function(b) { b.classList.remove('is-active'); });
+      opts[i].classList.add('is-active');
+      opts[i].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      (opts[i] || opts[0]).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    } else if (e.key === 'Escape') {
+      list.hidden = true;
+      input.value = comboLabel(sel);
+    }
+  });
+  input.addEventListener('blur', function() {
+    list.hidden = true;
+    input.value = comboLabel(sel);
+  });
+}
+
+function upgradeNewSelects(root) {
+  const scope = root && root.querySelectorAll ? root : document;
+  scope.querySelectorAll('select.form-select:not([data-combo]):not([multiple])').forEach(enhanceSelect);
+}
+
+function installComboSelects() {
+  if (window._comboObs || !document.body) return;
+  window._comboObs = new MutationObserver(function() { upgradeNewSelects(); });
+  window._comboObs.observe(document.body, { childList: true, subtree: true });
+  upgradeNewSelects();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   // Initialisation des filtres de groupes
   activeGroupFilters = new Set(attrGroups.map(g => g.id));
@@ -1461,6 +1587,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     datEl.textContent = now.toLocaleDateString('fr-FR', opts);
   }
+  installComboSelects();
   applyAccessControl();
   const home = getDefaultNavPage();
   if (home) {

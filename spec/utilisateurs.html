@@ -15,9 +15,9 @@
     <article id="spec-article">
       <h1>Gestion des utilisateurs</h1>
       <p class="lead">
-        Un utilisateur est une personne qui se connecte. Son role determine
-        ce qu’il voit et ce qu’il peut modifier. La maquette simule des comptes
-        locaux ; la cible s’appuie sur Okta.
+        Un utilisateur se connecte avec Okta. Son rôle détermine
+        ce qu’il voit et ce qu’il peut modifier. OctoPIM n’est pas l’annuaire :
+        il n’y a pas de mot de passe dans l’outil.
       </p>
 
       <h2>Qu’est-ce qu’un utilisateur ?</h2>
@@ -36,13 +36,13 @@
       <h2>Comment ça marche</h2>
       <table>
         <thead>
-          <tr><th></th><th>Maquette</th><th>Cible</th></tr>
+          <tr><th>Sujet</th><th>Règle</th></tr>
         </thead>
         <tbody>
-          <tr><td>Connexion</td><td>Switch d’utilisateur dans l’en-tete</td><td>Okta (SSO)</td></tr>
-          <tr><td>Affectation du role</td><td>Role pose sur le compte de demo</td><td>Groupe Okta ↔ role OctoPIM</td></tr>
-          <tr><td>Creation de compte</td><td>Hors ecran (comptes en dur)</td><td>Cycle de vie Okta ; OctoPIM ne duplique pas l’annuaire</td></tr>
-          <tr><td>Desactivation</td><td>Non represente</td><td>Desactivation IdP → plus d’acces PIM</td></tr>
+          <tr><td>Connexion</td><td>Okta. OctoPIM ne demande pas de mot de passe.</td></tr>
+          <tr><td>Rôle</td><td>Le groupe Okta porte le nom du rôle. À la connexion, les menus, les catégories et les modules de ce rôle s’appliquent.</td></tr>
+          <tr><td>Création de compte</td><td>Elle se fait dans Okta. OctoPIM ne duplique pas l’annuaire.</td></tr>
+          <tr><td>Désactivation</td><td>Un compte désactivé dans Okta n’entre plus dans OctoPIM.</td></tr>
         </tbody>
       </table>
       <svg class="schema" viewBox="0 0 720 110" role="img" aria-label="Okta vers role">
@@ -66,9 +66,8 @@
       <p>
         Un utilisateur est un compte rattache a un role. Les droits (menus,
         categories, modules, lecture, ecriture, suppression) viennent du role,
-        jamais de la personne. Dans la maquette, on change de compte localement.
-        La cible est Okta : OctoPIM n’est pas l’annuaire, il n’y a pas de mot de
-        passe local, et les groupes Okta portent deja les noms des roles.
+        jamais de la personne. La connexion est Okta. Le groupe Okta porte
+        le nom du rôle. OctoPIM ne stocke pas de mot de passe.
       </p>
       <p>
         Si les droits ne permettent pas de modifier ou de supprimer, l’utilisateur
@@ -77,7 +76,7 @@
       <div class="callout">
         <strong>Regles</strong>
         RG-USR-01 — Les droits ne se posent pas sur la personne, uniquement sur le role.<br>
-        RG-USR-02 — <span class="tag tag-cible">Cible</span> OctoPIM n’est pas l’annuaire : pas de mot de passe local.<br>
+        RG-USR-02 — La connexion est Okta. Le groupe Okta porte le nom du rôle. OctoPIM ne stocke pas de mot de passe et ne crée pas le compte.<br>
         RG-USR-03 — Si les droits ne permettent pas de modifier ou de supprimer, l’utilisateur contacte l’administrateur de la solution, Alexis Beranger. Les droits ne se contournent pas.
       </div>
     </article>

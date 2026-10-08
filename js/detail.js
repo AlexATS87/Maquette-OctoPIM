@@ -766,6 +766,7 @@ function refreshCalcFields(productId){
     const locked=selectFormulaLock(p, attr);
     el.value=locked ? 'A désactiver' : (p.fields[code] || '');
     el.disabled=locked;
+    if (typeof syncComboFromSelect === 'function') syncComboFromSelect(el);
     if (locked) el.setAttribute('data-formula-lock', '1');
     else el.removeAttribute('data-formula-lock');
     el.title=locked ? 'A désactiver tant que les deux canaux sont Non' : '';
@@ -789,7 +790,10 @@ function onFieldChange(productId, el, fieldKey) {
     if (teinteAttr && cur && !(teinteAttr.options || []).includes(cur)) {
       p.fields.teinte_verres = '';
       const teinteEl = document.querySelector('[data-attr-row="teinte_verres"] [data-field-code="teinte_verres"]');
-      if (teinteEl) teinteEl.value = '';
+      if (teinteEl) {
+        teinteEl.value = '';
+        if (typeof syncComboFromSelect === 'function') syncComboFromSelect(teinteEl);
+      }
     }
   }
   p.fields[fieldKey] = newVal;

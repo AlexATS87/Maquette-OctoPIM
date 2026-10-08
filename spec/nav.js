@@ -1,31 +1,27 @@
 (function () {
   var PAGES = [
-    { group: "Introduction", items: [
+    { group: "Cadrage", items: [
       { href: "index.html", label: "Sommaire" },
-      { href: "contexte.html", label: "Contexte du projet" }
+      { href: "contexte.html", label: "Systemes et evolutivite" }
     ]},
-    { group: "Referentiel", items: [
+    { group: "Proprietes", items: [
       { href: "produit.html", label: "Definition d'un produit" },
       { href: "attributs.html", label: "Gestion des attributs" },
       { href: "groupes.html", label: "Groupes d'attributs" },
-      { href: "categories.html", label: "Categories de produit" }
-    ]},
-    { group: "Usages", items: [
-      { href: "liste-produits.html", label: "Liste des produits" },
+      { href: "categories.html", label: "Categories de produit" },
       { href: "conditions.html", label: "Conditions commerciales" },
+      { href: "alertes.html", label: "Alertes" },
+      { href: "synthese.html", label: "Vue de synthese" },
+      { href: "roles.html", label: "Roles et permissions" },
+      { href: "utilisateurs.html", label: "Gestion des utilisateurs" },
+      { href: "administration.html", label: "Administration" },
+      { href: "mdd.html", label: "Modele de donnees" }
+    ]},
+    { group: "Fonctionnalites", items: [
+      { href: "dashboard.html", label: "Dashboard" },
+      { href: "liste-produits.html", label: "Liste des produits" },
       { href: "import.html", label: "Fonction d'import" },
       { href: "export.html", label: "Fonction d'export" },
-      { href: "dashboard.html", label: "Dashboard" }
-    ]},
-    { group: "Administration", items: [
-      { href: "administration.html", label: "Administration" },
-      { href: "alertes.html", label: "Alertes" },
-      { href: "roles.html", label: "Roles et permissions" },
-      { href: "synthese.html", label: "Vue de synthese" },
-      { href: "utilisateurs.html", label: "Gestion des utilisateurs" }
-    ]},
-    { group: "Modele & parcours", items: [
-      { href: "mdd.html", label: "Modele de donnees" },
       { href: "workflows.html", label: "Workflows d'utilisation" }
     ]}
   ];
