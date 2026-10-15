@@ -1,34 +1,32 @@
 ---
-description: Tenir la continuite OctoPIM via index.md et les specs HTML
+description: Tenir la continuite OctoPIM. La spec de travail est Confluence.
 alwaysApply: true
 ---
 
 # Continuite des specs
 
-Avant toute decision ou modification de comportement, lire `index.md`.
+Avant toute decision ou modification de comportement, lire `index.md`, puis `CLAUDE.md`.
 
 En cas de doute sur le besoin ou sur la mise en oeuvre, poser la question et challenger avant de modifier le code.
 
 Pour un choix d'ergonomie, se comporter en expert UI : hierarchie, densite, pas de texte qui repete une evidence et prend de la place.
 
-A chaque modification de la maquette ou d'une regle metier, et a chaque directive globale donnee dans la conversation :
+Confluence (espace OctoPim, partie Fonctionnement de l'outil) est la spec de travail. Ne plus tenir `spec/*.html` en parallele. Ne pas supprimer ces fichiers.
 
-1. Mettre a jour la page `spec/*.html` du sujet avec toutes les regles de gestion (besoin, agencement, caracteristiques, limites, contraintes, capture si l'ecran change).
-2. Mettre a jour le guide utilisateur `docs/Guide utilisateur/index.html` si le parcours ou un droit change.
-3. Ajouter une ligne datee dans `index.md` (decision, directive, point ouvert, ou correctif).
+A chaque modification de la maquette ou d'une regle metier, et a chaque directive globale :
 
-Ecrire le besoin avant la solution. Si la maquette ne tient pas au volume vise (100k produits) ou a un systeme cible (SAP, Babil, Okta), le signaler dans la spec au lieu de figer le comportement de la maquette.
+1. Mettre a jour la page Confluence du sujet.
+2. Mettre a jour `docs/Guide utilisateur/index.html` si le parcours ou un droit change. Si une action est impossible faute de droit, le guide dit de contacter Alexis Beranger, administrateur de la solution.
+3. Ajouter une ligne datee dans `index.md`.
 
-Exemple : la liste doit permettre de retrouver un produit. Ne pas specifier « afficher toutes les valeurs de la colonne » comme exigence.
+Ecrire le besoin avant la solution. L'outil est dimensionne pour un grand catalogue, sans seuil numerique. Si la maquette ne tient pas ce comportement face a SAP, Babil ou Okta, le dire dans la spec.
 
-Encadrer en rouge (classe `shot-mark`) la zone d'une capture dont parle la section.
+Un libelle d'ecran s'ecrit entre crochets, en gras. Un code technique reste en police code. Une capture globale montre l'organisation. Une zone decrite est cadree en rouge, le reste est voile.
 
-En fin de modification, citer la page spec et les regles touchees.
+A chaque passage sur `main` :
 
-A chaque passage sur `main` (PR de production) :
+1. Si un ecran a change, remplacer les captures dans `spec/captures`.
+2. Mettre a jour `docs/Cahier de test/Cahier de test OctoPIM.xlsx`. La colonne Ok ? reste vide tant que le test n'a pas ete joue.
+3. Mettre a jour le guide si une fonctionnalite ou un droit visible a change.
 
-1. Si un ecran a change, remplacer les captures dans `spec/captures` utilisees par les pages concernees.
-2. Mettre a jour `docs/Cahier de test/Cahier de test OctoPIM.xlsx` : scenarios et resultats attendus. La colonne Ok ? reste vide tant que le test n'a pas ete joue.
-3. Mettre a jour `docs/Guide utilisateur/index.html` si une fonctionnalite ou un droit visible a change. Si une action est impossible faute de droit, le guide dit de contacter Alexis Beranger, administrateur de la solution.
-
-`spec/` ne contient que la spec (pages, styles, scripts, captures). Les autres documents sont dans `docs/` (references, cahier de test, guide, canvases).
+`spec/` ne contient que d'anciennes pages. Les autres documents sont dans `docs/`.
