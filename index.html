@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <title>OctoPIM</title>
+  <link rel="stylesheet" href="css/style.css?v=37">
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="vendor/jszip.min.js"></script>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-title">
+        <span style="font-size:32px;filter:drop-shadow(0 0 4px #7c3aed88)">&#129425;</span>
+        <span style="color:#7c3aed;font-weight:800;letter-spacing:-0.5px">OctoPIM</span>
+      </div>
+      <div class="sidebar-logo-sub">Gestion produits</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <div class="nav-item active" data-nav="dashboard" onclick="showPage('dashboard', this)">
+        <span class="nav-item-icon">&#127968;</span>
+        <span>Tableau de bord</span>
+      </div>
+      <div class="nav-item" data-nav="products" onclick="showPage('products', this)">
+        <span class="nav-item-icon">&#128230;</span>
+        <span>Produits</span>
+      </div>
+      <div class="nav-item" data-nav="imports" onclick="showPage('imports', this)">
+        <span class="nav-item-icon">&#128229;</span>
+        <span>Imports</span>
+      </div>
+      <div class="nav-item" data-nav="exports" onclick="showPage('exports', this)">
+        <span class="nav-item-icon">&#128228;</span>
+        <span>Exports</span>
+      </div>
+      <div class="nav-section-label">Configuration</div>
+      <div class="nav-item" data-nav="admin" onclick="showPage('admin', this)">
+        <span class="nav-item-icon">&#9881;</span>
+        <span>Administration</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">v1.0.0</div>
+  </aside>
+
+  <div class="main-content">
+
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Tableau de bord</div>
+      <div class="topbar-actions">
+        <div class="account-menu" id="account-menu">
+          <button type="button" class="account-menu-trigger" onclick="toggleAccountMenu(event)">
+            <div class="account-menu-text">
+              <div class="account-menu-name" id="account-name">J. Doe</div>
+              <div class="account-menu-role" id="account-role">Admin Systeme</div>
+            </div>
+            <div class="account-avatar" id="account-avatar" title="Compte">JD</div>
+          </button>
+          <div class="account-dropdown" id="account-dropdown" hidden>
+            <button type="button" class="account-dropdown-item" onclick="openPreferencesFromMenu()">
+              Preferences d'affichage
+            </button>
+            <div class="account-dropdown-label">Changer d'utilisateur</div>
+            <div id="account-switch-list"></div>
+            <div class="account-dropdown-sep"></div>
+            <button type="button" class="account-dropdown-item is-danger" onclick="logoutUser()">
+              Deconnexion
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-container">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+          <div style="font-size:13px;color:#a0b0c0" id="dashboard-date"></div>
+        </div>
+
+        <div class="dashboard-section-label">Analyse des produits</div>
+        <div style="display:grid;grid-template-columns:1fr 1.4fr 1.4fr;
+          gap:16px;margin-bottom:20px">
+
+          <div class="dash-kpi-card" style="cursor:pointer"
+            onclick="showPage('products',
+              document.querySelector('.nav-item[onclick*=\'products\']'))">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div class="kpi-label">TOTAL PRODUITS</div>
+                <div class="kpi-value" id="kpi-total"
+                  style="font-size:52px;line-height:1.1;margin-top:4px">—</div>
+              </div>
+              <div style="font-size:48px;line-height:1;opacity:0.85">&#128230;</div>
+            </div>
+          </div>
+
+          <div class="dash-kpi-card">
+            <div style="font-size:12px;font-weight:700;color:#607080;
+              text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">
+              Repartition par categorie
+            </div>
+            <div style="display:flex;align-items:center;gap:16px">
+              <svg id="donut-svg" width="90" height="90"
+                viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"
+                style="flex-shrink:0"></svg>
+              <div id="donut-legend"
+                style="display:flex;flex-direction:column;gap:5px;flex:1"></div>
+            </div>
+          </div>
+
+          <div class="dash-kpi-card">
+            <div style="font-size:12px;font-weight:700;color:#607080;
+              text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
+              Evolution recente
+            </div>
+            <div style="font-size:11px;color:#a0b0c0;margin-bottom:8px">
+              6 derniers mois
+            </div>
+            <div id="dashboard-evolution-chart" style="width:100%"></div>
+          </div>
+
+        </div>
+
+        <div class="dashboard-section-label">Qualite des produits</div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;
+          gap:16px;margin-bottom:20px">
+
+          <div class="dash-kpi-card" style="cursor:pointer"
+            onclick="showIncomplets()">
+            <div style="display:flex;justify-content:space-between;
+              align-items:flex-start;height:100%">
+              <div style="display:flex;flex-direction:column;
+                justify-content:space-between;height:100%">
+                <div>
+                  <div class="kpi-label">PRODUITS INCOMPLETS</div>
+                  <div class="kpi-value"
+                    style="color:#ef5350;font-size:52px;line-height:1.1;margin-top:4px"
+                    id="kpi-incomplets">—</div>
+                </div>
+                <div style="font-size:12px;color:#a0b0c0;margin-top:12px">
+                  Seuil : &lt; <span id="seuil-label">—</span>
+                </div>
+              </div>
+              <div style="font-size:48px;line-height:1;opacity:0.85">&#128679;</div>
+            </div>
+          </div>
+
+          <div class="dash-kpi-card">
+            <div style="display:flex;align-items:center;
+              justify-content:space-between;margin-bottom:6px">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:#1a2332;
+                  display:flex;align-items:center;gap:6px">
+                  <span style="font-size:14px">&#9989;</span>
+                  Taux de completion global
+                </div>
+                <div style="font-size:11px;color:#a0b0c0;margin-top:2px">
+                  Objectif : <span id="objectif-label">—</span>
+                </div>
+              </div>
+              <div style="font-size:28px;font-weight:800;color:#1a2332"
+                id="kpi-completion-global">—</div>
+            </div>
+            <div style="height:12px;background:#f0f4f8;border-radius:6px;
+              overflow:hidden;margin-bottom:16px">
+              <div id="bar-global"
+                style="height:100%;border-radius:6px;
+                transition:width 0.4s ease;width:0%"></div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:#a0b0c0;
+              text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
+              Detail par categorie
+            </div>
+            <div id="dashboard-completion-cats"></div>
+          </div>
+
+        </div>
+
+        <div id="dashboard-workflow"></div>
+
+        <div id="dashboard-alerts"></div>
+
+        <div class="dashboard-section-label">Vue fournisseur</div>
+        <div class="dash-kpi-card" style="margin-bottom:20px">
+          <div id="supplier-chart-container"></div>
+        </div>
+      </div>
+
+      <!-- PRODUITS -->
+      <div class="page" id="page-products">
+        <div style="display:flex;align-items:center;gap:10px;
+          flex-wrap:wrap;margin-bottom:12px">
+          <input type="text" class="search-input" id="products-search"
+            placeholder="Code, EAN, désignation, marque"
+            oninput="onSearchInput()">
+          <select class="filter-select" id="filter-cat"
+            onchange="onCatFilterChange()">
+            <option value="">Toutes categories</option>
+          </select>
+          <button class="btn btn-secondary" id="btn-clear-filters"
+            style="display:none" onclick="clearAllFilters()">
+            &#10005; Effacer les filtres
+          </button>
+          <span id="alert-filter-chip" style="display:none;font-size:12px;font-weight:600;color:#c62828"></span>
+          <div style="flex:1"></div>
+          <div class="view-toggle-pill">
+            <button id="btn-view-synth" class="view-toggle-btn active"
+              onclick="switchView('synth')">Synthese</button>
+            <button id="btn-view-detail" class="view-toggle-btn"
+              onclick="switchView('detail')">Detaillee</button>
+          </div>
+          <button class="btn btn-primary" id="btn-new-product"
+            onclick="openModal('modal-create-product')">
+            + Nouveau produit
+          </button>
+        </div>
+        <div id="group-filter-bar-container"></div>
+        <div id="compare-bar-container"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;
+          margin-bottom:8px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:12px;color:#a0b0c0" id="pagination-info"></div>
+          <div id="pagination-container"></div>
+        </div>
+        <div class="table-container">
+          <table id="products-table">
+            <thead id="products-thead"></thead>
+            <tbody id="products-tbody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">
+          <div id="pagination-container-bottom"></div>
+        </div>
+      </div>
+
+      <!-- FICHE PRODUIT -->
+      <div class="page" id="page-product-detail">
+        <div class="detail-sticky">
+          <button class="btn btn-secondary"
+            onclick="safeShowPage('products',
+              document.querySelector('.nav-item[onclick*=\'products\']'))">
+            &larr; Retour a la liste
+          </button>
+          <button class="btn btn-primary" id="btn-save-product" onclick="saveProduct()">
+            &#10003; Enregistrer
+          </button>
+          <span id="btn-save-hint" style="font-size:11px;color:#a0b0c0">Ctrl+S</span>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:20px;
+          box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:16px">
+          <div id="product-header-left"></div>
+        </div>
+        <div class="detail-completion-bar">
+          <div style="font-size:12px;font-weight:600;color:#607080;
+            min-width:80px">Complétion</div>
+          <div class="completion-bar-bg" style="flex:1;height:10px">
+            <div class="completion-bar-fill" id="detail-completion-bar"
+              style="width:0%;transition:width 0.4s ease"></div>
+          </div>
+          <div style="font-size:14px;font-weight:700;min-width:44px;text-align:right"
+            id="detail-completion-pct">—</div>
+        </div>
+        <div class="detail-workflow" id="detail-workflow"></div>
+        <div class="product-tabs-bar" id="product-tabs"></div>
+        <div id="product-tab-contents"></div>
+      </div>
+
+      <!-- EXPORTS -->
+      <div class="page" id="page-exports"></div>
+
+      <!-- IMPORTS -->
+      <div class="page" id="page-imports"></div>
+
+      <!-- PREFERENCES UTILISATEUR -->
+      <div class="page" id="page-user-prefs"></div>
+
+      <!-- ADMINISTRATION -->
+      <div class="page" id="page-admin">
+        <div style="font-size:18px;font-weight:700;color:#1a2332;margin-bottom:20px">
+          Administration
+        </div>
+        <div class="admin-grid">
+          <div class="admin-card" data-mod="mod_categories" onclick="showPage('admin-categories',null)">
+            <div class="admin-card-icon">&#127991;</div>
+            <div class="admin-card-title">Categories</div>
+            <div class="admin-card-count" id="admin-count-cats">—</div>
+          </div>
+          <div class="admin-card" data-mod="mod_groups" onclick="showPage('admin-groups',null)">
+            <div class="admin-card-icon">&#128193;</div>
+            <div class="admin-card-title">Groupes d'attributs</div>
+            <div class="admin-card-count" id="admin-count-groups">—</div>
+          </div>
+          <div class="admin-card" data-mod="mod_attributes" onclick="showPage('admin-attributes',null)">
+            <div class="admin-card-icon">&#9741;</div>
+            <div class="admin-card-title">Attributs</div>
+            <div class="admin-card-count" id="admin-count-attrs">—</div>
+          </div>
+          <div class="admin-card" data-mod="mod_synthese" onclick="showPage('admin-synthese',null)">
+            <div class="admin-card-icon">&#9783;</div>
+            <div class="admin-card-title">Groupe Synthese</div>
+          </div>
+          <div class="admin-card" data-mod="mod_conditions" onclick="showPage('admin-suppliers',null)">
+            <div class="admin-card-icon">&#127970;</div>
+            <div class="admin-card-title">Conditions commerciales</div>
+            <div class="admin-card-count" id="admin-count-suppliers">—</div>
+          </div>
+          <div class="admin-card" data-mod="mod_roles" onclick="showPage('admin-roles',null)">
+            <div class="admin-card-icon">&#128100;</div>
+            <div class="admin-card-title">Utilisateurs & groupes</div>
+            <div class="admin-card-count" id="admin-count-roles">—</div>
+          </div>
+          <div class="admin-card" data-mod="mod_alerts" onclick="showPage('admin-alerts',null)">
+            <div class="admin-card-icon">&#9888;</div>
+            <div class="admin-card-title">Alertes</div>
+            <div class="admin-card-count" id="admin-count-alerts">—</div>
+          </div>
+          <div class="admin-card" data-mod="mod_calc" onclick="showPage('admin-calc',null)">
+            <div class="admin-card-icon">&#9638;</div>
+            <div class="admin-card-title">Champs calculés</div>
+            <div class="admin-card-count" id="admin-count-calc">—</div>
+          </div>
+          <div class="admin-card" data-mod="mod_workflow" onclick="showPage('admin-workflow',null)">
+            <div class="admin-card-icon">&#10140;</div>
+            <div class="admin-card-title">Workflow</div>
+            <div class="admin-card-count" id="admin-count-workflow">—</div>
+          </div>
+          <div class="admin-card" data-mod="mod_prefs" onclick="showPage('admin-prefs',null)">
+            <div class="admin-card-icon">&#9881;</div>
+            <div class="admin-card-title">Preferences application</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN CATEGORIES -->
+      <div class="page" id="page-admin-categories">
+        <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+          <button class="btn btn-secondary"
+            onclick="showPage('admin',null)">&larr; Administration</button>
+          <button class="btn btn-primary" id="btn-new-category"
+            onclick="openModal('modal-create-category')">+ Nouvelle categorie</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Nom</th><th>Code</th><th>Couleur</th>
+                <th>Groupes</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cats-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ADMIN EDITION CATEGORIE -->
+      <div class="page" id="page-admin-category-edit">
+        <div style="margin-bottom:16px">
+          <button class="btn btn-secondary"
+            onclick="showPage('admin-categories',null)">&larr; Categories</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
+          <div class="field-group">
+            <div class="field-group-title">Informations</div>
+            <div class="field-row">
+              <div class="field-label">Nom *</div>
+              <input class="field-input" id="edit-cat-name"
+                oninput="autoSlug('edit-cat-name','edit-cat-code')">
+            </div>
+            <div class="field-row">
+              <div class="field-label">Code technique</div>
+              <input class="field-input" id="edit-cat-code"
+                style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Couleur</div>
+              <input type="color" class="field-input" id="edit-cat-color"
+                style="height:40px;padding:4px 8px;cursor:pointer">
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+              <button class="btn btn-secondary"
+                onclick="showPage('admin-categories',null)">Annuler</button>
+              <button class="btn btn-primary"
+                onclick="saveCategoryEdit()">Enregistrer</button>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-group-title">Groupes associes</div>
+            <div id="cat-group-order-list" style="margin-bottom:14px"></div>
+            <div class="field-group-title" style="margin-top:16px">Ajouter un groupe</div>
+            <input type="text" class="search-input" placeholder="Rechercher..."
+              oninput="filterCatGroupToggles(this.value)"
+              style="width:100%;margin-bottom:10px">
+            <div id="cat-group-available-list"
+              style="max-height:240px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN ATTRIBUTS -->
+      <div class="page" id="page-admin-attributes">
+        <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+          <button class="btn btn-secondary"
+            onclick="showPage('admin',null)">&larr; Administration</button>
+          <input type="text" class="search-input" id="attrs-search"
+            placeholder="Rechercher un attribut..."
+            oninput="renderAttrsTable()"
+            style="max-width:260px">
+          <button class="btn btn-primary" id="btn-new-attr"
+            onclick="openModal('modal-create-attr')">+ Nouvel attribut</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead id="attrs-thead"></thead>
+            <tbody id="attrs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ADMIN EDITION ATTRIBUT -->
+      <div class="page" id="page-admin-attribute-edit">
+        <div style="margin-bottom:12px">
+          <button class="btn btn-secondary"
+            onclick="showPage('admin-attributes',null)">&larr; Attributs</button>
+        </div>
+        <div id="ea-system-note" class="attr-system-note" style="display:none">
+          Attribut systeme : consultation seule.
+        </div>
+        <div class="attr-edit-layout">
+          <div class="field-group">
+            <div class="field-group-title">Identite</div>
+            <div class="field-row">
+              <div class="field-label">Nom *</div>
+              <input class="field-input" id="ea-name"
+                oninput="autoSlug('ea-name','ea-code')">
+            </div>
+            <div class="field-row">
+              <div class="field-label">Code technique</div>
+              <input class="field-input" id="ea-code"
+                style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Type</div>
+              <select class="form-select" id="ea-type"
+                onchange="onEditAttrTypeChange()">
+                <option>Texte</option>
+                <option>Texte long</option>
+                <option>Nombre</option>
+                <option>Simple select</option>
+                <option>Multi select</option>
+                <option>Oui / Non</option>
+                <option>Date</option>
+                <option>Image</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Groupe maison</div>
+              <select class="form-select" id="ea-group"></select>
+              <div id="ea-other-groups" style="margin-top:6px"></div>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Obligatoire</div>
+              <select class="form-select" id="ea-required">
+                <option value="1">Oui</option>
+                <option value="0">Non</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Compte dans la completion</div>
+              <select class="form-select" id="ea-completion">
+                <option value="1">Oui</option>
+                <option value="0">Non</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Afficher seulement si</div>
+              <select class="form-select" id="ea-show-if" onchange="onShowIfAttrChange('ea')">
+                <option value="">Toujours affiche</option>
+              </select>
+              <div id="ea-show-if-value-wrap" style="display:none;margin-top:8px">
+                <select class="form-select" id="ea-show-if-value"></select>
+              </div>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-group-title">Saisie</div>
+            <div class="field-row" id="ea-formula-wrap">
+              <div class="field-label">Champ calculé</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <select class="form-select" id="ea-calc" data-combo="off" style="max-width:120px" onchange="onEaCalcChange()">
+                  <option value="0">Non</option><option value="1">Oui</option>
+                </select>
+                <button type="button" class="btn btn-secondary" id="ea-calc-open" onclick="openCalcFieldFromAttr(document.getElementById('ea-code').value)">Régler le calcul</button>
+              </div>
+              <input type="hidden" id="ea-formula">
+            </div>
+            <div id="ea-formula-help" style="display:none"></div>
+            <div class="field-row">
+              <div class="field-label">Texte d'aide</div>
+              <input class="field-input" id="ea-helptext"
+                placeholder="? a cote du libelle">
+            </div>
+            <div class="field-row" id="ea-maxlength-wrap" style="display:none">
+              <div class="field-label">Longueur maximale</div>
+              <input class="field-input" id="ea-maxlength" type="number" min="0"
+                placeholder="vide = illimite" onwheel="event.preventDefault();this.blur()">
+            </div>
+            <div id="ea-number-wrap" style="display:none">
+              <div class="field-row">
+                <div class="field-label">Incrementation</div>
+                <select class="field-input form-select" id="ea-step-enabled">
+                  <option value="0">Saisie libre</option>
+                  <option value="1">Avec fleches</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <div class="field-label">Pas</div>
+                <input class="field-input" id="ea-step" type="number"
+                  placeholder="1 ou 0.5" onwheel="event.preventDefault();this.blur()">
+              </div>
+              <div class="field-row">
+                <div class="field-label">Minimum</div>
+                <input class="field-input" id="ea-min" type="number"
+                  placeholder="vide = aucun" onwheel="event.preventDefault();this.blur()">
+              </div>
+              <div class="field-row">
+                <div class="field-label">Maximum</div>
+                <input class="field-input" id="ea-max" type="number"
+                  placeholder="vide = aucun" onwheel="event.preventDefault();this.blur()">
+              </div>
+              <div class="field-row">
+                <div class="field-label">Decimales</div>
+                <select class="form-select" id="ea-decimals">
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Masque de saisie</div>
+              <input class="field-input" id="ea-mask"
+                placeholder="ex: A999999999999"
+                style="font-family:monospace">
+            </div>
+            <div id="ea-mask-help" style="display:none"></div>
+            <div class="field-row" id="ea-options-wrap" style="display:none">
+              <div class="field-label">Options (une par ligne)</div>
+              <textarea class="field-input" id="ea-options"
+                rows="4" style="resize:vertical"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="attr-edit-actions">
+          <button class="btn btn-secondary"
+            onclick="showPage('admin-attributes',null)">Annuler</button>
+          <button class="btn btn-primary" id="ea-save"
+            onclick="saveAttributeEdit()">Enregistrer</button>
+        </div>
+      </div>
+
+      <!-- ADMIN GROUPES -->
+      <div class="page" id="page-admin-groups">
+        <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+          <button class="btn btn-secondary"
+            onclick="showPage('admin',null)">&larr; Administration</button>
+          <button class="btn btn-primary" id="btn-new-group"
+            onclick="openModal('modal-create-group')">+ Nouveau groupe</button>
+        </div>
+        <div id="attr-groups-list"></div>
+      </div>
+
+      <!-- ADMIN EDITION GROUPE -->
+      <div class="page" id="page-admin-group-edit">
+        <div style="margin-bottom:16px">
+          <button class="btn btn-secondary"
+            onclick="showPage('admin-groups',null)">&larr; Groupes</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
+          <div class="field-group">
+            <div class="field-group-title">Informations</div>
+            <div class="field-row">
+              <div class="field-label">Nom *</div>
+              <input class="field-input" id="edit-group-name"
+                oninput="autoSlug('edit-group-name','edit-group-code')">
+            </div>
+            <div class="field-row">
+              <div class="field-label">Code technique</div>
+              <input class="field-input" id="edit-group-code"
+                style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Complétion pour</div>
+              <div id="edit-group-audience"></div>
+              <div style="font-size:11px;color:#8090a0;margin-top:4px">
+                Aucun coche = tous les groupes utilisateur. Sinon, seuls les groupes coches comptent ce groupe d'attributs dans leur completion.
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+              <button class="btn btn-secondary"
+                onclick="showPage('admin-groups',null)">Annuler</button>
+              <button class="btn btn-primary"
+                onclick="saveGroupEdit()">Enregistrer</button>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-group-title">Attributs du groupe
+              <span style="font-size:12px;font-weight:400;color:#a0b0c0">
+                (glisser pour reordonner)
+              </span>
+            </div>
+            <input type="text" class="search-input"
+              placeholder="Rechercher un attribut..."
+              oninput="filterGroupAttrToggles(this.value)"
+              style="width:100%;margin-bottom:10px">
+            <div id="group-attr-toggle-list"
+              style="max-height:480px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN SYNTHESE -->
+      <div class="page" id="page-admin-synthese"></div>
+
+      <!-- ADMIN FOURNISSEURS -->
+      <div class="page" id="page-admin-suppliers"></div>
+
+      <!-- ADMIN ROLES -->
+      <div class="page" id="page-admin-roles">
+        <div style="margin-bottom:16px">
+          <button class="btn btn-secondary"
+            onclick="showPage('admin',null)">&larr; Administration</button>
+        </div>
+        <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:16px">
+          Utilisateurs & groupes d'affectation
+        </div>
+        <div class="roles-grid" id="roles-grid"></div>
+      </div>
+
+      <!-- ADMIN PREFERENCES -->
+      <div class="page" id="page-admin-prefs"></div>
+      <div class="page" id="page-admin-alerts"></div>
+      <div class="page" id="page-admin-calc"></div>
+      <div class="page" id="page-admin-workflow"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODALES -->
+
+<div class="modal-overlay" id="modal-confirm-delete">
+  <div class="modal-box">
+    <div class="modal-title">Confirmer la suppression</div>
+    <p id="confirm-delete-text"
+      style="font-size:13px;color:#607080;margin-bottom:8px"></p>
+    <p style="font-size:12px;color:#ef5350">Cette action est irreversible.</p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary"
+        onclick="closeModal('modal-confirm-delete')">Annuler</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-create-product">
+  <div class="modal-box">
+    <div class="modal-title">Nouveau produit</div>
+    <div class="field-row">
+      <div class="field-label">Code SAP</div>
+      <input class="field-input" id="np-sap"
+        placeholder="ex: M906342000001" style="font-family:monospace">
+    </div>
+    <div class="field-row">
+      <div class="field-label">Code EAN/GTIN *</div>
+      <input class="field-input" id="np-ean"
+        placeholder="ex: 08056262500675" style="font-family:monospace">
+      <div class="field-error-msg" id="err-np-ean">Code EAN/GTIN obligatoire.</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Nom produit *</div>
+      <input class="field-input" id="np-name"
+        placeholder="ex: Monture Vogue VO4279S">
+      <div class="field-error-msg" id="err-np-name">Nom obligatoire.</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Categorie *</div>
+      <select class="form-select" id="np-cat">
+        <option value="">-- Choisir --</option>
+      </select>
+      <div class="field-error-msg" id="err-np-cat">Categorie obligatoire.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary"
+        onclick="closeModal('modal-create-product')">Annuler</button>
+      <button class="btn btn-primary"
+        onclick="createProduct()">Creer et ouvrir la fiche</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-create-category">
+  <div class="modal-box">
+    <div class="modal-title">Nouvelle categorie</div>
+    <div class="field-row">
+      <div class="field-label">Nom *</div>
+      <input class="field-input" id="new-cat-name" placeholder="ex: Montures"
+        oninput="autoSlug('new-cat-name','new-cat-code')">
+    </div>
+    <div class="field-row">
+      <div class="field-label">Code technique</div>
+      <input class="field-input" id="new-cat-code"
+        style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
+        placeholder="auto-genere" readonly>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Couleur</div>
+      <input type="color" class="field-input" id="new-cat-color"
+        value="#4fc3f7" style="height:40px;padding:4px 8px;cursor:pointer">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary"
+        onclick="closeModal('modal-create-category')">Annuler</button>
+      <button class="btn btn-primary"
+        onclick="createCategory()">Creer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-create-attr">
+  <div class="modal-box modal-box-lg">
+    <div class="modal-title">Nouvel attribut</div>
+    <div class="form-grid">
+      <div class="form-field">
+        <div class="form-label">Nom *</div>
+        <input class="field-input" id="new-attr-name"
+          placeholder="ex: Code douanier"
+          oninput="autoSlug('new-attr-name','new-attr-code')">
+        <div class="field-error-msg" id="err-attr-name">Nom obligatoire.</div>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Code technique</div>
+        <input class="field-input" id="new-attr-code"
+          style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
+          placeholder="auto-genere" readonly>
+        <div class="field-error-msg" id="err-attr-code">Code obligatoire.</div>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Type</div>
+        <select class="form-select" id="new-attr-type"
+          onchange="onNewAttrTypeChange()">
+          <option>Texte</option>
+          <option>Texte long</option>
+          <option>Nombre</option>
+          <option>Simple select</option>
+          <option>Multi select</option>
+          <option>Oui / Non</option>
+          <option>Date</option>
+          <option>Image</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Groupe</div>
+        <select class="form-select" id="new-attr-group">
+          <option value="">-- Choisir --</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Obligatoire</div>
+        <select class="form-select" id="new-attr-required">
+          <option value="0">Non</option>
+          <option value="1">Oui</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Compte dans la completion</div>
+        <select class="form-select" id="new-attr-completion">
+          <option value="1">Oui</option>
+          <option value="0">Non</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Afficher seulement si</div>
+        <select class="form-select" id="new-attr-show-if" onchange="onShowIfAttrChange('new-attr')">
+          <option value="">Toujours affiche</option>
+        </select>
+        <div id="new-attr-show-if-value-wrap" style="display:none;margin-top:8px">
+          <select class="form-select" id="new-attr-show-if-value"></select>
+        </div>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Masque de saisie</div>
+        <input class="field-input" id="new-attr-mask"
+          placeholder="ex: A999999999999" style="font-family:monospace">
+      </div>
+      <div class="form-field" id="new-attr-maxlength-wrap" style="display:none">
+        <div class="form-label">Longueur maximale</div>
+        <input class="field-input" id="new-attr-maxlength" type="number" min="0"
+          placeholder="ex: 500 (vide = illimite)" onwheel="event.preventDefault();this.blur()">
+      </div>
+    </div>
+    <div class="form-grid" id="new-attr-number-wrap" style="display:none">
+      <div class="form-field">
+        <div class="form-label">Incrementation</div>
+        <select class="field-input form-select" id="new-attr-step-enabled">
+          <option value="0">Non, saisie libre sans fleches</option>
+          <option value="1">Oui, avec fleches d'increment</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Pas d'incrementation</div>
+        <input class="field-input" id="new-attr-step" type="number"
+          placeholder="ex: 1 ou 0.5" onwheel="event.preventDefault();this.blur()">
+      </div>
+      <div class="form-field">
+        <div class="form-label">Valeur minimale</div>
+        <input class="field-input" id="new-attr-min" type="number"
+          placeholder="vide = pas de minimum" onwheel="event.preventDefault();this.blur()">
+      </div>
+      <div class="form-field">
+        <div class="form-label">Valeur maximale</div>
+        <input class="field-input" id="new-attr-max" type="number"
+          placeholder="vide = pas de maximum" onwheel="event.preventDefault();this.blur()">
+      </div>
+      <div class="form-field">
+        <div class="form-label">Chiffres apres la virgule</div>
+        <select class="form-select" id="new-attr-decimals">
+          <option value="0">0 — arrondi</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+        </select>
+      </div>
+    </div>
+    <div id="new-attr-mask-help" style="display:none"></div>
+    <div class="field-row" style="margin-top:14px" id="new-attr-formula-wrap">
+      <div class="field-label">Champ calculé</div>
+      <select class="form-select" id="new-attr-calc" data-combo="off" style="max-width:120px">
+        <option value="0">Non</option><option value="1">Oui</option>
+      </select>
+    </div>
+    <div id="new-attr-formula-help" style="display:none"></div>
+    <div class="field-row" style="margin-top:14px">
+      <div class="field-label">Texte d'aide (tooltip)</div>
+      <input class="field-input" id="new-attr-helptext"
+        placeholder="Affiche un ? a cote du libelle sur la fiche produit">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary"
+        onclick="closeModal('modal-create-attr')">Annuler</button>
+      <button class="btn btn-primary"
+        onclick="createNewAttribute()">Creer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-create-group">
+  <div class="modal-box">
+    <div class="modal-title">Nouveau groupe d'attributs</div>
+    <div class="field-row">
+      <div class="field-label">Nom *</div>
+      <input class="field-input" id="new-group-name"
+        placeholder="ex: Caracteristiques monture"
+        oninput="autoSlug('new-group-name','new-group-code')">
+    </div>
+    <div class="field-row">
+      <div class="field-label">Code technique</div>
+      <input class="field-input" id="new-group-code"
+        style="font-family:monospace;background:#f8fafc;color:#a0b0c0"
+        placeholder="auto-genere" readonly>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Complétion pour</div>
+      <div id="new-group-audience"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary"
+        onclick="closeModal('modal-create-group')">Annuler</button>
+      <button class="btn btn-primary"
+        onclick="createAttrGroup()">Creer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-unsaved">
+  <div class="modal-box">
+    <div class="modal-title">Modifications non sauvegardees</div>
+    <p id="unsaved-lead" style="font-size:13px;color:#607080;margin-bottom:8px">
+      Des modifications sont en cours sur cette fiche produit.
+    </p>
+    <p style="font-size:13px;color:#607080">
+      Voulez-vous quitter sans enregistrer ?
+    </p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary"
+        onclick="cancelLeaveUnsaved()">Rester sur la fiche</button>
+      <button class="btn btn-danger"
+        onclick="confirmLeaveUnsaved()">Quitter sans enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-seuil">
+  <div class="modal-box">
+    <div class="modal-title">Modifier le seuil de completion</div>
+    <div class="field-row">
+      <div class="field-label">Seuil (%)</div>
+      <input type="number" class="field-input" id="seuil-input"
+        min="0" max="100" step="5" style="width:120px"
+        onwheel="event.preventDefault();this.blur()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary"
+        onclick="closeModal('modal-seuil')">Annuler</button>
+      <button class="btn btn-primary"
+        onclick="saveSeuil()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="login-overlay" id="login-overlay" hidden>
+  <div class="login-card">
+    <div class="login-brand">
+      <span style="font-size:36px">&#129425;</span>
+      <div class="login-title">OctoPIM</div>
+    </div>
+    <div class="login-sub">Choisissez un compte pour vous connecter</div>
+    <div id="login-user-list" class="login-user-list"></div>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="js/data.js?v=50"></script>
+<script src="js/utils.js?v=42"></script>
+<script src="js/dashboard.js?v=26"></script>
+<script src="js/products.js?v=32"></script>
+<script src="js/admin.js?v=41"></script>
+<script src="js/baremes-workflow.js?v=8"></script>
+<script src="js/detail.js?v=39"></script>
+<script src="js/export.js?v=26"></script>
+<script src="js/import.js?v=22"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    syncWorkflowAttrOptions();
+    const newAttrGroup = document.getElementById('new-attr-group');
+    if (newAttrGroup) {
+      attrGroups.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.id; opt.textContent = g.name;
+        newAttrGroup.appendChild(opt);
+      });
+    }
+    renderRoles();
+  });
+</script>
+
+</body>
+</html>
