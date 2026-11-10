@@ -322,7 +322,7 @@ function renderCatGroupAvailable(cat) {
     row.innerHTML = `
       <div class="attr-toggle-info">
         <div class="attr-toggle-name">${g.name}</div>
-        <div class="attr-toggle-meta">${g.attrIds.length} attributs</div>
+        <div class="attr-toggle-meta">${g.attrIds.filter(id => !isAttrSection(id)).length} attributs</div>
       </div>
       <button class="action-btn" onclick="addCatGroup(${cat.id},${g.id})">Ajouter</button>`;
     list.appendChild(row);
@@ -547,6 +547,8 @@ function editAttribute(id) {
     compEl.disabled = isAutoFilled(a);
   }
   document.getElementById('ea-formula').value  = a.formula || '';
+  const widthEl = document.getElementById('ea-width');
+  if (widthEl) widthEl.value = a.width || '';
   const calcEl = document.getElementById('ea-calc');
   if (calcEl) { calcEl.value = (a.calc || a.formula) ? '1' : '0'; calcEl.disabled = !!a.system; }
   onEaCalcChange();
@@ -738,6 +740,8 @@ function saveAttributeEdit() {
     showNotif('Code deja utilise par un autre attribut'); return;
   }
   if (typeof calcCommit === 'function') calcCommit(a.code);
+  const widthSave = document.getElementById('ea-width');
+  if (widthSave) a.width = widthSave.value || undefined;
   const oldCode     = a.code;
   const oldGroupId  = a.groupId;
   const newGroupId  = a.system ? a.groupId : (parseInt(document.getElementById('ea-group').value) || null);
@@ -1068,6 +1072,7 @@ function renderAttrGroupsList() {
 }
 
 function editAttrGroup(id) {
+  _grpSel = null;
   editingGroupId = id;
   const g = attrGroups.find(x => x.id === id);
   if (!g) return;
@@ -1078,53 +1083,86 @@ function editAttrGroup(id) {
   showPage('admin-group-edit', null);
 }
 
-function renderGroupAttrToggles(g) {
+// Contenu d'un groupe : barre d'ajout en haut (attribut ou intertitre),
+// puis la liste ordonnée de ce qui s'affiche dans l'onglet.
+function renderGroupAttrToggles(g, flashIdx) {
   const list = document.getElementById('group-attr-toggle-list');
   if (!list) return;
-  list.innerHTML = '';
-  const ordered = g.attrIds.map(id => getAttrById(id)).filter(Boolean);
+  const entries = g.attrIds.map((id, i) => ({ id, i, a: isAttrSection(id) ? null : getAttrById(id) }))
+    .filter(e => e.a || isAttrSection(e.id));
   const inGroup = new Set(g.attrIds);
-  const others = attributes.filter(a => !inGroup.has(a.id));
+  const others = attributes.filter(a => !inGroup.has(a.id))
+    .sort((x, y) => x.name.localeCompare(y.name, 'fr'));
+  const nAttrs = entries.filter(e => e.a).length;
+  const nSec = entries.length - nAttrs;
 
-  const structureHint = '';
+  const rows = entries.map(({ id, i, a }) => {
+    const drag = `draggable="true" ondragstart="groupAttrDragStart(${i})" ondragover="groupAttrDragOver(event)" ondrop="groupAttrDrop(event,${i})" onclick="selectGroupRow(event,${i})"`;
+    const flash = (i === flashIdx ? ' field-flash' : '') + (i === _grpSel ? ' grp-selected' : '');
+    if (!a) return `
+      <div class="grp-item grp-section${flash}" ${drag}>
+        <span class="drag-handle">&#8942;&#8942;</span>
+        <input class="field-input group-section-input" value="${escapeHtml(attrSectionTitle(id))}"
+          onchange="renameGroupSection(${i},this.value)">
+        <button class="action-btn-danger btn-trash" title="Supprimer l'intertitre" onclick="removeGroupSection(${i})">${TRASH_ICON}</button>
+      </div>`;
+    const locked = a.system && (a.groupId === g.id || (g.isBrandGroup && a.code === 'cat'));
+    return `
+      <div class="grp-item${flash}" ${drag}>
+        <span class="drag-handle">&#8942;&#8942;</span>
+        <span class="grp-name">${escapeHtml(a.name)}${a.system ? systemLockBadge('attr') : ''}</span>
+        <span class="grp-type">${escapeHtml(a.type)}${a.width ? ' · ' + ({ narrow: 'étroite', normal: 'normale', wide: 'large', full: 'pleine ligne' }[a.width] || '') : ''}</span>
+        ${locked ? '<span class="grp-x-spacer"></span>'
+          : `<button class="grp-x" title="Retirer du groupe" onclick="toggleGroupAttr(${a.id})">&#10005;</button>`}
+      </div>`;
+  }).join('');
 
   list.innerHTML = `
-    ${structureHint}
-    <div style="font-size:12px;font-weight:700;color:#1a2332;margin-bottom:8px">
-      Ordre d'affichage
-      <span style="font-weight:400;color:#a0b0c0">(glisser pour reordonner)</span>
+    <div class="grp-add">
+      <select class="form-select" id="grp-add-attr" onchange="addAttrToGroup(this.value)">
+        <option value="">Ajouter un attribut…</option>
+        ${others.map(a => {
+          const where = attrGroups.filter(x => x.attrIds.includes(a.id)).map(x => x.name).join(', ');
+          return `<option value="${a.id}">${escapeHtml(a.name)}${where ? ' (' + escapeHtml(where) + ')' : ''}</option>`;
+        }).join('')}
+      </select>
+      <button class="btn btn-secondary" onclick="addGroupSection()">+ Intertitre</button>
     </div>
-    <div id="group-attr-order-list" style="margin-bottom:16px">
-      ${ordered.length
-        ? ordered.map((a, i) => `
-            <div class="cat-group-order-item" draggable="true"
-              data-attr-name="${escapeHtml(a.name.toLowerCase())}"
-              ondragstart="groupAttrDragStart(${i})"
-              ondragover="groupAttrDragOver(event)"
-              ondrop="groupAttrDrop(event,${i})">
-              <span class="drag-handle">&#8942;&#8942;</span>
-              <span style="flex:1;font-size:13px;font-weight:600;color:#1a2332">${escapeHtml(a.name)}</span>
-              ${a.system ? systemLockBadge('attr') : ''}
-              <span class="badge badge-grey" style="font-size:11px">${escapeHtml(a.code)}</span>
-              ${a.system && (a.groupId === g.id || (g.isBrandGroup && a.code === 'cat'))
-                ? ''
-                : `<button class="action-btn-danger" style="padding:2px 8px;font-size:11px"
-                    onclick="toggleGroupAttr(${a.id})">&#10005;</button>`}
-            </div>`).join('')
-        : '<div style="font-size:12px;color:#a0b0c0;padding:8px">Aucun attribut dans ce groupe.</div>'}
+    <div class="grp-head">
+      <span>${nAttrs} attribut${nAttrs > 1 ? 's' : ''}${nSec ? ' · ' + nSec + ' intertitre' + (nSec > 1 ? 's' : '') : ''}</span>
+      <span class="grp-hint">glisser pour réordonner</span>
     </div>
-    <div style="font-size:12px;font-weight:700;color:#1a2332;margin-bottom:8px">Ajouter un attribut</div>
-    ${others.length
-      ? others.map(attr => `
-          <div class="attr-toggle-row" data-attr-name="${escapeHtml(attr.name.toLowerCase())}">
-            <div class="attr-toggle-info">
-              <div class="attr-toggle-name">${escapeHtml(attr.name)}</div>
-              <div class="attr-toggle-meta">${escapeHtml(attr.type)}</div>
-            </div>
-            <div class="toggle" data-attr-id="${attr.id}"
-              onclick="toggleGroupAttr(${attr.id})"></div>
-          </div>`).join('')
-      : '<div style="font-size:12px;color:#a0b0c0;padding:8px">Tous les attributs sont deja dans le groupe.</div>'}`;
+    <div id="group-attr-order-list">${rows || '<div class="grp-empty">Aucun attribut.</div>'}</div>`;
+
+  if (flashIdx != null) {
+    const el = list.querySelector('.field-flash');
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+// Ligne sélectionnée : les ajouts s'insèrent juste après (sinon en fin de liste)
+let _grpSel = null;
+function selectGroupRow(e, i) {
+  if (e.target.closest('input, button')) return;
+  const g = attrGroups.find(x => x.id === editingGroupId);
+  _grpSel = _grpSel === i ? null : i;
+  if (g) renderGroupAttrToggles(g);
+}
+function insertInGroup(g, item) {
+  const at = _grpSel != null && _grpSel < g.attrIds.length ? _grpSel + 1 : g.attrIds.length;
+  g.attrIds.splice(at, 0, item);
+  _grpSel = at;
+  return at;
+}
+
+function addAttrToGroup(val) {
+  const g = attrGroups.find(x => x.id === editingGroupId);
+  const id = parseInt(val, 10);
+  if (!g || !id || g.attrIds.includes(id)) return;
+  const attr = getAttrById(id);
+  const at = insertInGroup(g, id);
+  if (g.code === 'conditions_commerciales' && attr) attr.isConditionCommerciale = true;
+  renderGroupAttrToggles(g, at);
 }
 
 let groupAttrDragIdx = null;
@@ -1140,6 +1178,32 @@ function groupAttrDrop(e, i) {
   const moved = g.attrIds.splice(groupAttrDragIdx, 1)[0];
   g.attrIds.splice(i, 0, moved);
   groupAttrDragIdx = null;
+  _grpSel = null;
+  renderGroupAttrToggles(g);
+}
+
+function addGroupSection() {
+  const g = attrGroups.find(x => x.id === editingGroupId);
+  if (!g) return;
+  const at = insertInGroup(g, '§Nouvel intertitre');
+  renderGroupAttrToggles(g, at);
+  const el = document.querySelector('.grp-item.field-flash .group-section-input');
+  if (el) { el.focus(); el.select(); }
+}
+
+function renameGroupSection(i, val) {
+  const g = attrGroups.find(x => x.id === editingGroupId);
+  if (!g || !isAttrSection(g.attrIds[i])) return;
+  const t = String(val || '').trim();
+  if (t) g.attrIds[i] = '§' + t;
+  renderGroupAttrToggles(g);
+}
+
+function removeGroupSection(i) {
+  const g = attrGroups.find(x => x.id === editingGroupId);
+  if (!g || !isAttrSection(g.attrIds[i])) return;
+  g.attrIds.splice(i, 1);
+  _grpSel = null;
   renderGroupAttrToggles(g);
 }
 
@@ -1154,6 +1218,7 @@ function toggleGroupAttr(attrId) {
       return;
     }
     g.attrIds.splice(idx, 1);
+    _grpSel = null;
     if (g.code === 'conditions_commerciales' && attr) attr.isConditionCommerciale = false;
   } else {
     g.attrIds.push(attrId);

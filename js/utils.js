@@ -44,6 +44,7 @@ function showPage(id, navEl) {
 
   const target = document.getElementById('page-' + id);
   if (target) target.classList.add('active');
+  document.body.classList.toggle('on-detail', id === 'product-detail');
   if (navEl)  navEl.classList.add('active');
   const pageTitles = {
     dashboard: 'Dashboard',
@@ -440,8 +441,25 @@ function isWorkflowOn() {
 }
 
 // Colonnes / infos du résumé : sans l'étape quand le workflow est désactivé
+// Le libellé d'un élément de synthèse est toujours le nom de son attribut
 function activeSynthItems() {
+  syntheseItems.forEach(i => {
+    if (i.kind !== 'attr') return;
+    const codes = typeof synthCodeAliases === 'function' ? synthCodeAliases(i.code) : [i.code];
+    const a = attributes.find(x => codes.includes(x.code));
+    if (a) i.label = a.name;
+  });
   return isWorkflowOn() ? syntheseItems : syntheseItems.filter(i => i.code !== 'etape_workflow');
+}
+
+// Intertitre dans la liste d'un groupe d'attributs : chaîne « §Titre »
+function isAttrSection(id) { return typeof id === 'string' && id.charAt(0) === '§'; }
+function attrSectionTitle(id) { return String(id).slice(1); }
+
+// Largeur d'un attribut sur la fiche (grille de 12 colonnes)
+function fieldWidthClass(a) {
+  const w = a.width || ((a.type === 'Texte long' || a.type === 'Image') ? 'full' : 'normal');
+  return 'fw-' + w;
 }
 
 // Complétion des seuls onglets choisis qui existent dans la catégorie du
@@ -523,6 +541,24 @@ function workflowStepperHtml(p) {
   const note = st.gaps.length
     ? `<div class="wf-note">${st.gaps.length} jalon${st.gaps.length > 1 ? 's' : ''} à régulariser</div>` : '';
   return `<div class="wf-label">Workflow</div><div class="wf-steps">${items}</div>${note}`;
+}
+
+// Version condensée pour le bandeau de la fiche : une pastille par jalon
+// (nom au survol), puis l'étape atteinte et les jalons à régulariser.
+function workflowCompactHtml(p) {
+  if (!isWorkflowOn()) return '';
+  const st = workflowState(p);
+  const dots = workflowSteps.map((s, i) => {
+    const ok = st.reached[i], gap = st.gaps.includes(i);
+    return `<span class="wfc-dot${ok ? ' done' : gap ? ' gap' : ''}" title="${escapeHtml(s.name)}">${ok ? '&#10003;' : gap ? '!' : ''}</span>`;
+  }).join('');
+  const stage = p.fields.etape_workflow || WORKFLOW_START_LABEL;
+  const gaps = st.gaps.length ? `<span class="wfc-gap">${st.gaps.length} à régulariser</span>` : '';
+  return `<div class="ps-item ps-wf">
+      <span class="ps-label">Workflow</span>
+      <span class="wfc-dots">${dots}</span>
+      <span class="ps-sub">${escapeHtml(stage)}${gaps ? ' · ' + gaps : ''}</span>
+    </div>`;
 }
 
 function getCompletionColor(pct) {
@@ -1693,7 +1729,10 @@ function enhanceSelect(sel) {
   input.className = 'field-input combo-input';
   input.autocomplete = 'off';
   input.spellcheck = false;
-  input.placeholder = 'Choisir…';
+  // Libellé de l'option vide s'il est parlant (« Ajouter un attribut… »), sinon « Choisir… »
+  const emptyOpt = sel.querySelector('option[value=""]');
+  const emptyTxt = emptyOpt ? emptyOpt.textContent.trim() : '';
+  input.placeholder = emptyTxt && !emptyTxt.startsWith('--') ? emptyTxt : 'Choisir…';
   input.value = comboLabel(sel);
   input.disabled = sel.disabled;
   input.title = sel.title || '';

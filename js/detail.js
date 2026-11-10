@@ -116,17 +116,30 @@ function renderProductHeader(p, cat) {
     .filter(i => i.kind === 'attr' && i !== titleItem && !isVisualCode(i.code)
       && i.code !== 'completion' && i.code !== 'etape_workflow')
     .map(i => {
-      const inner = i.code === 'cat'
+      const val = i.code === 'cat'
         ? `<span class="badge" style="${getCatBadgeStyle(p.cat)}">${escapeHtml(p.cat)}</span>`
-        : `${escapeHtml(i.label)} : <b>${escapeHtml(getSynthValue(p, i.code) || '—')}</b>`;
-      return `<span class="synth-chip" onclick="goToProductField('${i.code}')">${inner}</span>`;
+        : escapeHtml(getSynthValue(p, i.code) || '—');
+      return `<span class="synth-chip" onclick="goToProductField('${i.code}')">
+        <span class="synth-chip-label">${escapeHtml(i.label)}</span><span class="synth-chip-val">${val}</span></span>`;
     }).join('');
   const visual = getSynthVisualItem();
+  computeCalcFields(p);
+  const comp = calcCompletion(p), color = getCompletionColor(comp);
   headerLeft.innerHTML = `
     <div class="product-head">
       <div class="product-head-visual" ${visual ? `onclick="goToProductField('${visual.code}')"` : ''}>${summaryVisual(p)}</div>
-      <div style="flex:1;min-width:0">
-        <div class="product-title" onclick="goToProductField('${titleItem ? titleItem.code : 'nom'}')">${escapeHtml(title)}${alertPictoHtml(p)}</div>
+      <div class="ph-main">
+        <div class="ph-top">
+          <div class="product-title" title="${escapeHtml(title)}" onclick="goToProductField('${titleItem ? titleItem.code : 'nom'}')">${escapeHtml(title)}</div>${alertPictoHtml(p)}
+          <div class="product-status">
+        <div class="ps-item">
+          <span class="ps-label">Complétion</span>
+          <span class="ps-comp"><span class="ps-bar"><span style="width:${comp}%;background:${color}"></span></span>
+            <b style="color:${color}">${comp}%</b></span>
+        </div>
+        ${workflowCompactHtml(p)}
+          </div>
+        </div>
         ${productAlertLine(p)}
         <div class="product-meta">${chips}</div>
       </div>
@@ -253,7 +266,7 @@ function renderProductTabs(p,cat){
   allTabs.forEach((g,i)=>{
     const tabEl=document.createElement('div');
     tabEl.className='tab'+(i===0?' active':'');
-    tabEl.textContent=g.name;
+    tabEl.innerHTML=escapeHtml(g.name)+(g._isHist?'':`<span class="tab-comp" id="tab-comp-${g.id}"></span>`);
     tabEl.onclick=(function(gid){return function(){
       document.querySelectorAll('#product-tabs .tab').forEach(t=>t.classList.remove('active'));
       document.querySelectorAll('#product-tab-contents .tab-content').forEach(t=>t.classList.remove('active'));
@@ -270,7 +283,24 @@ function renderProductTabs(p,cat){
     else content.innerHTML=renderTabAttrGroup(p,g);
     contentsEl.appendChild(content);
   });
+  updateTabCompletions(p);
   lockProductSheet(p);
+}
+
+// Complétion de chaque onglet, dans son libellé : % coloré, ✓ à 100 %,
+// rien si l'onglet n'a aucun champ qui compte dans la complétion
+function updateTabCompletions(p) {
+  const cat = getCatByName(p.cat);
+  (cat ? cat.groupIds : []).forEach(gid => {
+    const el = document.getElementById('tab-comp-' + gid);
+    const g = getGroupById(gid);
+    if (!el || !g) return;
+    const st = groupCompletionStats(p, g);
+    if (!st) { el.textContent = ''; el.className = 'tab-comp'; return; }
+    el.className = 'tab-comp' + (st.pct === 100 ? ' full' : '');
+    el.style.color = st.pct === 100 ? '' : getCompletionColor(st.pct);
+    el.innerHTML = st.pct === 100 ? '&#10003;' : st.pct + '%';
+  });
 }
 
 // ============================================================
@@ -577,9 +607,8 @@ function renderTabAttrGroup(p, g, opts) {
 
   computeCalcFields(p);
   const shown = attrs.filter(a => a.code !== 'completion');
-  let html = '<div class="fields-flow">';
-  if (g.code !== 'synth') html += groupCompletionHtml(p, g);
-  if (g.code === 'infos_generales') html += `<div class="field-group-title field-span">${g.name}</div>`;
+  let html = '';
+  const rowHtml = {};
 
   shown.forEach(a => {
     const val = getAttrFieldValue(p, a);
@@ -654,7 +683,7 @@ function renderTabAttrGroup(p, g, opts) {
     const wide = a.type === 'Texte long' || a.type === 'Image';
     const shownRow = isAttrShown(p, a);
     const missing = shownRow && countsInCompletion(a) && !isCompletionFilled(p, a);
-    html += `<div class="field-row${wide ? ' field-span' : ''}${missing ? ' field-missing' : ''}" data-attr-row="${a.code}" style="${shownRow ? '' : 'display:none'}">
+    rowHtml[a.id] = `<div class="field-row ${fieldWidthClass(a)}${missing ? ' field-missing' : ''}" data-attr-row="${a.code}" style="${shownRow ? '' : 'display:none'}">
       <div class="field-label">
         ${attrLabelHtml(a)}${fieldAlertMark(p, a)}
       </div>
@@ -662,7 +691,19 @@ function renderTabAttrGroup(p, g, opts) {
     </div>`;
   });
 
-  html += '</div>';
+  // Blocs séparés par les intertitres du groupe ; un bloc dont tous les
+  // champs sont masqués disparaît (CSS :has)
+  const blocks = [];
+  let cur = { title: '', rows: [] };
+  (g.attrIds || []).forEach(id => {
+    if (isAttrSection(id)) { blocks.push(cur); cur = { title: attrSectionTitle(id), rows: [] }; return; }
+    if (rowHtml[id]) cur.rows.push(rowHtml[id]);
+  });
+  blocks.push(cur);
+  html += blocks.filter(b => b.rows.length).map(b => `<div class="field-block">
+      ${b.title ? `<div class="field-section">${escapeHtml(b.title)}</div>` : ''}
+      <div class="fields-flow">${b.rows.join('')}</div>
+    </div>`).join('');
 
   setTimeout(() => {
     attrs.forEach(a => {
@@ -887,27 +928,8 @@ function onCatChange(productId,el){
 // COMPLETUDE
 // ============================================================
 function updateDetailCompletion(p){
-  const comp=calcCompletion(p);const color=getCompletionColor(comp);
-  const pctEl=document.getElementById('detail-completion-pct');
-  const barEl=document.getElementById('detail-completion-bar');
-  if(pctEl){pctEl.textContent=comp+'%';pctEl.style.color=color;}
-  if(barEl){barEl.style.width=comp+'%';barEl.style.background=color;}
-  const wfEl=document.getElementById('detail-workflow');
-  if(wfEl){computeCalcFields(p);wfEl.innerHTML=workflowStepperHtml(p);wfEl.style.display=isWorkflowOn()?'':'none';}
-  const cat = getCatByName(p.cat);
-  (cat ? cat.groupIds : []).forEach(gid => {
-    const g = getGroupById(gid);
-    const bar = document.getElementById('group-comp-bar-' + gid);
-    const pctNode = document.getElementById('group-comp-pct-' + gid);
-    if (!g || !bar || !pctNode) return;
-    const stats = groupCompletionStats(p, g);
-    if (!stats) return;
-    const c = getCompletionColor(stats.pct);
-    bar.style.width = stats.pct + '%';
-    bar.style.background = c;
-    pctNode.textContent = stats.pct + '%';
-    pctNode.style.color = c;
-  });
+  renderProductHeader(p, getCatByName(p.cat));
+  updateTabCompletions(p);
 }
 
 // ============================================================

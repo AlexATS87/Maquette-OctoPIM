@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <title>OctoPIM</title>
-  <link rel="stylesheet" href="css/style.css?v=37">
+  <link rel="stylesheet" href="css/style.css?v=43">
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
 </head>
@@ -52,8 +52,14 @@
   <div class="main-content">
 
     <div class="topbar">
+      <button class="btn btn-secondary topbar-detail"
+        onclick="safeShowPage('products', document.querySelector('.nav-item[onclick*=\'products\']'))">&larr; Liste des produits</button>
       <div class="topbar-title" id="topbar-title">Tableau de bord</div>
       <div class="topbar-actions">
+        <span class="topbar-detail topbar-save">
+          <span id="btn-save-hint" style="font-size:11px;color:#a0b0c0">Ctrl+S</span>
+          <button class="btn btn-primary" id="btn-save-product" onclick="saveProduct()">&#10003; Enregistrer</button>
+        </span>
         <div class="account-menu" id="account-menu">
           <button type="button" class="account-menu-trigger" onclick="toggleAccountMenu(event)">
             <div class="account-menu-text">
@@ -242,32 +248,10 @@
 
       <!-- FICHE PRODUIT -->
       <div class="page" id="page-product-detail">
-        <div class="detail-sticky">
-          <button class="btn btn-secondary"
-            onclick="safeShowPage('products',
-              document.querySelector('.nav-item[onclick*=\'products\']'))">
-            &larr; Retour a la liste
-          </button>
-          <button class="btn btn-primary" id="btn-save-product" onclick="saveProduct()">
-            &#10003; Enregistrer
-          </button>
-          <span id="btn-save-hint" style="font-size:11px;color:#a0b0c0">Ctrl+S</span>
-        </div>
         <div style="background:#fff;border-radius:12px;padding:20px;
           box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:16px">
           <div id="product-header-left"></div>
         </div>
-        <div class="detail-completion-bar">
-          <div style="font-size:12px;font-weight:600;color:#607080;
-            min-width:80px">Complétion</div>
-          <div class="completion-bar-bg" style="flex:1;height:10px">
-            <div class="completion-bar-fill" id="detail-completion-bar"
-              style="width:0%;transition:width 0.4s ease"></div>
-          </div>
-          <div style="font-size:14px;font-weight:700;min-width:44px;text-align:right"
-            id="detail-completion-pct">—</div>
-        </div>
-        <div class="detail-workflow" id="detail-workflow"></div>
         <div class="product-tabs-bar" id="product-tabs"></div>
         <div id="product-tab-contents"></div>
       </div>
@@ -487,6 +471,16 @@
                 <select class="form-select" id="ea-show-if-value"></select>
               </div>
             </div>
+            <div class="field-row">
+              <div class="field-label">Largeur sur la fiche</div>
+              <select class="form-select" id="ea-width" data-combo="off">
+                <option value="">Automatique</option>
+                <option value="narrow">Étroite</option>
+                <option value="normal">Normale</option>
+                <option value="wide">Large</option>
+                <option value="full">Pleine ligne</option>
+              </select>
+</div>
           </div>
           <div class="field-group">
             <div class="field-group-title">Saisie</div>
@@ -598,9 +592,6 @@
             <div class="field-row">
               <div class="field-label">Complétion pour</div>
               <div id="edit-group-audience"></div>
-              <div style="font-size:11px;color:#8090a0;margin-top:4px">
-                Aucun coche = tous les groupes utilisateur. Sinon, seuls les groupes coches comptent ce groupe d'attributs dans leur completion.
-              </div>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
               <button class="btn btn-secondary"
@@ -610,17 +601,8 @@
             </div>
           </div>
           <div class="field-group">
-            <div class="field-group-title">Attributs du groupe
-              <span style="font-size:12px;font-weight:400;color:#a0b0c0">
-                (glisser pour reordonner)
-              </span>
-            </div>
-            <input type="text" class="search-input"
-              placeholder="Rechercher un attribut..."
-              oninput="filterGroupAttrToggles(this.value)"
-              style="width:100%;margin-bottom:10px">
-            <div id="group-attr-toggle-list"
-              style="max-height:480px;overflow-y:auto"></div>
+            <div class="field-group-title">Contenu de l'onglet</div>
+            <div id="group-attr-toggle-list"></div>
           </div>
         </div>
       </div>
@@ -935,13 +917,13 @@
 </div>
 
 <!-- SCRIPTS -->
-<script src="js/data.js?v=50"></script>
-<script src="js/utils.js?v=42"></script>
+<script src="js/data.js?v=55"></script>
+<script src="js/utils.js?v=46"></script>
 <script src="js/dashboard.js?v=26"></script>
 <script src="js/products.js?v=32"></script>
-<script src="js/admin.js?v=41"></script>
+<script src="js/admin.js?v=44"></script>
 <script src="js/baremes-workflow.js?v=8"></script>
-<script src="js/detail.js?v=39"></script>
+<script src="js/detail.js?v=43"></script>
 <script src="js/export.js?v=26"></script>
 <script src="js/import.js?v=22"></script>
 
