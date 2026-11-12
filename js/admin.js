@@ -23,7 +23,7 @@ function renderSyntheseAdmin() {
       <button class="btn btn-secondary"
         onclick="showPage('admin',null)">&larr; Administration</button>
       <span style="font-size:15px;font-weight:700;color:#1a2332">
-        Vue Synthese — colonnes
+        Vue Synthèse — colonnes
       </span>
     </div>
 
@@ -32,8 +32,9 @@ function renderSyntheseAdmin() {
       <div class="field-group">
         <div class="field-group-title">
           Colonnes actives
+          <span class="tab-count${syntheseItems.filter(x => x.kind === 'attr').length >= SYNTH_MAX_FIELDS ? ' synth-full' : ''}">${syntheseItems.filter(x => x.kind === 'attr').length} / ${SYNTH_MAX_FIELDS}</span>
           <span style="font-size:12px;font-weight:400;color:#a0b0c0">
-            (glisser pour reordonner)
+            (glisser pour réordonner)
           </span>
         </div>
         <div id="synthese-items-list">
@@ -90,7 +91,7 @@ function renderSyntheseAdmin() {
         </div>
 
         <div class="field-group">
-          <div class="field-group-title">Visuel de la synthese</div>
+          <div class="field-group-title">Visuel de la synthèse</div>
           <select class="form-select" id="synth-visual" onchange="setSyntheseVisual()">
             <option value="">-- Aucun --</option>
             ${attributes.filter(a => a.type === 'Image').map(a =>
@@ -103,17 +104,17 @@ function renderSyntheseAdmin() {
         </div>
 
         <div class="field-group">
-          <div class="field-group-title">Attributs systeme</div>
+          <div class="field-group-title">Attributs système</div>
           ${attributes.filter(a => a.system).map(s => {
             const already = isInSynthese(s.code);
             return `
             <div style="display:flex;align-items:center;justify-content:space-between;
               padding:5px 0;border-bottom:1px solid #f0f4f8">
               <span style="font-size:12px;color:#607080;display:inline-flex;align-items:center;gap:6px">
-                ${escapeHtml(s.name)}${systemLockBadge('attr')}
+                ${escapeHtml(s.name)}${attrLockBadge(s)}
               </span>
               ${already
-                ? `<span style="font-size:11px;color:#a0b0c0">Deja ajoute</span>`
+                ? `<span style="font-size:11px;color:#a0b0c0">Déjà ajouté</span>`
                 : `<button class="btn btn-secondary"
                     style="font-size:11px;padding:3px 10px"
                     onclick="addSyntheseSystem('${s.code}','${escapeHtml(s.name)}')">
@@ -168,7 +169,7 @@ function setSyntheseVisual() {
 
   renderSyntheseAdmin();
   renderProductsTable();
-  showNotif(code ? 'Visuel de la synthese mis a jour' : 'Visuel retire de la synthese', 'ok');
+  showNotif(code ? 'Visuel de la synthèse mis à jour' : 'Visuel retiré de la synthèse', 'ok');
 }
 
 function synthCodeAliases(code) {
@@ -183,12 +184,15 @@ function isInSynthese(code) {
 }
 
 function addSyntheseSystem(code, label) {
+  if (syntheseItems.filter(x => x.kind === 'attr').length >= SYNTH_MAX_FIELDS) {
+    showNotif('La vue synthèse est limitée à ' + SYNTH_MAX_FIELDS + ' champs : retirez-en un avant d’en ajouter un autre', 'warn'); return;
+  }
   if (isInSynthese(code)) {
-    showNotif(label + ' est deja dans la vue synthese', 'warn'); return;
+    showNotif(label + ' est déjà dans la vue synthèse', 'warn'); return;
   }
   syntheseItems.push({ code, label, kind: 'attr' });
   renderSyntheseAdmin();
-  showNotif(label + ' ajoute');
+  showNotif(label + ' ajouté');
 }
 
 function addSyntheseAttr() {
@@ -198,11 +202,14 @@ function addSyntheseAttr() {
   const attr = attributes.find(a => a.id === parseInt(sel.value));
   if (!attr) return;
   if (syntheseItems.find(x => x.code === attr.code)) {
-    showNotif('Cet attribut est deja dans la vue synthese', 'warn'); return;
+    showNotif('Cet attribut est déjà dans la vue synthèse', 'warn'); return;
+  }
+  if (syntheseItems.filter(x => x.kind === 'attr').length >= SYNTH_MAX_FIELDS) {
+    showNotif('La vue synthèse est limitée à ' + SYNTH_MAX_FIELDS + ' champs : retirez-en un avant d’en ajouter un autre', 'warn'); return;
   }
   syntheseItems.push({ code: attr.code, label: attr.name, kind: 'attr' });
   renderSyntheseAdmin();
-  showNotif(attr.name + ' ajoute a la vue synthese');
+  showNotif(attr.name + ' ajouté à la vue synthèse');
 }
 
 function addSyntheseAction() {
@@ -212,11 +219,11 @@ function addSyntheseAction() {
   const code  = sel.value.replace('action_', '');
   const label = sel.options[sel.selectedIndex].text;
   if (syntheseItems.find(x => x.code === code && x.kind === 'action')) {
-    showNotif('Cette action est deja presente', 'warn'); return;
+    showNotif('Cette action est déjà présente', 'warn'); return;
   }
   syntheseItems.push({ code, label, kind: 'action' });
   renderSyntheseAdmin();
-  showNotif('Action "' + label + '" ajoutee');
+  showNotif('Action "' + label + '" ajoutée');
 }
 
 // ============================================================
@@ -236,7 +243,7 @@ function renderCatsTable() {
       <td><span class="color-swatch" style="background:${cat.color}"></span>${cat.color}</td>
       <td>${nb} groupe${nb > 1 ? 's' : ''}</td>
       <td><div class="td-actions">
-        ${canW ? `<button class="action-btn" onclick="editCategory(${cat.id})">Editer</button>`
+        ${canW ? `<button class="action-btn" onclick="editCategory(${cat.id})">Modifier</button>`
                : `<button class="action-btn" onclick="editCategory(${cat.id})">Voir</button>`}
         ${canD ? `<button class="action-btn-danger btn-trash" title="Supprimer la catégorie"
           onclick="confirmDelete('cat',${cat.id},'${cat.name}')">${TRASH_ICON}</button>` : ''}
@@ -312,7 +319,7 @@ function renderCatGroupAvailable(cat) {
   list.innerHTML = '';
   const available = attrGroups.filter(g => !cat.groupIds.includes(g.id));
   if (!available.length) {
-    list.innerHTML = '<div style="font-size:12px;color:#a0b0c0;padding:8px">Tous les groupes sont deja associes.</div>';
+    list.innerHTML = '<div style="font-size:12px;color:#a0b0c0;padding:8px">Tous les groupes sont déjà associés.</div>';
     return;
   }
   available.forEach(g => {
@@ -353,7 +360,7 @@ function saveCategoryEdit() {
   cat.color = document.getElementById('edit-cat-color').value;
   renderAll();
   showPage('admin-categories', null);
-  showNotif('Categorie mise a jour');
+  showNotif('Catégorie mise à jour');
 }
 
 function createCategory() {
@@ -368,7 +375,7 @@ function createCategory() {
   if (!name) { showNotif('Le nom est obligatoire', 'error'); nameEl.focus(); return; }
   if (!code) { showNotif('Le code est obligatoire', 'error'); codeEl.focus(); return; }
   if (categories.find(c => c.code === code)) {
-    showNotif('Ce code existe deja', 'error'); codeEl.focus(); return;
+    showNotif('Ce code existe déjà', 'error'); codeEl.focus(); return;
   }
 
   const newCat = {
@@ -388,7 +395,7 @@ function createCategory() {
   closeModal('modal-create-category');
   renderCatsTable();
   renderAdminHome();
-  showNotif('Categorie "' + name + '" creee');
+  showNotif('Catégorie "' + name + '" créée');
 }
 
 // ============================================================
@@ -415,7 +422,7 @@ function renderAttrsTable() {
       Obligatoire <span style="color:#8a9bb0;font-size:11px">&#8645;</span>
     </th>
     <th class="th-sortable" onclick="sortAttrsTable('inCompletion')">
-      Completion <span style="color:#8a9bb0;font-size:11px">&#8645;</span>
+      Complétion <span style="color:#8a9bb0;font-size:11px">&#8645;</span>
     </th>
     <th class="th-sortable" onclick="sortAttrsTable('fill')"
       title="Part des produits concernes qui ont une valeur pour cet attribut">
@@ -462,7 +469,7 @@ function renderAttrsTable() {
       <td style="font-weight:600">
         <button class="cell-link" onclick="editAttribute(${a.id})"
           title="${canEditAttr(a) ? 'Ouvrir et modifier' : 'Consulter'}">${escapeHtml(a.name)}</button>
-        ${a.system ? systemLockBadge('attr') : ''}
+        ${attrLockBadge(a)}
         ${calcBadgeHtml(a)}
       </td>
       <td><span class="badge badge-grey">${a.type}</span></td>
@@ -482,13 +489,13 @@ function renderAttrsTable() {
         : '<span class="badge-active-off">Non</span>'}</td>
       <td style="white-space:nowrap"
         title="${fill.filled} produit(s) renseigne(s) sur ${fill.total} concerne(s)${
-          fill.pct === 0 ? ' — attribut candidat a la suppression' : ''}">
+          fill.pct === 0 ? ' — attribut candidat à la suppression' : ''}">
         <strong style="color:${fill.pct === 0 ? '#ef5350' : getCompletionColor(fill.pct)}">
           ${fill.pct}%
         </strong>
       </td>
       <td class="td-icon">
-        ${(!a.system && canMod('mod_attributes','d'))
+        ${(!isProtectedAttr(a) && canMod('mod_attributes','d'))
           ? `<button class="action-btn-danger btn-trash" title="Supprimer l'attribut"
               aria-label="Supprimer ${escapeHtml(a.name)}"
               onclick="confirmDelete('attr',${a.id},'${a.name.replace(/'/g,"\\'")}')">${TRASH_ICON}</button>`
@@ -525,7 +532,7 @@ function setAttrClickToOpen(attrId, cb) {
   renderProductsTable();
   showNotif(cb.checked
     ? 'Clic actif sur : ' + (attributes.find(x => x.id === attrId) || {}).name
-    : 'Option clic desactivee');
+    : 'Option clic désactivée');
 }
 
 // ============================================================
@@ -533,10 +540,14 @@ function setAttrClickToOpen(attrId, cb) {
 // ============================================================
 let editingAttrId = null;
 
-function editAttribute(id) {
+function editAttribute(id, draft) {
   editingAttrId = id;
-  const a = attributes.find(x => x.id === id);
+  const a = draft || attributes.find(x => x.id === id);
   if (!a) return;
+  if (!draft) _newAttrDraft = null;
+  // Création : le code se déduit du nom ; modification : il ne bouge plus seul
+  const nameInput = document.getElementById('ea-name');
+  if (nameInput) nameInput.oninput = draft ? () => autoSlug('ea-name', 'ea-code') : null;
   document.getElementById('ea-name').value     = a.name;
   document.getElementById('ea-code').value     = a.code;
   document.getElementById('ea-type').value     = a.type;
@@ -549,6 +560,8 @@ function editAttribute(id) {
   document.getElementById('ea-formula').value  = a.formula || '';
   const widthEl = document.getElementById('ea-width');
   if (widthEl) widthEl.value = a.width || '';
+  const sheetEl = document.getElementById('ea-onsheet');
+  if (sheetEl) sheetEl.value = a.hideOnSheet ? '0' : '1';
   const calcEl = document.getElementById('ea-calc');
   if (calcEl) { calcEl.value = (a.calc || a.formula) ? '1' : '0'; calcEl.disabled = !!a.system; }
   onEaCalcChange();
@@ -562,12 +575,14 @@ function editAttribute(id) {
   document.getElementById('ea-step').value = a.step ?? '';
   document.getElementById('ea-min').value  = a.min  ?? '';
   document.getElementById('ea-max').value  = a.max  ?? '';
+  const fmtEl = document.getElementById('ea-format');
+  if (fmtEl) fmtEl.value = a.displayFormat === 'percent' ? 'percent' : '';
   const decEl = document.getElementById('ea-decimals');
   if (decEl) decEl.value = String(a.decimals === 1 || a.decimals === 2 ? a.decimals : 0);
 
   // Code technique : lecture seule pour non-admin
   const codeEl = document.getElementById('ea-code');
-  if (codeEl) codeEl.readOnly = !isTechAdmin() || !!a.system;
+  if (codeEl) codeEl.readOnly = draft ? false : (!isTechAdmin() || !!a.system);
   const typeEl = document.getElementById('ea-type');
   if (typeEl) typeEl.disabled = !!a.system;
 
@@ -603,8 +618,8 @@ function editAttribute(id) {
   fillShowIfControls('ea', a.code, a.showIfAttr || '', a.showIfValue || '');
   const locked = !canEditAttr(a);
   lockAttrEditor(locked, a.system
-    ? 'Attribut systeme : consultation seule.'
-    : 'Consultation seule : votre role ne permet pas de modifier les attributs.');
+    ? 'Attribut système : consultation seule.'
+    : 'Consultation seule : votre rôle ne permet pas de modifier les attributs.');
   // Un champ rempli automatiquement ne compte jamais : la case reste grisee
   if (compEl) compEl.disabled = locked || isAutoFilled(a);
   attrFormDirty = false;
@@ -618,6 +633,8 @@ function editAttribute(id) {
     editPage.onchange = locked ? null : function () { attrFormDirty = true; };
   }
   showPage('admin-attribute-edit', null);
+  updateTopbarTitle(draft ? 'Nouvel attribut' : 'Attribut « ' + a.name + ' »');
+  setTimeout(snapshotAttrForm, 0);
 }
 
 function canEditAttr(a) {
@@ -681,7 +698,7 @@ function fillShowIfControls(prefix, currentCode, showIfAttr, showIfValue) {
   const pilots = attributes.filter(a =>
     a.code !== currentCode && (a.type === 'Simple select' || a.type === 'Oui / Non')
   );
-  sel.innerHTML = '<option value="">Toujours affiche</option>' +
+  sel.innerHTML = '<option value="">Toujours affiché</option>' +
     pilots.map(a => `<option value="${a.code}"${a.code === showIfAttr ? ' selected' : ''}>${escapeHtml(a.name)}</option>`).join('');
   onShowIfAttrChange(prefix, showIfValue);
 }
@@ -698,17 +715,23 @@ function onShowIfAttrChange(prefix, selectedValue) {
     return;
   }
   wrap.style.display = '';
-  const wanted = selectedValue != null ? selectedValue : valSel.value;
-  valSel.innerHTML = showIfValueOptions(pilot).map(o =>
-    `<option${o === wanted ? ' selected' : ''}>${escapeHtml(o)}</option>`
+  const wanted = selectedValue != null ? showIfValues(selectedValue) : readShowIfChecked(prefix);
+  valSel.innerHTML = showIfValueOptions(pilot).map((o, i) =>
+    `<label class="showif-val"><input type="checkbox" id="${prefix}-siv-${i}" value="${escapeHtml(o)}"${wanted.includes(o) ? ' checked' : ''}> ${escapeHtml(o)}</label>`
   ).join('');
 }
 
+function readShowIfChecked(prefix) {
+  const box = document.getElementById(prefix + '-show-if-value');
+  return box ? [...box.querySelectorAll('input[type=checkbox]:checked')].map(x => x.value) : [];
+}
+
+// Affichage conditionnel : une ou plusieurs valeurs du champ pilote
 function readShowIf(prefix) {
   const sel = document.getElementById(prefix + '-show-if');
-  const valSel = document.getElementById(prefix + '-show-if-value');
   if (!sel || !sel.value) return { showIfAttr: '', showIfValue: '' };
-  return { showIfAttr: sel.value, showIfValue: valSel ? valSel.value : '' };
+  const vals = readShowIfChecked(prefix);
+  return vals.length ? { showIfAttr: sel.value, showIfValue: vals.join(' ; ') } : { showIfAttr: '', showIfValue: '' };
 }
 
 function onEditAttrTypeChange() {
@@ -723,29 +746,128 @@ function onEditAttrTypeChange() {
   renderMaskHelp('ea-mask-help', type);
 }
 
+// ------------------------------------------------------------
+// CODE TECHNIQUE : où il est utilisé, et report d'un nouveau code partout
+// ------------------------------------------------------------
+// Codes cités dans une formule hors des textes entre guillemets
+function formulaUsesCode(f, code) {
+  if (!f) return false;
+  const re = new RegExp('(^|[^A-Za-z0-9_])' + code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![A-Za-z0-9_])');
+  return String(f).split(/("[^"]*")/).some((part, i) => i % 2 === 0 && re.test(part));
+}
+function replaceCodeInFormula(f, oldC, newC) {
+  if (!f) return f;
+  const re = new RegExp('(^|[^A-Za-z0-9_])' + oldC.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![A-Za-z0-9_])', 'g');
+  return String(f).split(/("[^"]*")/).map((part, i) => i % 2 ? part : part.replace(re, '$1' + newC)).join('');
+}
+
+function attrCodeUsages(code) {
+  const out = [];
+  const names = list => list.map(x => x.name).join(', ');
+  const f = attributes.filter(x => x.code !== code && formulaUsesCode(x.formula, code));
+  if (f.length) out.push({ label: f.length + ' formule' + (f.length > 1 ? 's' : ''), now: names(f) });
+  const t = calcTables.filter(x => x.attrCode === code || x.conditions.some(c => c.attrCode === code));
+  if (t.length) out.push({ label: t.length + ' table' + (t.length > 1 ? 's' : '') + ' de calcul', now: t.map(x => calcAttrName(x.attrCode)).join(', ') });
+  const w = workflowSteps.filter(x => x.rule && x.rule.attrCode === code);
+  if (w.length) out.push({ label: 'Workflow', now: names(w) });
+  const al = alerts.filter(x => x.attrCode === code || (x.conds || []).some(c => c.attrCode === code));
+  if (al.length) out.push({ label: 'Alertes', now: names(al) });
+  const sh = attributes.filter(x => x.showIfAttr === code);
+  if (sh.length) out.push({ label: 'Affichage conditionnel', now: names(sh) });
+  if (syntheseItems.some(i => synthCodeAliases(i.code).includes(code))) out.push({ label: 'Vue synthèse', now: 'colonne de la liste' });
+  (refTables || []).forEach(t => {
+    const ks = Object.keys(t.keys || {}).filter(c => t.keys[c] === code);
+    if (ks.length) out.push({ label: 'Référentiel « ' + t.name + ' »', now: 'colonne clé ' + ks.join(', ') });
+  });
+  (trames || []).forEach(f => {
+    const n = (f.columns || []).filter(c => c.code === code).length;
+    if (n) out.push({ label: 'Trame « ' + f.name + ' »', now: n + ' colonne' + (n > 1 ? 's' : '') });
+  });
+  const n = products.filter(p => p.fields && String(p.fields[code] ?? '').trim() !== '').length;
+  if (n) out.push({ label: n + ' produit' + (n > 1 ? 's' : ''), now: 'valeurs déplacées sous le nouveau code' });
+  return out;
+}
+
+function renameAttrCodeEverywhere(oldC, newC) {
+  products.forEach(p => {
+    if (p.fields && Object.prototype.hasOwnProperty.call(p.fields, oldC)) { p.fields[newC] = p.fields[oldC]; delete p.fields[oldC]; }
+    if (p.forcedFields && Object.prototype.hasOwnProperty.call(p.forcedFields, oldC)) { p.forcedFields[newC] = p.forcedFields[oldC]; delete p.forcedFields[oldC]; }
+  });
+  attributes.forEach(x => {
+    if (x.formula) x.formula = replaceCodeInFormula(x.formula, oldC, newC);
+    if (x._altFormula) x._altFormula = replaceCodeInFormula(x._altFormula, oldC, newC);
+    if (x.showIfAttr === oldC) x.showIfAttr = newC;
+  });
+  calcTables.forEach(t => {
+    if (t.attrCode === oldC) t.attrCode = newC;
+    t.conditions.forEach(c => { if (c.attrCode === oldC) c.attrCode = newC; });
+  });
+  workflowSteps.forEach(w => { if (w.rule && w.rule.attrCode === oldC) w.rule.attrCode = newC; });
+  alerts.forEach(al => {
+    if (al.attrCode === oldC) al.attrCode = newC;
+    (al.conds || []).forEach(c => { if (c.attrCode === oldC) c.attrCode = newC; });
+  });
+  (refTables || []).forEach(t => Object.keys(t.keys || {}).forEach(c => { if (t.keys[c] === oldC) t.keys[c] = newC; }));
+  (trames || []).forEach(f => (f.columns || []).forEach(c => { if (c.code === oldC) c.code = newC; }));
+  syntheseItems.forEach(i => { if (i.kind === 'attr' && i.code === oldC) i.code = newC; });
+}
+
+let _codeChangeOk = false;
+
+// Création d'un attribut : même page que la modification
+let _newAttrDraft = null;
+function openNewAttribute() {
+  if (!requirePerm(canMod('mod_attributes', 'w'))) return;
+  _newAttrDraft = { id: 'new', name: '', code: '', type: '', groupId: null, required: false, inCompletion: true,
+    calc: false, formula: '', mask: '', options: [], system: false };
+  editAttribute('new', _newAttrDraft);
+}
+
 function saveAttributeEdit() {
   if (!requirePerm(canMod('mod_attributes', 'w'))) return;
-  const a = attributes.find(x => x.id === editingAttrId);
+  const isNew = editingAttrId === 'new';
+  const a = isNew ? _newAttrDraft : attributes.find(x => x.id === editingAttrId);
   if (!a) return;
   if (a.system) {
-    showNotif('Attribut systeme : modification impossible', 'warn');
+    showNotif('Attribut système : modification impossible', 'warn');
     return;
   }
   const newName = document.getElementById('ea-name').value.trim();
-  const newCode = (isTechAdmin() && !a.system)
+  const newCode = isNew || (isTechAdmin() && !a.system)
     ? document.getElementById('ea-code').value.trim()
     : a.code; // non-admin et attributs systeme : code fige
-  if (!newName || !newCode) { showNotif('Nom et code obligatoires'); return; }
+  const typeChosen = a.system ? a.type : document.getElementById('ea-type').value;
+  if (!newName || !newCode || !typeChosen) { showNotif('Nom, code technique et type obligatoires', 'error'); return; }
+  if (!/^[a-z0-9_]+$/.test(newCode)) { showNotif('Code technique : minuscules, chiffres et _ seulement', 'error'); return; }
   if (newCode !== a.code && attributes.find(x => x.code === newCode)) {
-    showNotif('Code deja utilise par un autre attribut'); return;
+    showNotif('Code déjà utilisé par un autre attribut', 'error'); return;
+  }
+  // Changement de code d'un attribut existant : cas d'urgence, impacts affichés
+  if (!isNew && newCode !== a.code && !_codeChangeOk) {
+    const items = attrCodeUsages(a.code);
+    items.push({ label: 'Fichiers d\'import et d\'export existants', now: 'à mettre à jour hors d\'OctoPIM' });
+    openConfirmModal({ title: 'Changer le code technique',
+      lead: '« ' + a.code + ' » devient « ' + newCode + ' ». Le nouveau code sera reporté partout dans OctoPIM :',
+      items, okLabel: 'Changer le code',
+      onOk: () => { _codeChangeOk = true; try { saveAttributeEdit(); } finally { _codeChangeOk = false; } } });
+    return;
+  }
+  if (isNew) {
+    a.id = Math.max(nextAttrId, ...attributes.map(x => x.id + 1));
+    nextAttrId = a.id + 1;
+    attributes.push(a);
+    products.forEach(p => { if (p.fields && !Object.prototype.hasOwnProperty.call(p.fields, newCode)) p.fields[newCode] = ''; });
   }
   if (typeof calcCommit === 'function') calcCommit(a.code);
   const widthSave = document.getElementById('ea-width');
   if (widthSave) a.width = widthSave.value || undefined;
+  const sheetSave = document.getElementById('ea-onsheet');
+  if (sheetSave) a.hideOnSheet = sheetSave.value === '0' || undefined;
   const oldCode     = a.code;
   const oldGroupId  = a.groupId;
   const newGroupId  = a.system ? a.groupId : (parseInt(document.getElementById('ea-group').value) || null);
   const newType     = a.system ? a.type : document.getElementById('ea-type').value;
+  if (!isNew && oldCode !== newCode) renameAttrCodeEverywhere(oldCode, newCode);
   a.name     = newName;
   a.code     = newCode;
   syntheseItems.forEach(i => {
@@ -757,6 +879,8 @@ function saveAttributeEdit() {
   a.type     = newType;
   a.required = document.getElementById('ea-required').value === '1';
   a.inCompletion = document.getElementById('ea-completion').value === '1';
+  const fmtSave = document.getElementById('ea-format');
+  if (fmtSave) a.displayFormat = (newType === 'Nombre' && fmtSave.value === 'percent') ? 'percent' : undefined;
   const showIf = readShowIf('ea');
   a.showIfAttr = a.system ? '' : showIf.showIfAttr;
   a.showIfValue = a.system ? '' : showIf.showIfValue;
@@ -790,8 +914,10 @@ function saveAttributeEdit() {
   }
   renderAll();
   attrFormDirty = false;
+  if (typeof _attrFormSnap !== 'undefined') _attrFormSnap = null; // enregistré : plus rien à signaler
+  if (isNew) { editingAttrId = a.id; _newAttrDraft = null; }
   showPage('admin-attributes', null);
-  showNotif('Attribut "' + newName + '" mis a jour');
+  showNotif('Attribut « ' + newName + ' » ' + (isNew ? 'créé' : 'mis à jour'));
 }
 
 function createNewAttribute() {
@@ -855,7 +981,7 @@ function createNewAttribute() {
   if (!valid) return;
 
   if (attributes.find(a => a.code === code)) {
-    showNotif('Ce code technique existe deja', 'error');
+    showNotif('Ce code technique existe déjà', 'error');
     codeEl.classList.add('field-error');
     return;
   }
@@ -911,7 +1037,7 @@ function createNewAttribute() {
 
   closeModal('modal-create-attr');
   renderAll();
-  showNotif('Attribut "' + name + '" cree');
+  showNotif('Attribut "' + name + '" créé');
 }
 
 function onNewAttrTypeChange() {
@@ -938,7 +1064,7 @@ function formulaExampleFor(type) {
 const FORMULA_OPERATORS = [
   { token: 'CONCAT(a, " x ", b)', help: 'Concatene des champs et du texte libre. Le texte libre est entre guillemets doubles, les codes de champs sans guillemets.' },
   { token: '[code]',              help: 'Valeur du champ dont le code technique est indique entre crochets.' },
-  { token: '+ - * /',             help: 'Operations arithmetiques sur les champs numeriques. Exemple : =[prix_catalogue_monture] * 1.2' },
+  { token: '+ - * /',             help: 'Opérations arithmétiques sur les champs numériques. Exemple : =[prix_catalogue_monture] * 1.2' },
   { token: 'SI(condition)',              help: 'Renvoie Oui si la condition est vraie, Non sinon. Exemple : =SI([active_o]=="Actif")' },
   { token: 'SI(cond, siVrai, siFaux)',   help: 'Renvoie siVrai ou siFaux. siFaux peut etre un autre SI. Exemple : =SI([largeur_verres]>=56,"Adulte L","Adulte M")' },
   { token: 'OU / ET',             help: 'Combine plusieurs conditions dans un SI. Exemple : =SI([a]==VRAI OU [b]==VRAI)' },
@@ -947,8 +1073,8 @@ const FORMULA_OPERATORS = [
   { token: 'DATE_MAJ(code)',      help: 'Horodate la derniere modification du champ cite. Reserve aux attributs de type Date.' },
   { token: 'MAP(code,"A"="1")',  help: 'Remplace une valeur par une autre, sur un seul champ. Exemple : MAP(optique_solaire,"Optique"="A","Solaire"="B")' },
   { token: 'ROUNDUP(n, 0)',      help: 'Arrondit a l entier superieur, ou au nombre de decimales indique. Exemple : ROUNDUP([prix_base]*[coefficient], 0)' },
-  { token: 'RECHERCHE("réf", [champ], "colonne")', help: 'Valeur d’une colonne d’un référentiel, pour la ligne qui correspond au champ. Référentiels : Fournisseurs (Code → Nom, Trigramme), Marques (Marque → Code IWI, Fournisseur). Exemple : RECHERCHE("Fournisseurs",[fournisseur_code],"Trigramme")' },
-  { token: 'TABLE()',            help: 'Le champ est calculé par une table du module Champs calculés (conditions sur d\'autres champs, première ligne vraie). La table se crée et se modifie dans ce module, pas ici.' },
+  { token: 'RECHERCHE("réf", [champ], "colonne")', help: 'Valeur d’une colonne d’un référentiel, pour la ligne qui correspond au champ. Référentiels : ceux d’Administration > Référentiels (Fournisseurs, Marques et ceux créés), la première colonne est la clé. Exemple : RECHERCHE("Fournisseurs",[fournisseur_code],"Trigramme")' },
+  { token: 'TABLE()',            help: 'Le champ est calculé par une table du module Champs calculés (conditions sur d\'autres champs, première ligne vraie). La table se crée et se modifié dans ce module, pas ici.' },
 ];
 
 // Guide des formules, affiche des que le champ Formule est disponible
@@ -961,7 +1087,8 @@ function renderFormulaHelp(targetId) {
 function onEaCalcChange() {
   const on = (document.getElementById('ea-calc') || {}).value === '1';
   const btn = document.getElementById('ea-calc-open');
-  if (btn) btn.style.display = on && canMod('mod_calc', 'r') ? '' : 'none';
+  // Un attribut pas encore créé n'a pas de calcul à régler
+  if (btn) btn.style.display = on && canMod('mod_calc', 'r') && editingAttrId !== 'new' ? '' : 'none';
 }
 
 // Aide au masque de saisie : infobulle a cote du champ, memes regles que applyInputMask
@@ -1044,13 +1171,10 @@ function renderAttrGroupsList() {
           <div class="attr-group-card-title">${g.name}</div>
           ${audienceLabel(g)}
           ${g.system ? systemLockBadge('group') : ''}
-          ${g.isBrandGroup
-            ? '<span class="attr-group-badge-system" style="background:#fce4ec;color:#880e4f">Marque/Fourn.</span>'
-            : ''}
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#a0b0c0">${attrs.length} attribut${attrs.length > 1 ? 's' : ''}</span>
-          <button class="action-btn" onclick="editAttrGroup(${g.id})">${canMod('mod_groups','w') ? 'Editer' : 'Voir'}</button>
+          <button class="action-btn" onclick="editAttrGroup(${g.id})">${canMod('mod_groups','w') ? 'Modifier' : 'Voir'}</button>
           ${(!isProtectedGroup(g) && canMod('mod_groups','d'))
             ? `<button class="action-btn-danger btn-trash" title="Supprimer le groupe"
                 onclick="confirmDelete('group',${g.id},'${g.name}')">${TRASH_ICON}</button>`
@@ -1060,12 +1184,9 @@ function renderAttrGroupsList() {
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">
         ${attrs.length
           ? attrs.map(a =>
-              `<span class="attr-chip" style="background:${g.isBrandGroup ? '#fce4ec' : color.bg};color:${g.isBrandGroup ? '#880e4f' : color.text}">${a.system ? systemLockIcon() + ' ' : ''}${a.name}</span>`
+              `<span class="attr-chip" style="background:${color.bg};color:${color.text}">${isProtectedAttr(a) ? systemLockIcon() : ''}${escapeHtml(a.name)}</span>`
             ).join('')
-          : (g.isBrandGroup
-            ? `<span class="attr-chip" style="background:#fce4ec;color:#880e4f">Fournisseur</span>
-               <span class="attr-chip" style="background:#fce4ec;color:#880e4f">Marque</span>`
-            : '')}
+          : ''}
       </div>`;
     list.appendChild(card);
   });
@@ -1106,11 +1227,11 @@ function renderGroupAttrToggles(g, flashIdx) {
           onchange="renameGroupSection(${i},this.value)">
         <button class="action-btn-danger btn-trash" title="Supprimer l'intertitre" onclick="removeGroupSection(${i})">${TRASH_ICON}</button>
       </div>`;
-    const locked = a.system && (a.groupId === g.id || (g.isBrandGroup && a.code === 'cat'));
+    const locked = isProtectedAttr(a) && a.groupId === g.id;
     return `
       <div class="grp-item${flash}" ${drag}>
         <span class="drag-handle">&#8942;&#8942;</span>
-        <span class="grp-name">${escapeHtml(a.name)}${a.system ? systemLockBadge('attr') : ''}</span>
+        <span class="grp-name">${escapeHtml(a.name)}${attrLockBadge(a)}</span>
         <span class="grp-type">${escapeHtml(a.type)}${a.width ? ' · ' + ({ narrow: 'étroite', normal: 'normale', wide: 'large', full: 'pleine ligne' }[a.width] || '') : ''}</span>
         ${locked ? '<span class="grp-x-spacer"></span>'
           : `<button class="grp-x" title="Retirer du groupe" onclick="toggleGroupAttr(${a.id})">&#10005;</button>`}
@@ -1213,8 +1334,8 @@ function toggleGroupAttr(attrId) {
   const attr = getAttrById(attrId);
   const idx = g.attrIds.indexOf(attrId);
   if (idx >= 0) {
-    if (isProtectedAttr(attr) && (attr.groupId === g.id || (g.isBrandGroup && attr.code === 'cat'))) {
-      showNotif('Attribut systeme : impossible de le retirer du groupe', 'warn');
+    if (isProtectedAttr(attr) && attr.groupId === g.id) {
+      showNotif('Attribut système : impossible de le retirer du groupe', 'warn');
       return;
     }
     g.attrIds.splice(idx, 1);
@@ -1244,23 +1365,23 @@ function saveGroupEdit() {
   g.audienceGroupIds = readAudienceChecks('edit-group-audience');
   renderAll();
   showPage('admin-groups', null);
-  showNotif('Groupe mis a jour');
+  showNotif('Groupe mis à jour');
 }
 
 function createAttrGroup() {
   if (!requirePerm(canMod('mod_groups', 'w'))) return;
   const name = document.getElementById('new-group-name').value.trim();
   const code = document.getElementById('new-group-code').value.trim();
-  if (!name || !code) { showNotif('Nom et code obligatoires'); return; }
+  if (!name || !code) { showNotif('Nom, code technique et type obligatoires'); return; }
   attrGroups.push({
-    id: nextGroupId++, name, code, system: false, isBrandGroup: false, attrIds: [],
+    id: nextGroupId++, name, code, system: false, attrIds: [],
     audienceGroupIds: readAudienceChecks('new-group-audience')
   });
   document.getElementById('new-group-name').value = '';
   document.getElementById('new-group-code').value = '';
   closeModal('modal-create-group');
   renderAll();
-  showNotif('Groupe "' + name + '" cree');
+  showNotif('Groupe "' + name + '" créé');
 }
 
 // ============================================================
@@ -1308,7 +1429,7 @@ function renderRoles() {
   const ungrouped = users.filter(u => !u.groupId && u.levelKey !== 'admin');
   const tabs = [
     { key: 'users',  label: 'Utilisateurs', badge: ungrouped.length ? `<span class="acc-nogroup" style="margin-left:6px">${ungrouped.length} sans groupe</span>` : '' },
-    { key: 'groups', label: 'Groupes d’affectation', badge: `<span class="calc-meta" style="margin-left:6px">${affectGroups.length}</span>` },
+    { key: 'groups', label: 'Groupes d’affectation', badge: `<span class="tab-count">${affectGroups.length}</span>` },
     { key: 'levels', label: 'Niveaux de droits', badge: '' },
   ];
   const bar = `<div class="product-tabs-bar acc-tabs">${tabs.map(t =>
@@ -1350,7 +1471,7 @@ function renderAccUsers(ungrouped) {
     <div class="acc-toolbar">
       <input class="field-input" style="max-width:240px" placeholder="Rechercher un nom ou un e-mail" value="${escapeHtml(_accSearch)}"
         oninput="_accSearch=this.value;renderRoles();const i=document.querySelector('.acc-toolbar input');i.focus();i.setSelectionRange(i.value.length,i.value.length)">
-      <select class="form-select" data-combo="off" style="max-width:200px" onchange="_accLevelFilter=this.value;renderRoles()">
+      <select class="form-select" style="max-width:200px" onchange="_accLevelFilter=this.value;renderRoles()">
         <option value="">Tous les niveaux</option>
         ${ACCESS_LEVELS.map(l => `<option value="${l.key}"${_accLevelFilter === l.key ? ' selected' : ''}>${l.name}</option>`).join('')}
       </select>
@@ -1509,63 +1630,40 @@ function deleteAffectGroup(groupId) {
   const g = affectGroups.find(x => x.id === groupId);
   if (!g) return;
   const n = users.filter(u => u.groupId === groupId).length;
-  if (!confirm('Supprimer le groupe « ' + g.name + ' » ?' + (n ? ' Ses ' + n + ' membres n\'auront plus de groupe et verront tout.' : ''))) return;
-  users.forEach(u => { if (u.groupId === groupId) u.groupId = null; });
-  affectGroups = affectGroups.filter(x => x.id !== groupId);
-  attrGroups.forEach(ag => { ag.audienceGroupIds = (ag.audienceGroupIds || []).filter(id => id !== groupId); });
-  afterAccessChange();
+  openConfirmModal({ title: 'Supprimer le groupe d’affectation', okLabel: 'Supprimer',
+    lead: '« ' + g.name + ' » sera supprimé.' + (n ? ' Ses ' + n + ' membres n’auront plus de groupe et verront tout.' : ''),
+    onOk: () => {
+      users.forEach(u => { if (u.groupId === groupId) u.groupId = null; });
+      affectGroups = affectGroups.filter(x => x.id !== groupId);
+      attrGroups.forEach(ag => { ag.audienceGroupIds = (ag.audienceGroupIds || []).filter(id => id !== groupId); });
+      afterAccessChange();
+    } });
 }
 
 
-function renderBrandInfoPanel(brandInfo) {
-  if (!brandInfo) {
-    return `<div class="field-group-title">Conditions commerciales</div>
-      <div style="color:#a0b0c0;font-size:13px;padding:8px">
-        Selectionnez un fournisseur et une marque pour afficher les conditions.
-      </div>`;
-  }
-  const skip = new Set(['fournisseur_code', 'marque', 'cat', 'segmentation']);
-  const rows = getConditionAttrs()
-    .filter(a => !skip.has(a.code))
-    .map(a => ({ label: a.name, val: getBrandSettingAttrValue(brandInfo, a) || '—' }));
-  if (!rows.length) {
-    rows.push({ label: 'Fournisseur', val: brandInfo.sup || '—' });
-  }
-  let html = `<div class="field-group-title">Conditions — ${escapeHtml(brandInfo.marque || '')}</div>`;
-  rows.forEach(r => {
-    html += `<div class="field-row" style="display:flex;justify-content:space-between;
-      align-items:center;padding:5px 0;border-bottom:1px solid #f0f4f8">
-      <div class="field-label" style="margin:0;flex:1">${escapeHtml(r.label)}</div>
-      <div style="font-size:13px;color:#1a2332;text-align:right">${escapeHtml(r.val)}</div>
-    </div>`;
-  });
-  return html;
-}
 // ============================================================
 // ADMIN — PRODUITS (creation via products.js)
 // ============================================================
 function confirmDelete(type, id, name) {
   if (type === 'product') {
     const p = products.find(x => x.id === id);
-    if (!requirePerm(canDeleteProduct(p), 'Suppression produit non autorisee')) return;
+    if (!requirePerm(canDeleteProduct(p), 'Suppression produit non autorisée')) return;
   } else if (type === 'cat') {
-    if (!requirePerm(canMod('mod_categories', 'd'), 'Suppression categorie non autorisee')) return;
+    if (!requirePerm(canMod('mod_categories', 'd'), 'Suppression catégorie non autorisée')) return;
   } else if (type === 'attr') {
-    if (!requirePerm(canMod('mod_attributes', 'd'), 'Suppression attribut non autorisee')) return;
+    if (!requirePerm(canMod('mod_attributes', 'd'), 'Suppression attribut non autorisée')) return;
     const a = attributes.find(x => x.id === id);
     if (isProtectedAttr(a)) {
-      showNotif('Attribut systeme : suppression impossible', 'warn');
+      showNotif('Attribut système : suppression impossible', 'warn');
       return;
     }
   } else if (type === 'group') {
-    if (!requirePerm(canMod('mod_groups', 'd'), 'Suppression groupe non autorisee')) return;
+    if (!requirePerm(canMod('mod_groups', 'd'), 'Suppression groupe non autorisée')) return;
     const g = attrGroups.find(x => x.id === id);
     if (isProtectedGroup(g)) {
-      showNotif('Groupe systeme : suppression impossible', 'warn');
+      showNotif('Groupe système : suppression impossible', 'warn');
       return;
     }
-  } else if (type === 'brand' || type === 'supplier') {
-    if (!requirePerm(canMod('mod_conditions', 'd'), 'Suppression non autorisee')) return;
   }
   pendingDelete = { type, id };
   document.getElementById('confirm-delete-text').textContent = 'Supprimer "' + name + '" ?';
@@ -1581,7 +1679,7 @@ function executeDelete() {
     const deleted = attributes.find(a => a.id === pendingDelete.id);
     if (isProtectedAttr(deleted)) {
       closeModal('modal-confirm-delete');
-      showNotif('Attribut systeme : suppression impossible', 'warn');
+      showNotif('Attribut système : suppression impossible', 'warn');
       pendingDelete = null;
       return;
     }
@@ -1596,22 +1694,16 @@ function executeDelete() {
     const gDel = attrGroups.find(g => g.id === pendingDelete.id);
     if (isProtectedGroup(gDel)) {
       closeModal('modal-confirm-delete');
-      showNotif('Groupe systeme : suppression impossible', 'warn');
+      showNotif('Groupe système : suppression impossible', 'warn');
       pendingDelete = null;
       return;
     }
     attrGroups = attrGroups.filter(g => g.id !== pendingDelete.id);
     categories.forEach(c => { c.groupIds = c.groupIds.filter(id => id !== pendingDelete.id); });
   }
-  else if (pendingDelete.type === 'brand')
-    brandSettings = brandSettings.filter((_, i) => i !== pendingDelete.id);
-  else if (pendingDelete.type === 'supplier') {
-    suppliers     = suppliers.filter(s => s.code !== pendingDelete.id);
-    brandSettings = brandSettings.filter(b => b.fournisseurCode !== pendingDelete.id);
-  }
   closeModal('modal-confirm-delete');
   renderAll();
-  showNotif('Element supprime');
+  showNotif('Élément supprimé');
   pendingDelete = null;
 }
 
@@ -1626,7 +1718,7 @@ function renderPrefsPage() {
       <button class="btn btn-secondary" onclick="showPage('admin',null)">&larr; Administration</button>
     </div>
     <div style="background:#fff;border-radius:12px;padding:28px;box-shadow:0 1px 6px rgba(0,0,0,0.07);max-width:560px">
-      <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:20px">Preferences application</div>
+      <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:20px">Préférences application</div>
 
       <div class="field-row" style="margin-bottom:20px">
         <div class="field-label" style="margin-bottom:6px">Nombre de produits par page</div>
@@ -1639,7 +1731,7 @@ function renderPrefsPage() {
       </div>
 
       <div class="field-row" style="margin-bottom:24px">
-        <div class="field-label" style="margin-bottom:6px">Seuil de completion</div>
+        <div class="field-label" style="margin-bottom:6px">Seuil de complétion</div>
         <div style="display:flex;gap:10px;align-items:center">
           <input type="number" class="field-input" id="pref-seuil"
             value="${seuilCompletion}" min="0" max="100" step="5"
@@ -1663,875 +1755,516 @@ function savePrefs() {
   if (!isNaN(sc) && sc >= 0 && sc <= 100) seuilCompletion = sc;
   showPage('admin', null);
   renderAll();
-  showNotif('Preferences enregistrees');
+  showNotif('Préférences enregistrées');
 }
 
 // ============================================================
 // ADMIN — MARQUES / FOURNISSEURS
 // ============================================================
-let editingBrandIdx = null;
-
 function catBadgeHtml(typeName) {
   const cat = categories.find(c => c.name === typeName);
   if (!cat) return `<span class="badge badge-grey" style="font-size:11px">${typeName || '—'}</span>`;
   return `<span class="badge" style="font-size:11px;background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}55">${typeName}</span>`;
 }
 
-function getBrandSettingsFilteredList() {
-  const searchVal = (document.getElementById('brand-settings-search') || {}).value || '';
-  const q = searchVal.toLowerCase();
-  const condAttrs = getConditionAttrs();
-
-  let list = brandSettings.map((b, i) => {
-    const sup = suppliers.find(s => s.code === b.fournisseurCode);
-    return { i, b, supName: sup ? sup.name : b.fournisseurCode, trigram: sup ? (sup.trigram || '') : '' };
+let _refTab = 'ref_conditions';
+const _refSearch = {};
+function setRefTab(id) {
+  // une ligne ajoutée sans clé est abandonnée en changeant d'onglet
+  allReferentials().forEach(R => {
+    const data = R.data();
+    for (let i = data.length - 1; i >= 0; i--) if (data[i]._new && R.cols.every(c => !String(data[i][c.prop] || '').trim())) data.splice(i, 1);
   });
-
-  if (q) {
-    list = list.filter(x =>
-      condAttrs.some(a => getBrandSettingAttrValue(x.b, a).toLowerCase().includes(q)) ||
-      (x.b.fournisseurCode || '').toLowerCase().includes(q) ||
-      (x.supName || '').toLowerCase().includes(q) ||
-      (x.trigram || '').toLowerCase().includes(q)
-    );
-  }
-
-  for (const code in brandColFilters) {
-    const allowed = brandColFilters[code];
-    const attr = attributes.find(a => a.code === code);
-    list = list.filter(x => allowed.has(getBrandSettingAttrValue(x.b, attr || { code }).toString().trim()));
-  }
-
-  if (_brandSortState.col) {
-    const attr = attributes.find(a => a.code === _brandSortState.col);
-    list.sort((a, b) => {
-      const va = getBrandSettingSortValue(a.b, attr || { code: _brandSortState.col });
-      const vb = getBrandSettingSortValue(b.b, attr || { code: _brandSortState.col });
-      if (typeof va === 'number' && typeof vb === 'number')
-        return _brandSortState.dir === 'asc' ? va - vb : vb - va;
-      return _brandSortState.dir === 'asc'
-        ? String(va).localeCompare(String(vb), 'fr')
-        : String(vb).localeCompare(String(va), 'fr');
-    });
-  }
-  return { list, q, condAttrs };
-}
-
-function brandSettingsRowsHtml(list, q, condAttrs) {
-  const attrs = condAttrs || getConditionAttrs();
-  const colCount = attrs.length + 1 + (attrs.some(a => a.code === 'fournisseur_code') ? 2 : 0);
-  let rows = '';
-  list.forEach(x => {
-    const cells = attrs.map(a => {
-      const raw = getBrandSettingAttrValue(x.b, a);
-      if (a.code === 'cat' && x.b.type) {
-        const cat = categories.find(c => c.name === x.b.type);
-        return cat
-          ? `<td><span class="badge" style="background:${cat.color}22;color:${cat.color};
-               border:1px solid ${cat.color}55;padding:2px 8px;border-radius:4px;
-               font-size:11px;font-weight:600">${escapeHtml(x.b.type)}</span></td>`
-          : `<td>${escapeHtml(raw) || '—'}</td>`;
-      }
-      if (a.code === 'repriseEchange' || a.type === 'Oui / Non') {
-        return `<td>${raw === 'Oui'
-          ? '<span class="badge-active-on">Oui</span>'
-          : '<span class="badge-active-off">Non</span>'}</td>`;
-      }
-      if (a.code === 'remiseEnseigne')
-        return `<td><strong style="color:#1565c0">${raw || '—'}</strong></td>`;
-      if (a.code === 'fournisseur_code') {
-        const code = getBrandSettingAttrValue(x.b, { code: '_supplierCode' });
-        const tri = getBrandSettingAttrValue(x.b, { code: '_supplierTrigram' });
-        return `<td style="white-space:nowrap">${raw ? escapeHtml(raw) : '—'}</td>`
-          + `<td style="white-space:nowrap;font-family:monospace">${code ? escapeHtml(code) : '—'}</td>`
-          + `<td style="white-space:nowrap;font-family:monospace">${tri ? escapeHtml(tri) : '—'}</td>`;
-      }
-      return `<td style="white-space:nowrap">${raw ? escapeHtml(raw) : '—'}</td>`;
-    }).join('');
-
-    rows += `<tr>
-      ${cells}
-      <td>
-        <div class="td-actions">
-          <button class="action-btn"
-            onclick="editBrandSetting(${x.i})">${canMod('mod_conditions','w') ? 'Modifier' : 'Voir'}</button>
-          ${canMod('mod_conditions','d')
-            ? `<button class="action-btn-danger btn-trash" title="Supprimer"
-            onclick="confirmDelete('brand',${x.i},'${(x.b.marque || '').replace(/'/g, "\\'")}')">${TRASH_ICON}</button>` : ''}
-        </div>
-      </td>
-    </tr>`;
-  });
-
-  if (!rows) {
-    rows = `<tr><td colspan="${colCount}" style="text-align:center;color:#a0b0c0;padding:24px">
-      Aucune condition commerciale${q ? ' pour cette recherche' : ''}.
-    </td></tr>`;
-  }
-  return rows;
-}
-
-function fillBrandSettingsTbody() {
-  const tbody = document.getElementById('brand-settings-tbody');
-  if (!tbody) { renderSuppliersPage(); return; }
-  const { list, q, condAttrs } = getBrandSettingsFilteredList();
-  tbody.innerHTML = brandSettingsRowsHtml(list, q, condAttrs);
-}
-
-function makeBrandSortFilterTh(attr) {
-  const isFiltered = !!brandColFilters[attr.code];
-  return `<th class="th-sortable" style="white-space:nowrap;min-width:120px">
-    <div style="display:flex;align-items:center;gap:4px;white-space:nowrap">
-      <span class="sort-btn" onclick="sortBrandSettingsTable('${attr.code}')" title="Trier"
-        style="cursor:pointer;font-size:13px;color:#8a9bb0">&#8645;</span>
-      <span onclick="sortBrandSettingsTable('${attr.code}')" style="cursor:pointer;flex:1">${escapeHtml(attr.name)}</span>
-      <span class="th-filter-icon${isFiltered ? ' filter-active' : ''}"
-        title="Filtrer" onclick="openBrandColFilter('${attr.code}','${escapeHtml(attr.name)}',this)">&#9663;</span>
-    </div>
-  </th>`;
+  _refTab = id;
+  renderSuppliersPage();
 }
 
 function renderSuppliersPage() {
   const page = document.getElementById('page-admin-suppliers');
   if (!page) return;
-
-  const searchVal = (document.getElementById('brand-settings-search') || {}).value || '';
-  const condGroup = getConditionGroup();
-  const condAttrs = getConditionAttrs();
-
+  const refs = allReferentials();
+  if (!refs.some(x => x.id === _refTab)) _refTab = refs.length ? refs[0].id : null;
   page.innerHTML = `
-    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <button class="btn btn-secondary"
-        onclick="showPage('admin',null)">&larr; Administration</button>
-      <span style="font-size:15px;font-weight:700;color:#1a2332">
-        Conditions commerciales
-      </span>
-      <input class="field-input" id="brand-settings-search"
-        placeholder="Rechercher un fournisseur, une marque..."
-        value="${escapeHtml(searchVal)}"
-        oninput="fillBrandSettingsTbody()"
-        style="flex:1;min-width:220px;max-width:340px">
-      <div style="flex:1"></div>
-      ${condGroup && canMod('mod_groups', 'w')
-        ? `<button class="btn btn-secondary"
-             onclick="editAttrGroup(${condGroup.id})">Modifier la structure</button>`
-        : ''}
-      ${canMod('mod_conditions', 'w')
-        ? `<button class="btn btn-secondary"
-        onclick="openCreateSupplierModal()">+ Fournisseur</button>
-      <button class="btn btn-primary"
-        onclick="openCreateBrandModal()">+ Nouvelle condition commerciale</button>`
-        : ''}
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <button class="btn btn-secondary" onclick="showPage('admin',null)">&larr; Administration</button>
+      <span style="font-size:15px;font-weight:700;color:#1a2332">Référentiels</span>
     </div>
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            ${condAttrs.map(a => makeBrandSortFilterTh(a) + (a.code === 'fournisseur_code'
-              ? makeBrandSortFilterTh({ code: '_supplierCode', name: 'Code fournisseur' })
-                + makeBrandSortFilterTh({ code: '_supplierTrigram', name: 'Trigramme' })
-              : '')).join('')}
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="brand-settings-tbody"></tbody>
-      </table>
-    </div>`;
-  fillBrandSettingsTbody();
+    <div class="product-tabs-bar acc-tabs">
+      ${refs.map(t => `<div class="tab${t.id === _refTab ? ' active' : ''}" onclick="setRefTab('${t.id}')">${escapeHtml(t.name)}<span class="tab-count">${t.data().length}</span></div>`).join('')}
+      ${canMod('mod_conditions', 'w') ? `<div class="tab ref-tab-add" onclick="openNewReferentialModal()">+ Référentiel</div>` : ''}
+    </div>
+    <div class="acc-tab-body">${referentialTabHtml(refs.find(x => x.id === _refTab))}</div>`;
 }
 
-let _brandSortState = { col: null, dir: 'asc' };
-let brandColFilters = {};
-
-function sortBrandSettingsTable(col) {
-  if (_brandSortState.col === col) {
-    _brandSortState.dir = _brandSortState.dir === 'asc' ? 'desc' : 'asc';
-  } else {
-    _brandSortState = { col, dir: 'asc' };
-  }
-  fillBrandSettingsTbody();
+// ============================================================
+// RÉFÉRENTIELS : onglets Fournisseurs, Marques et référentiels créés ici.
+// Saisie dans le tableau, import d'un fichier (colonnes reconnues par leur
+// nom), suppression refusée tant qu'une ligne ou une colonne est utilisée.
+// ============================================================
+function refKeyRows(attrCode, value) {
+  let n = 0;
+  (refTables || []).forEach(t => Object.keys(t.keys || {}).forEach(c => {
+    if (t.keys[c] !== attrCode) return;
+    n += t.rows.filter(r => refNorm(r[c]) === refNorm(value)).length;
+  }));
+  return n;
 }
-
-function getBrandColUniqueValues(code) {
-  const attr = attributes.find(a => a.code === code) || { code };
-  const vals = new Set();
-  brandSettings.forEach(b => {
-    const v = getBrandSettingAttrValue(b, attr).toString().trim();
-    if (v && v !== '—') vals.add(v);
+// Une ligne dont la clé unique est reliée à un attribut est « utilisée » par
+// les produits qui ont cette valeur et par les autres référentiels qui ont
+// une colonne clé sur le même attribut
+function refRowUsage(R, row) {
+  const keys = refKeysOf(R);
+  const cols = Object.keys(keys);
+  if (cols.length !== 1) return null;
+  const code = keys[cols[0]], value = row[cols[0]];
+  if (!String(value || '').trim()) return null;
+  let rows = 0;
+  (refTables || []).forEach(t => {
+    if (t === R.table) return;
+    Object.keys(t.keys || {}).forEach(c => { if (t.keys[c] === code) rows += t.rows.filter(x => refNorm(x[c]) === refNorm(value)).length; });
   });
-  return [...vals].sort((a, b) => a.localeCompare(b, 'fr'));
+  return { conds: rows, prods: products.filter(p => p.fields && refNorm(p.fields[code]) === refNorm(value)).length };
 }
-
-function openBrandColFilter(code, label, iconEl) {
-  document.removeEventListener('click', colFilterOutsideClick);
-  if (activeColFilterDropdown) { activeColFilterDropdown.remove(); activeColFilterDropdown = null; }
-  const vals   = getBrandColUniqueValues(code);
-  const active = brandColFilters[code] || null;
-  const rect   = iconEl.getBoundingClientRect();
-  const dd     = document.createElement('div');
-  dd.className = 'col-filter-dropdown';
-  dd.style.top  = (rect.bottom + 4) + 'px';
-  dd.style.left = Math.min(rect.left, window.innerWidth - 270) + 'px';
-  let itemsHtml = '';
-  if (!vals.length) {
-    itemsHtml = '<div class="col-filter-empty">Aucune valeur disponible</div>';
-  } else {
-    const allChecked = !active || active.size === 0;
-    itemsHtml += `<div class="col-filter-item">
-      <input type="checkbox" id="bcfa-${code}" ${allChecked ? 'checked' : ''}
-        onchange="toggleBrandColFilterAll('${code}',this)">
-      <label for="bcfa-${code}" style="font-weight:600">Tout selectionner</label>
-    </div>`;
-    vals.forEach((v, i) => {
-      const checked = !active || active.has(v);
-      itemsHtml += `<div class="col-filter-item col-filter-val-item" data-val="${escapeHtml(v)}">
-        <input type="checkbox" id="bcfv-${code}-${i}" ${checked ? 'checked' : ''}
-          onchange="toggleBrandColFilterVal('${code}',this)">
-        <label for="bcfv-${code}-${i}">${escapeHtml(v)}</label>
-      </div>`;
-    });
-  }
-  dd.innerHTML = `
-    <div class="col-filter-dropdown-header">
-      <span>${escapeHtml(label)}</span>
-      <button onclick="clearBrandColFilter('${code}')">Effacer</button>
-    </div>
-    <div class="col-filter-search-wrap">
-      <input type="text" class="col-filter-search" placeholder="Rechercher..."
-        oninput="filterColFilterList(this)">
-    </div>
-    <div class="col-filter-list">${itemsHtml}</div>`;
-  document.body.appendChild(dd);
-  activeColFilterDropdown = dd;
-  setTimeout(() => document.addEventListener('click', colFilterOutsideClick), 0);
+// Formules qui lisent un référentiel (et, au besoin, une de ses colonnes)
+const REF_FORMULA_RES = [/RECHERCHE\s*\(\s*"([^"]+)"\s*,[^,]+,\s*"([^"]+)"\s*\)/gi, /R[EÉ]F[EÉ]RENTIEL\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/gi];
+function refFormulaUsers(refName, colName) {
+  return attributes.filter(a => [a.formula, a._altFormula].some(f => REF_FORMULA_RES.some(re0 => {
+    const re = new RegExp(re0.source, 'gi');
+    let m;
+    while ((m = re.exec(f || ''))) {
+      if (refNorm(m[1]) === refNorm(refName) && (!colName || refNorm(m[2]) === refNorm(colName))) return true;
+    }
+    return false;
+  })));
 }
-
-function toggleBrandColFilterVal(code, cb) {
-  const item = cb.closest('.col-filter-val-item');
-  const val = item ? item.getAttribute('data-val') : '';
-  const vals = getBrandColUniqueValues(code);
-  if (!brandColFilters[code]) brandColFilters[code] = new Set(vals);
-  if (cb.checked) brandColFilters[code].add(val);
-  else brandColFilters[code].delete(val);
-  fillBrandSettingsTbody();
+// Attribut qui lit une colonne (formule REFERENTIEL) : il donne le format
+function refColAttr(refName, colName) {
+  return attributes.find(a => {
+    const m = /^=?\s*R[EÉ]F[EÉ]RENTIEL\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)\s*$/i.exec(a.formula || '');
+    return m && refNorm(m[1]) === refNorm(refName) && refNorm(m[2]) === refNorm(colName);
+  }) || null;
 }
-
-function toggleBrandColFilterAll(code, cb) {
-  if (cb.checked) delete brandColFilters[code];
-  else brandColFilters[code] = new Set();
-  if (activeColFilterDropdown)
-    activeColFilterDropdown.querySelectorAll('.col-filter-val-item input')
-      .forEach(c => { c.checked = cb.checked; });
-  fillBrandSettingsTbody();
-}
-
-function clearBrandColFilter(code) {
-  delete brandColFilters[code];
-  if (activeColFilterDropdown) { activeColFilterDropdown.remove(); activeColFilterDropdown = null; }
-  renderSuppliersPage();
-}
-
-function openCreateSupplierModal() {
-  if (!requirePerm(canMod('mod_conditions', 'w'))) return;
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.style.display = 'flex';
-  overlay.innerHTML = `
-    <div class="modal-box" style="max-width:420px;width:100%">
-      <div class="modal-title">Nouveau fournisseur</div>
-      <div class="form-grid">
-        <div class="form-field">
-          <div class="form-label">Code *</div>
-          <input class="field-input" id="ns-code" placeholder="ex: R00999"
-            style="font-family:monospace">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Nom *</div>
-          <input class="field-input" id="ns-name" placeholder="ex: ESSILOR">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Trigramme</div>
-          <input class="field-input" id="ns-trigram" maxlength="3" placeholder="ex: ESS"
-            style="font-family:monospace;text-transform:uppercase">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary"
-          onclick="this.closest('.modal-overlay').remove()">Annuler</button>
-        <button class="btn btn-primary" onclick="createSupplier(this)">Creer</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-}
-
-function createSupplier(btn) {
-  if (!requirePerm(canMod('mod_conditions', 'w'))) return;
-  const code = (document.getElementById('ns-code').value || '').trim().toUpperCase();
-  const name = (document.getElementById('ns-name').value || '').trim();
-  const trigram = (document.getElementById('ns-trigram').value || '').trim().toUpperCase().slice(0, 3);
-  if (!code || !name) { showNotif('Code et nom obligatoires', 'warn'); return; }
-  if (suppliers.find(s => s.code === code)) {
-    showNotif('Ce code fournisseur existe deja', 'error'); return;
-  }
-  suppliers.push({ code, name, trigram });
-  btn.closest('.modal-overlay').remove();
+function refAfterChange(msg) {
+  (products || []).forEach(p => computeCalcFields(p));
   renderSuppliersPage();
   renderAdminHome();
-  showNotif('Fournisseur "' + name + '" cree');
+  if (msg) showNotif(msg);
 }
 
-function renderSuppliersTable(filter) {
-  const tb = document.getElementById('suppliers-tbody');
-  if (!tb) return;
-  const q = (filter || '').toLowerCase();
-  tb.innerHTML = '';
-  brandSettings.forEach((b, idx) => {
-    const sup     = suppliers.find(s => s.code === b.fournisseurCode);
-    const supName = sup ? sup.name : b.fournisseurCode;
-    if (q && !supName.toLowerCase().includes(q) && !b.marque.toLowerCase().includes(q)) return;
-    const repriseLabel = b.repriseEchange
-      ? '<span class="badge badge-green" style="font-size:11px">Oui</span>'
-      : '<span class="badge badge-grey" style="font-size:11px">Non</span>';
-    const tri = sup && sup.trigram ? sup.trigram : '—';
-    tb.innerHTML += `<tr>
-      <td style="font-weight:600;white-space:nowrap">${supName}</td>
-      <td style="font-family:monospace;font-size:11px;color:#607080">${b.fournisseurCode}</td>
-      <td style="font-family:monospace">${tri}</td>
-      <td style="white-space:nowrap">${b.marque}</td>
-      <td>${catBadgeHtml(b.type)}</td>
-      <td style="text-align:right">${b.rf > 0 ? (b.rf * 100).toFixed(2) + '%' : '—'}</td>
-      <td style="text-align:right">${b.rfa > 0 ? (b.rfa * 100).toFixed(2) + '%' : '—'}</td>
-      <td style="text-align:right;font-weight:600;color:#1565c0">
-        ${b.remiseEnseigne > 0 ? (b.remiseEnseigne * 100).toFixed(0) + '%' : '—'}
-      </td>
-      <td style="text-align:center">${repriseLabel}</td>
-      <td style="font-size:12px;color:#607080;white-space:nowrap">${b.conditionsLivraison || '—'}</td>
-      <td><div class="td-actions">
-        <button class="action-btn" onclick="openBrandEditor(${idx})">Editer</button>
-        <button class="action-btn-danger btn-trash" title="Supprimer"
-          onclick="confirmDelete('brand',${idx},'${b.marque}')">${TRASH_ICON}</button>
-      </div></td>
-    </tr>`;
-  });
+function refKeysOf(R) { return (R && R.table && R.table.keys) || {}; }
+function refHasKeys(R) { return Object.keys(refKeysOf(R)).length > 0; }
+function refRowUsageShown(R) { return Object.keys(refKeysOf(R)).length === 1; }
+// Identifiant unique : la première colonne d'un référentiel qui a au plus une
+// colonne clé (Fournisseurs, Marques, Pays…) ; en lecture seule une fois saisie
+function refIsSoleKey(R, c) { return c.key && Object.keys(refKeysOf(R)).length <= 1; }
+// La colonne qui définit elle-même la liste d'un attribut (Code des
+// Fournisseurs pour l'attribut Fournisseur) se saisit en texte
+function refDefinesList(R, attr) { return !!(attr && attr.listRef && refNorm(attr.listRef.ref) === refNorm(R.name)); }
+
+function refCellHtml(R, row, i, c, ci, ro) {
+  const v = row[c.prop] == null ? '' : String(row[c.prop]);
+  const keyAttr = attributes.find(a => a.code === refKeysOf(R)[c.name]) || null;
+  const valAttr = refColAttr(R.name, c.name);
+  const on = `onchange="setRefCell('${R.id}',${i},${ci},this.value)"${ro}`;
+  if (refIsSoleKey(R, c) && !row._new) return `<td style="font-weight:600">${escapeHtml(v)}</td>`;
+  if (keyAttr && !refDefinesList(R, keyAttr)) {
+    const opts = keyAttr.code === 'cat' ? categories.map(x => ({ v: x.name, l: x.name })) : attrSelectOptions(keyAttr);
+    const known = !v || opts.some(o => o.v === v);
+    return `<td><select class="form-select ref-cell-select" ${on}>
+      <option value="">Toutes</option>
+      ${known ? '' : `<option value="${escapeHtml(v)}" selected>${escapeHtml(v)}</option>`}
+      ${opts.map(o => `<option value="${escapeHtml(o.v)}"${o.v === v ? ' selected' : ''}>${escapeHtml(o.l === o.v ? o.v : o.v + ' — ' + o.l)}</option>`).join('')}
+    </select></td>`;
+  }
+  if (valAttr && valAttr.type === 'Oui / Non') {
+    return `<td><select class="form-select ref-cell-select" ${on}>
+      <option value=""></option>${['Oui', 'Non'].map(o => `<option${o === v ? ' selected' : ''}>${o}</option>`).join('')}</select></td>`;
+  }
+  if (valAttr && isPercentAttr(valAttr)) {
+    const shown = v === '' ? '' : formatPercentDisplay(v);
+    return `<td><span class="ref-pct"><input class="field-input" value="${escapeHtml(shown)}" ${on}><span>%</span></span></td>`;
+  }
+  return `<td><input class="field-input${c.mono ? ' ref-mono' : ''}" value="${escapeHtml(v)}"${c.max ? ` maxlength="${c.max}"` : ''} ${on}></td>`;
 }
 
-function isBrandSpecialFormAttr(a) {
-  return !!(a && ['fournisseur_code', 'marque', 'cat', 'segmentation'].includes(a.code));
-}
-
-function brandExtraFieldsHtml(b, prefix) {
-  const known = new Set(['rf', 'rfa', 'remiseEnseigne', 'repriseEchange', 'conditionsLivraison']);
-  const extras = getConditionAttrs().filter(a => !isBrandSpecialFormAttr(a) && !known.has(a.code));
-  if (!extras.length) return '';
-  return extras.map(a => {
-    const id = prefix + '-attr-' + a.code;
-    const key = brandAttrStorageKey(a);
-    const val = b ? b[key] : '';
-    let input;
-    if (isPercentBrandAttr(a)) {
-      const n = typeof val === 'number' ? (val * 100) : 0;
-      input = `<input class="field-input" id="${id}" type="number" step="0.01" value="${n}"
-        onwheel="event.preventDefault();this.blur()">`;
-    } else if (a.type === 'Oui / Non' || a.code === 'repriseEchange') {
-      input = `<select class="form-select" id="${id}">
-        <option value="0"${!val ? ' selected' : ''}>Non</option>
-        <option value="1"${val ? ' selected' : ''}>Oui</option>
-      </select>`;
-    } else if (a.type === 'Simple select') {
-      const opts = (a.options || []).map(o =>
-        `<option${o === val ? ' selected' : ''}>${escapeHtml(o)}</option>`
-      ).join('');
-      input = `<select class="form-select" id="${id}">
-        <option value="">-- Choisir --</option>${opts}
-      </select>`;
-    } else {
-      input = `<input class="field-input" id="${id}" value="${escapeHtml(val == null ? '' : val)}">`;
+function referentialTabHtml(R) {
+  if (!R) return '';
+  const canW = canMod('mod_conditions', 'w'), canD = canMod('mod_conditions', 'd');
+  const ro = canW ? '' : ' disabled';
+  const q = refNorm(_refSearch[R.id] || '');
+  const data = R.data();
+  const rows = data.map((row, i) => ({ row, i }))
+    .filter(({ row }) => row._new || !q || R.cols.some(c => refNorm(row[c.prop]).includes(q)));
+  const users = refFormulaUsers(R.name);
+  const keys = refKeysOf(R);
+  const keyable = attributes.filter(a => a.type === 'Simple select' || a.type === 'Oui / Non' || a.code === 'cat')
+    .sort((x, y) => x.name.localeCompare(y.name, 'fr'));
+  const head = R.cols.map((c, ci) => {
+    if (!canW) {
+      const k = keys[c.name] ? attributes.find(a => a.code === keys[c.name]) : null;
+      return `<th>${escapeHtml(c.name)}${k ? ` <span class="ref-key">clé : ${escapeHtml(k.name)}</span>` : (refIsSoleKey(R, c) ? ' <span class="calc-meta">(clé)</span>' : '')}</th>`;
     }
-    return `<div class="form-field">
-      <div class="form-label">${escapeHtml(a.name)}</div>
-      ${input}
-    </div>`;
+    return `<th><div class="ref-col-head">
+      <input class="field-input" value="${escapeHtml(c.name)}" onchange="renameRefColumn('${R.id}',${ci},this.value)">
+      ${canD && ci > 0 ? `<button class="grp-x" title="Supprimer la colonne" onclick="removeRefColumn('${R.id}',${ci})">&#10005;</button>` : ''}
+    </div>
+    <select class="form-select ref-key-select" onchange="setRefKey('${R.id}',${ci},this.value)">
+      <option value="">${refIsSoleKey(R, c) ? 'Clé' : 'Valeur'}</option>
+      ${keyable.map(a => `<option value="${a.code}"${keys[c.name] === a.code ? ' selected' : ''}>Clé : ${escapeHtml(a.name)}</option>`).join('')}
+    </select></th>`;
   }).join('');
+  const body = rows.map(({ row, i }) => {
+    const u = refRowUsage(R, row);
+    const cells = R.cols.map((c, ci) => refCellHtml(R, row, i, c, ci, ro)).join('');
+    const nh = (row._hist || []).length;
+    return `<tr>${cells}
+      ${refRowUsageShown(R) ? `<td class="calc-meta" style="white-space:nowrap">${u ? u.conds + ' lignes · ' + u.prods + ' produits' : ''}</td>` : ''}
+      <td style="white-space:nowrap">${nh ? `<button class="grp-x" title="Historique (${nh})" onclick="openRefRowHistory('${R.id}',${i})">&#8635;</button>` : ''}
+        ${canD ? `<button class="action-btn-danger btn-trash" title="Supprimer la ligne" onclick="deleteRefRow('${R.id}',${i})">${TRASH_ICON}</button>` : ''}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="${R.cols.length + 2}" style="color:#a0b0c0;padding:16px">Aucune ligne.</td></tr>`;
+  const grp = R.table.groupId ? getGroupById(R.table.groupId) : null;
+  return `
+    <div class="acc-toolbar">
+      <input class="field-input" style="max-width:260px" placeholder="Rechercher" value="${escapeHtml(_refSearch[R.id] || '')}"
+        oninput="_refSearch['${R.id}']=this.value;renderSuppliersPage();const i=document.querySelector('.acc-tab-body .acc-toolbar input');i.focus();i.setSelectionRange(i.value.length,i.value.length)">
+      <label class="ref-group-check"><input type="checkbox"${grp ? ' checked' : ''}${canW ? '' : ' disabled'} onchange="this.checked ? createRefGroup('${R.id}') : removeRefGroup('${R.id}', this)"> Groupe d’attributs</label>
+        ${grp ? `<button class="cell-link" onclick="editAttrGroup(${grp.id})">${escapeHtml(grp.name)}</button>` : ''}
+      <div style="flex:1"></div>
+      ${canW ? `<button class="btn btn-secondary" onclick="addRefRow('${R.id}')">+ Ligne</button>
+        <button class="btn btn-secondary" onclick="addRefColumn('${R.id}')">+ Colonne</button>
+        <label class="btn btn-secondary" style="margin:0">Importer un fichier<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importRefFile('${R.id}',this)"></label>` : ''}
+      ${canW ? `<input class="field-input" style="max-width:200px" value="${escapeHtml(R.name)}" title="Nom du référentiel" onchange="renameReferential('${R.id}',this.value)">` : ''}
+      ${canD ? `<button class="action-btn-danger btn-trash" title="Supprimer le référentiel" onclick="deleteReferential('${R.id}')">${TRASH_ICON}</button>` : ''}
+    </div>
+    ${users.length ? `<div class="calc-meta" style="margin-bottom:8px">Lu par : ${users.map(a => escapeHtml(a.name)).join(', ')}</div>` : ''}
+    <div class="table-container"><table class="ref-table">
+      <thead><tr>${head}${refRowUsageShown(R) ? '<th>Utilisé par</th>' : ''}<th></th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>`;
 }
 
-function applyBrandExtraForm(b, prefix) {
-  const known = new Set(['rf', 'rfa', 'remiseEnseigne', 'repriseEchange', 'conditionsLivraison']);
-  getConditionAttrs().forEach(a => {
-    if (isBrandSpecialFormAttr(a) || known.has(a.code)) return;
-    const el = document.getElementById(prefix + '-attr-' + a.code);
-    if (!el) return;
-    const key = brandAttrStorageKey(a);
-    if (isPercentBrandAttr(a)) b[key] = parseFloat(el.value) / 100 || 0;
-    else if (a.type === 'Oui / Non' || a.code === 'repriseEchange') b[key] = el.value === '1' || el.value === 'Oui';
-    else b[key] = el.value;
-  });
-}
-
-function editBrandSetting(i) {
-  const b = brandSettings[i];
-  if (!b) return;
-
-  const allMarques = getMarqueOptions();
-  const catOptions = categories.map(c =>
-    `<option value="${c.name}" ${c.name === b.type ? 'selected' : ''}>${c.name}</option>`
-  ).join('');
-
-  const cat = categories.find(c => c.name === b.type);
-  const segAttrs = _getSegAttrsForCat(cat);
-  const segAttrOptions = `<option value="">-- Aucune --</option>` +
-    segAttrs.map(a =>
-      `<option value="${a.code}" ${a.code === b.segAttrCode ? 'selected' : ''}>${a.name}</option>`
-    ).join('');
-  const segAttr = b.segAttrCode ? attributes.find(a => a.code === b.segAttrCode) : null;
-  const segValOptions = segAttr
-    ? (segAttr.options || []).map(o =>
-        `<option ${o === b.segAttrValue ? 'selected' : ''}>${o}</option>`
-      ).join('') : '';
-
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.style.display = 'flex';
-  overlay.innerHTML = `
-    <div class="modal-box" style="max-width:720px;width:100%">
-      <div class="modal-title">Modifier — ${b.marque}</div>
-      <div class="form-grid">
-        <div class="form-field">
-          <div class="form-label">Fournisseur</div>
-          ${autocompleteInput('eb-sup', 'eb-sup-list',
-            supplierNameByCode(b.fournisseurCode),
-            suppliers.map(s => s.name),
-            '', 'Rechercher un fournisseur')}
-        </div>
-        <div class="form-field">
-          <div class="form-label">Marque</div>
-          ${autocompleteInput('eb-marque', 'eb-marque-list', b.marque,
-            allMarques, '', 'Rechercher une marque')}
-        </div>
-        <div class="form-field">
-          <div class="form-label">Code IWI (3 caracteres max)</div>
-          <input class="field-input" id="eb-iwi" maxlength="3" value="${escapeHtml(b.iwiCode || '')}">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Type (categorie)</div>
-          <select class="form-select" id="eb-type"
-            onchange="onEditBrandCatChange(this)">${catOptions}</select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">Segmentation</div>
-          <select class="form-select" id="eb-seg-attr"
-            onchange="onEditBrandSegAttrChange(this)">${segAttrOptions}</select>
-        </div>
-        <div class="form-field" id="eb-seg-val-wrap"
-          style="${segAttr ? '' : 'display:none'}">
-          <div class="form-label">Valeur</div>
-          <select class="form-select" id="eb-seg-val">${segValOptions}</select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">RF (%)</div>
-          <input class="field-input" id="eb-rf" type="number" step="0.01" onwheel="event.preventDefault();this.blur()"
-            value="${((b.rf || 0) * 100).toFixed(2)}">
-        </div>
-        <div class="form-field">
-          <div class="form-label">RFA (%)</div>
-          <input class="field-input" id="eb-rfa" type="number" step="0.01" onwheel="event.preventDefault();this.blur()"
-            value="${((b.rfa || 0) * 100).toFixed(2)}">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Remise interne %</div>
-          <input class="field-input" id="eb-marge" type="number" step="1" onwheel="event.preventDefault();this.blur()"
-            value="${((b.remiseEnseigne || 0) * 100).toFixed(0)}">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Reprise echange</div>
-          <select class="form-select" id="eb-reprise">
-            <option value="1" ${b.repriseEchange ? 'selected' : ''}>Oui</option>
-            <option value="0" ${!b.repriseEchange ? 'selected' : ''}>Non</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">Conditions livraison</div>
-          <input class="field-input" id="eb-livraison"
-            value="${b.conditionsLivraison || ''}">
-        </div>
-      </div>
-      <div class="form-grid" style="margin-top:8px">${brandExtraFieldsHtml(b, 'eb')}</div>
-      ${brandHistoryHtml(b)}
-      <div class="modal-footer">
-        <button class="btn btn-secondary"
-          onclick="this.closest('.modal-overlay').remove()">Annuler</button>
-        <button class="btn btn-primary"
-          onclick="saveBrandSetting(${i}, this)">Enregistrer</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-}
-
-function brandChangeSnapshot(b) {
-  const pct = (n, digits) => (typeof n === 'number' ? (n * 100).toFixed(digits) + '%' : '');
-  return {
-    Fournisseur: supplierNameByCode(b.fournisseurCode) || b.fournisseurCode || '',
-    'Code fournisseur': b.fournisseurCode || '',
-    Trigramme: getBrandSettingAttrValue(b, { code: '_supplierTrigram' }),
-    Marque: b.marque || '',
-    'Code IWI': b.iwiCode || '',
-    Type: b.type || '',
-    Segmentation: getBrandSettingAttrValue(b, { code: 'segmentation' }),
-    RF: pct(b.rf, 2),
-    RFA: pct(b.rfa, 2),
-    'Remise interne': pct(b.remiseEnseigne, 0),
-    'Reprise echange': b.repriseEchange ? 'Oui' : 'Non',
-    'Conditions livraison': b.conditionsLivraison || '',
-  };
-}
-
-function pushBrandHistory(b, before) {
-  const after = brandChangeSnapshot(b);
-  if (!b.history) b.history = [];
-  const ts = typeof nowStr === 'function' ? nowStr() : '';
-  const user = typeof currentUserName === 'function' ? currentUserName() : '';
-  Object.keys(before).forEach(field => {
-    const oldVal = before[field] || '';
-    const newVal = after[field] || '';
-    if (oldVal !== newVal) b.history.push({ ts, user, field, old: oldVal, new: newVal });
-  });
-}
-
-function brandHistoryHtml(b) {
-  const history = (b && b.history) || [];
-  const title = `<div class="field-group-title" style="margin-top:16px">Historique</div>`;
-  if (!history.length) {
-    return title + `<div style="color:#a0b0c0;font-size:13px">Aucune modification enregistree.</div>`;
-  }
-  const rows = [...history].reverse().map(h => `<tr>
-      <td style="white-space:nowrap;color:#607080">${escapeHtml(h.ts || '')}</td>
-      <td>${escapeHtml(h.user || '')}</td>
-      <td>${escapeHtml(h.field || '')}</td>
-      <td><span class="history-val-old">${escapeHtml(h.old || '(vide)')}</span><span class="history-arrow">→</span><span class="history-val-new">${escapeHtml(h.new || '(vide)')}</span></td>
-    </tr>`).join('');
-  return title + `<div style="max-height:180px;overflow:auto;border:1px solid #e6edf5;border-radius:8px">
-    <table class="history-table"><thead><tr><th>Date</th><th>Utilisateur</th><th>Champ</th><th>Modification</th></tr></thead>
-    <tbody>${rows}</tbody></table></div>`;
-}
-
-function saveBrandSetting(i, btn) {
+// Colonne clé : reliée à un attribut du produit (la ligne la plus précise
+// s'applique ; case vide = toutes)
+function setRefKey(refId, ci, code) {
   if (!requirePerm(canMod('mod_conditions', 'w'))) return;
-  const b = brandSettings[i];
-  if (!b) return;
-  const before = brandChangeSnapshot(b);
-  b.fournisseurCode     = resolveSupplierCode(document.getElementById('eb-sup').value);
-  if (!b.fournisseurCode) { showNotif('Fournisseur inconnu', 'warn'); return; }
-  b.marque              = document.getElementById('eb-marque').value.trim();
-  b.iwiCode             = (document.getElementById('eb-iwi').value || '').trim().slice(0, 3);
-  b.type                = document.getElementById('eb-type').value;
-  b.segAttrCode         = document.getElementById('eb-seg-attr').value || null;
-  const vSel            = document.getElementById('eb-seg-val');
-  b.segAttrValue        = b.segAttrCode && vSel ? vSel.value : null;
-  b.rf                  = parseFloat(document.getElementById('eb-rf').value) / 100 || 0;
-  b.rfa                 = parseFloat(document.getElementById('eb-rfa').value) / 100 || 0;
-  b.remiseEnseigne        = parseFloat(document.getElementById('eb-marge').value) / 100 || 0;
-  b.repriseEchange      = document.getElementById('eb-reprise').value === '1';
-  b.conditionsLivraison = document.getElementById('eb-livraison').value.trim();
-  applyBrandExtraForm(b, 'eb');
-  pushBrandHistory(b, before);
-  registerMarque(b.marque);
-  btn.closest('.modal-overlay').remove();
-  renderSuppliersPage();
-  showNotif('Condition "' + b.marque + '" mise a jour');
+  const t = refTable(refId); if (!t) return;
+  const col = t.columns[ci];
+  if (!t.keys) t.keys = {};
+  if (code) t.keys[col] = code; else delete t.keys[col];
+  refAfterChange(code ? '« ' + col + ' » devient une colonne clé' : '« ' + col + ' » devient une colonne de valeur');
 }
 
-function _getSegAttrsForCat(cat) {
-  if (!cat) return [];
-  return cat.groupIds
-    .flatMap(gid => { const g = getGroupById(gid); return g ? g.attrIds : []; })
-    .map(aid => getAttrById(aid))
-    .filter(a => a && (a.type === 'Simple select' || a.type === 'Oui / Non'));
+// Case « Groupe d'attributs » : un groupe ordinaire, un attribut calculé
+// =REFERENTIEL(...) par colonne de valeur ; il se règle ensuite comme les autres
+function refAttrCode(name) {
+  let base = refNorm(name).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'champ';
+  let code = base, n = 2;
+  while (attributes.some(a => a.code === code)) code = base + '_' + (n++);
+  return code;
 }
-
-function onEditBrandCatChange(sel) {
-  const cat      = categories.find(c => c.name === sel.value);
-  const segAttrs = _getSegAttrsForCat(cat);
-  const segSel   = document.getElementById('eb-seg-attr');
-  if (segSel) {
-    segSel.innerHTML = `<option value="">-- Aucune --</option>` +
-      segAttrs.map(a => `<option value="${a.code}">${a.name}</option>`).join('');
-  }
-  const wrap = document.getElementById('eb-seg-val-wrap');
-  if (wrap) wrap.style.display = 'none';
+function addRefAttr(t, col) {
+  const g = getGroupById(t.groupId); if (!g) return;
+  const a = { id: Math.max(nextAttrId, ...attributes.map(x => x.id + 1)), name: col, code: refAttrCode(col), type: 'Texte',
+    groupId: g.id, required: false, calc: true, inCompletion: false,
+    formula: '=REFERENTIEL("' + t.name + '","' + col + '")', formulaLabel: 'Lu dans le référentiel ' + t.name,
+    mask: '', showInSynth: false, clickToOpen: false };
+  nextAttrId = a.id + 1;
+  attributes.push(a);
+  g.attrIds.push(a.id);
 }
-
-function onEditBrandSegAttrChange(sel) {
-  const attr = sel.value ? attributes.find(a => a.code === sel.value) : null;
-  const wrap = document.getElementById('eb-seg-val-wrap');
-  const vSel = document.getElementById('eb-seg-val');
-  if (!wrap || !vSel) return;
-  if (attr && attr.options && attr.options.length) {
-    vSel.innerHTML = attr.options.map(o => `<option>${o}</option>`).join('');
-    wrap.style.display = '';
-  } else {
-    wrap.style.display = 'none';
-  }
-}
-
-function onNewBrandCatChange(sel) {
-  const cat      = categories.find(c => c.name === sel.value);
-  const segAttrs = _getSegAttrsForCat(cat);
-  const segSel   = document.getElementById('nb-seg-attr');
-  if (segSel) {
-    segSel.innerHTML = `<option value="">-- Aucune --</option>` +
-      segAttrs.map(a => `<option value="${a.code}">${a.name}</option>`).join('');
-  }
-  const wrap = document.getElementById('nb-seg-val-wrap');
-  if (wrap) wrap.style.display = 'none';
-}
-
-function onNewBrandSegAttrChange(sel) {
-  const attr = sel.value ? attributes.find(a => a.code === sel.value) : null;
-  const wrap = document.getElementById('nb-seg-val-wrap');
-  const vSel = document.getElementById('nb-seg-val');
-  if (!wrap || !vSel) return;
-  if (attr && attr.options && attr.options.length) {
-    vSel.innerHTML = attr.options.map(o => `<option>${o}</option>`).join('');
-    wrap.style.display = '';
-  } else {
-    wrap.style.display = 'none';
-  }
-}
-
-function openCreateBrandModal() {
+function createRefGroup(refId) {
   if (!requirePerm(canMod('mod_conditions', 'w'))) return;
-  const allMarques = getMarqueOptions();
-  const catOptions = categories.map(c =>
-    `<option value="${c.name}">${c.name}</option>`).join('');
-
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.style.display = 'flex';
-  overlay.innerHTML = `
-    <div class="modal-box" style="max-width:560px;width:100%">
-      <div class="modal-title">Nouvelle condition commerciale</div>
-      <div class="form-grid">
-        <div class="form-field">
-          <div class="form-label">Fournisseur *</div>
-          ${autocompleteInput('nb-sup', 'nb-sup-list', '',
-            suppliers.map(s => s.name),
-            '', 'Rechercher un fournisseur')}
-        </div>
-        <div class="form-field">
-          <div class="form-label">Marque *</div>
-          ${autocompleteInput('nb-marque', 'nb-marque-list', '',
-            allMarques, '', 'Rechercher une marque')}
-        </div>
-        <div class="form-field">
-          <div class="form-label">Type (categorie) *</div>
-          <select class="form-select" id="nb-type"
-            onchange="onNewBrandCatChange(this)">${catOptions}</select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">Segmentation</div>
-          <select class="form-select" id="nb-seg-attr"
-            onchange="onNewBrandSegAttrChange(this)">
-            <option value="">-- Aucune --</option>
-          </select>
-        </div>
-        <div class="form-field" id="nb-seg-val-wrap" style="display:none">
-          <div class="form-label">Valeur</div>
-          <select class="form-select" id="nb-seg-val"></select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">RF (%)</div>
-          <input class="field-input" id="nb-rf" type="number" step="0.01" value="0" onwheel="event.preventDefault();this.blur()">
-        </div>
-        <div class="form-field">
-          <div class="form-label">RFA (%)</div>
-          <input class="field-input" id="nb-rfa" type="number" step="0.01" value="0" onwheel="event.preventDefault();this.blur()">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Remise interne %</div>
-          <input class="field-input" id="nb-marge" type="number" step="1" value="0" onwheel="event.preventDefault();this.blur()">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Reprise echange</div>
-          <select class="form-select" id="nb-reprise">
-            <option value="0">Non</option>
-            <option value="1">Oui</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">Conditions livraison</div>
-          <input class="field-input" id="nb-livraison" placeholder="ex: Franco">
-        </div>
-      </div>
-      <div class="form-grid" style="margin-top:8px">${brandExtraFieldsHtml({}, 'nb')}</div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary"
-          onclick="this.closest('.modal-overlay').remove()">Annuler</button>
-        <button class="btn btn-primary"  
-          onclick="createBrandSetting(this)">Creer</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  onNewBrandCatChange(document.getElementById('nb-type'));
+  const t = refTable(refId); if (!t || t.groupId) return;
+  if (!Object.keys(t.keys || {}).length) {
+    showNotif('Reliez d’abord au moins une colonne clé à un attribut du produit', 'warn'); renderSuppliersPage(); return;
+  }
+  const g = { id: nextGroupId++, name: t.name, code: refAttrCode(t.name), system: false, attrIds: [], audienceGroupIds: [] };
+  attrGroups.push(g);
+  t.groupId = g.id;
+  t.columns.filter(c => !(t.keys || {})[c] && !refColAttr(t.name, c)).forEach(c => addRefAttr(t, c));
+  refAfterChange('Groupe « ' + g.name + ' » créé : ' + g.attrIds.length + ' champs. Rattachez-le aux catégories dans Catégories.');
 }
 
-function createBrandSetting(btn) {
-  if (!requirePerm(canMod('mod_conditions', 'w'))) return;
-  const marque        = (document.getElementById('nb-marque').value || '').trim();
-  const fournisseurCode = resolveSupplierCode(document.getElementById('nb-sup').value);
-  const type          = document.getElementById('nb-type').value;
-  const segAttrCode   = document.getElementById('nb-seg-attr').value || null;
-  const vSel          = document.getElementById('nb-seg-val');
-  const segAttrValue  = segAttrCode && vSel ? vSel.value : null;
-
-  if (!marque) { showNotif('Marque obligatoire', 'error'); return; }
-  if (!fournisseurCode) { showNotif('Fournisseur inconnu', 'warn'); return; }
-
-  // Controle doublon
-  const exists = brandSettings.some(b =>
-    b.fournisseurCode === fournisseurCode &&
-    b.marque          === marque &&
-    b.type            === type &&
-    (b.segAttrCode    || null) === segAttrCode &&
-    (b.segAttrValue   || null) === segAttrValue
-  );
-  if (exists) {
-    const segLabel = segAttrCode
-      ? ` / ${(attributes.find(a => a.code === segAttrCode) || {}).name || segAttrCode} = ${segAttrValue}`
-      : '';
-    const supName = (suppliers.find(s => s.code === fournisseurCode) || {}).name || fournisseurCode;
-    showNotif(
-      `Une condition existe deja : ${supName} — ${marque} — ${type}${segLabel}`,
-      'error'
-    );
+function removeRefGroup(refId, box) {
+  if (!requirePerm(canMod('mod_conditions', 'w'))) { if (box) box.checked = true; return; }
+  const t = refTable(refId); if (!t || !t.groupId) return;
+  const g = getGroupById(t.groupId);
+  const fields = (g ? g.attrIds : []).map(getAttrById).filter(a => a && /R[EÉ]F[EÉ]RENTIEL\s*\(/i.test(a.formula || ''));
+  const own = new Set(fields.map(a => a.code));
+  const blocking = [];
+  fields.forEach(a => attrCodeUsages(a.code).forEach(u => {
+    if (/produit/.test(u.label)) return;
+    const users = String(u.now || '');
+    if (/formule/.test(u.label) && users.split(', ').every(n => fields.some(x => x.name === n))) return;
+    blocking.push({ label: a.name, now: u.label + ' : ' + users });
+  }));
+  if (box) box.checked = true;
+  if (blocking.length) {
+    openConfirmModal({ title: 'Groupe d’attributs utilisé', okLabel: 'Compris',
+      lead: 'Les champs du groupe « ' + (g ? g.name : t.name) + ' » servent ailleurs. Modifiez d’abord :', items: blocking, onOk: () => {} });
     return;
   }
-
-  const entry = {
-    marque,
-    fournisseurCode,
-    type,
-    segAttrCode,
-    segAttrValue,
-    rf:                  parseFloat(document.getElementById('nb-rf').value)    / 100 || 0,
-    rfa:                 parseFloat(document.getElementById('nb-rfa').value)   / 100 || 0,
-    remiseEnseigne:        parseFloat(document.getElementById('nb-marge').value) / 100 || 0,
-    repriseEchange:      document.getElementById('nb-reprise').value === '1',
-    conditionsLivraison: document.getElementById('nb-livraison').value.trim(),
-    history: [],
-  };
-  applyBrandExtraForm(entry, 'nb');
-  brandSettings.push(entry);
-  registerMarque(marque);
-  btn.closest('.modal-overlay').remove();
-  renderSuppliersPage();
-  showNotif('Condition "' + marque + '" creee');
+  openConfirmModal({ title: 'Retirer le groupe d’attributs', okLabel: 'Retirer',
+    lead: 'Le groupe « ' + (g ? g.name : t.name) + ' » et ses champs seront supprimés des fiches produit :',
+    items: fields.map(a => ({ label: a.name, now: '' })),
+    onOk: () => {
+      attributes = attributes.filter(a => !own.has(a.code));
+      products.forEach(p => { own.forEach(c => { if (p.fields) delete p.fields[c]; if (p.forcedFields) delete p.forcedFields[c]; }); });
+      if (g) {
+        g.attrIds = g.attrIds.filter(id => getAttrById(id));
+        if (!g.attrIds.some(id => !isAttrSection(id))) {
+          attrGroups = attrGroups.filter(x => x !== g);
+          categories.forEach(c => { c.groupIds = c.groupIds.filter(id => id !== g.id); });
+        }
+      }
+      t.groupId = null;
+      refAfterChange('Groupe d’attributs retiré');
+    } });
 }
 
-function filterSuppliersTable() {
-  renderSuppliersPage();
-}
-
-function openBrandEditor(idx) {
-  editingBrandIdx = idx;
-  const isNew = idx === -1;
-  const b = isNew
-    ? { fournisseurCode: '', marque: '', type: '', rf: 0, rfa: 0, remiseEnseigne: 0,
-        repriseEchange: false, conditionsLivraison: 'Franco' }
-    : brandSettings[idx];
-  const existing = document.getElementById('brand-editor-overlay');
-  if (existing) existing.remove();
-  const supOptions  = suppliers.map(s =>
-    `<option value="${s.code}"${s.code === b.fournisseurCode ? ' selected' : ''}>${s.name} (${s.code})</option>`
-  ).join('');
-  const typeOptions = categories.map(c =>
-    `<option value="${c.name}"${c.name === b.type ? ' selected' : ''}>${c.name}</option>`
-  ).join('');
+function openRefRowHistory(refId, i) {
+  const R = refById(refId); const row = R && R.data()[i]; if (!row) return;
+  const hist = [...(row._hist || [])].reverse();
   const overlay = document.createElement('div');
-  overlay.id = 'brand-editor-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:2000;display:flex;align-items:center;justify-content:center;';
+  overlay.className = 'modal-overlay'; overlay.style.display = 'flex';
+  overlay.innerHTML = `<div class="modal-box" style="max-width:640px;width:100%">
+    <div class="modal-title">Historique — ${escapeHtml(R.cols.map(c => row[c.prop]).filter(Boolean).slice(0, 3).join(' · '))}</div>
+    <div style="max-height:50vh;overflow:auto"><table class="history-table">
+      <thead><tr><th>Date</th><th>Utilisateur</th><th>Colonne</th><th>Modification</th></tr></thead>
+      <tbody>${hist.map(h => `<tr><td style="white-space:nowrap;color:#607080">${escapeHtml(h.ts)}</td><td>${escapeHtml(h.user)}</td><td>${escapeHtml(h.col)}</td>
+        <td><span class="history-val-old">${escapeHtml(h.old || '(vide)')}</span><span class="history-arrow">→</span><span class="history-val-new">${escapeHtml(h.new || '(vide)')}</span></td></tr>`).join('')}</tbody>
+    </table></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Fermer</button></div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function refById(id) { return allReferentials().find(x => x.id === id) || null; }
+
+function setRefCell(refId, i, ci, val) {
+  if (!requirePerm(canMod('mod_conditions', 'w'))) return;
+  const R = refById(refId); if (!R) return;
+  const row = R.data()[i]; if (!row) return;
+  const c = R.cols[ci]; if (!c) return;
+  const prop = c.prop;
+  let v = String(val == null ? '' : val).trim();
+  if (c.upper) v = v.toUpperCase();
+  if (c.max) v = v.slice(0, c.max);
+  const valAttr = refColAttr(R.name, c.name);
+  if (valAttr && isPercentAttr(valAttr) && v !== '') {
+    const n = parseFloat(v.replace(',', '.').replace('%', ''));
+    if (!isFinite(n)) { showNotif('Pourcentage illisible', 'warn'); renderSuppliersPage(); return; }
+    v = String(parseFloat((n / 100).toFixed(6)));
+  }
+  if (refIsSoleKey(R, c)) {
+    if (!v) { showNotif(c.name + ' obligatoire', 'warn'); renderSuppliersPage(); return; }
+    if (R.data().some((x, k) => k !== i && refNorm(x[prop]) === refNorm(v))) {
+      showNotif('« ' + v + ' » existe déjà', 'error'); renderSuppliersPage(); return;
+    }
+    delete row._new;
+  }
+
+  if (!row._new && String(row[prop] == null ? '' : row[prop]) !== v) {
+    if (!row._hist) row._hist = [];
+    row._hist.push({ ts: typeof nowStr === 'function' ? nowStr() : '', user: typeof currentUserName === 'function' ? currentUserName() : '', col: c.name, old: String(row[prop] == null ? '' : row[prop]), new: v });
+  }
+  if (refHasKeys(R)) delete row._new;
+  row[prop] = v;
+  refAfterChange(R.name + ' : ligne enregistrée');
+}
+
+function addRefRow(refId) {
+  if (!requirePerm(canMod('mod_conditions', 'w'))) return;
+  const R = refById(refId); if (!R) return;
+  const row = { _new: true };
+  R.cols.forEach(c => { row[c.prop] = ''; });
+  R.data().unshift(row);
+  _refSearch[refId] = '';
+  renderSuppliersPage();
+  const first = document.querySelector('.ref-table tbody input');
+  if (first) first.focus();
+}
+
+function deleteRefRow(refId, i) {
+  if (!requirePerm(canMod('mod_conditions', 'd'))) return;
+  const R = refById(refId); if (!R) return;
+  const row = R.data()[i]; if (!row) return;
+  const key = row[R.cols[0].prop];
+  const u = refRowUsage(R, row);
+  if (u && (u.conds || u.prods)) {
+    showNotif('« ' + key + ' » est utilisé (' + u.conds + ' lignes de référentiels, ' + u.prods + ' produits) : suppression impossible', 'warn');
+    return;
+  }
+  const remove = () => {
+    R.data().splice(i, 1);
+    refAfterChange('Ligne supprimée');
+  };
+  if (row._new) { remove(); return; }
+  openConfirmModal({ title: 'Supprimer la ligne', okLabel: 'Supprimer',
+    lead: '« ' + key + ' » sera supprimé du référentiel ' + R.name + '.', onOk: remove });
+}
+
+// Import : colonnes reconnues par leur nom (casse et accents ignorés) ;
+// la clé met à jour une ligne existante ou en crée une
+const REF_ALIASES = {
+  ref_fournisseurs: { 'Code': ['code fournisseur', 'fournisseur code'], 'Nom': ['fournisseur', 'nom fournisseur'], 'Trigramme': ['trigram', 'fab', 'fab.'] },
+  ref_marques: { 'Marque': ['description', 'nom'], 'Code IWI': ['code', 'code marque'], 'Fabricant': ['fab', 'fab.', 'code fabricant'] },
+};
+function importRefFile(refId, input) {
+  if (!requirePerm(canMod('mod_conditions', 'w'))) return;
+  const R = refById(refId); const file = input.files && input.files[0];
+  if (!R || !file) return;
+  const csv = /\.csv$/i.test(file.name);
+  const reader = new FileReader();
+  reader.onload = e => {
+    let rows;
+    try {
+      if (csv) {
+        let text = e.target.result;
+        rows = parseCSV(text);
+      } else {
+        const wb = XLSX.read(e.target.result, { type: 'binary' });
+        rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+      }
+    } catch (err) { showNotif('Fichier illisible : ' + err.message, 'error'); return; }
+    if (!rows.length) { showNotif('Fichier vide', 'warn'); return; }
+    const headers = Object.keys(rows[0]);
+    const alias = REF_ALIASES[R.id] || {};
+    const map = {};
+    R.cols.forEach(c => {
+      const names = [c.name].concat(alias[c.name] || []).map(refNorm);
+      const h = headers.find(x => names.includes(refNorm(x)));
+      if (h) map[c.prop] = h;
+    });
+    const key = R.cols[0];
+    const multi = refHasKeys(R);
+    if (!multi && !map[key.prop]) { showNotif('Colonne « ' + key.name + ' » introuvable dans le fichier', 'error'); return; }
+    const keyCols = multi ? R.cols.filter(c => refKeysOf(R)[c.name]) : [key];
+    let added = 0, updated = 0;
+    rows.forEach(src => {
+      const val = c => String(map[c.prop] && src[map[c.prop]] != null ? src[map[c.prop]] : '').trim();
+      const k = val(key);
+      if (!multi && !k) return;
+      let row = R.data().find(x => keyCols.every(c => refNorm(x[c.prop]) === refNorm(val(c))));
+      if (!row) { row = {}; R.cols.forEach(c => { row[c.prop] = ''; }); keyCols.forEach(c => { row[c.prop] = val(c); }); R.data().push(row); added++; }
+      else updated++;
+      R.cols.forEach(c => {
+        if (keyCols.includes(c) || !map[c.prop]) return;
+        let v = String(src[map[c.prop]] == null ? '' : src[map[c.prop]]).trim();
+        if (c.upper) v = v.toUpperCase();
+        if (c.max) v = v.slice(0, c.max);
+        if (v !== '') row[c.prop] = v;
+      });
+    });
+    refAfterChange(R.name + ' : ' + added + ' ligne' + (added > 1 ? 's' : '') + ' ajoutée' + (added > 1 ? 's' : '') + ', ' + updated + ' mise' + (updated > 1 ? 's' : '') + ' à jour');
+  };
+  if (csv) {
+    // fichier en UTF-8, sinon en Windows-1252 (exports Excel)
+    const r2 = new FileReader();
+    r2.onload = ev => {
+      const t = ev.target.result;
+      if (t.includes('\uFFFD')) reader.readAsText(file, 'windows-1252'); else reader.onload({ target: { result: t } });
+    };
+    r2.readAsText(file, 'UTF-8');
+  } else reader.readAsBinaryString(file);
+  input.value = '';
+}
+
+// Référentiels créés dans l'administration
+function openNewReferentialModal() {
+  if (!requirePerm(canMod('mod_conditions', 'w'))) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.display = 'flex';
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:14px;padding:28px;width:560px;max-width:95vw;
-      max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.18)">
-      <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:20px">
-        ${isNew ? 'Nouvelle entree fournisseur / marque' : 'Modifier : ' + b.marque + (b.type ? ' — ' + b.type : '')}
+    <div class="modal-box" style="max-width:460px;width:100%">
+      <div class="modal-title">Nouveau référentiel</div>
+      <div class="form-field">
+        <div class="form-label">Nom <span class="field-required">*</span></div>
+        <input class="field-input" id="nr-name">
       </div>
-      <div class="form-grid" style="margin-bottom:16px">
-        <div class="form-field">
-          <div class="form-label">Fournisseur *</div>
-          <select class="form-select" id="be-supplier">${supOptions}</select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">Marque *</div>
-          <input class="field-input" id="be-marque" value="${b.marque}" placeholder="ex : Ray-Ban">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Type (categorie)</div>
-          <select class="form-select" id="be-type">
-            <option value="">-- Choisir --</option>${typeOptions}
-          </select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">RF %</div>
-          <input class="field-input" type="number" step="0.01" id="be-rf" onwheel="event.preventDefault();this.blur()"
-            value="${(b.rf * 100).toFixed(2)}">
-        </div>
-        <div class="form-field">
-          <div class="form-label">RFA %</div>
-          <input class="field-input" type="number" step="0.01" id="be-rfa" onwheel="event.preventDefault();this.blur()"
-            value="${(b.rfa * 100).toFixed(2)}">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Remise interne %</div>
-          <input class="field-input" type="number" step="0.01" id="be-remise-enseigne" onwheel="event.preventDefault();this.blur()"
-            value="${(b.remiseEnseigne * 100).toFixed(2)}">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Reprise echange</div>
-          <select class="form-select" id="be-reprise">
-            <option value="1"${b.repriseEchange ? ' selected' : ''}>Oui</option>
-            <option value="0"${!b.repriseEchange ? ' selected' : ''}>Non</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">Conditions de livraison</div>
-          <input class="field-input" id="be-conditions" value="${b.conditionsLivraison || ''}">
-        </div>
+      <div class="form-field" style="margin-top:12px">
+        <div class="form-label">Colonnes, une par ligne ; la première est la clé <span class="field-required">*</span></div>
+        <textarea class="field-input" id="nr-cols" rows="4"></textarea>
       </div>
-      ${brandHistoryHtml(b)}
-      <div style="display:flex;justify-content:flex-end;gap:10px">
-        <button class="btn btn-secondary"
-          onclick="document.getElementById('brand-editor-overlay').remove()">Annuler</button>
-        <button class="btn btn-primary" onclick="saveBrandEditor()">Enregistrer</button>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="createReferential(this)">Créer</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('nr-name').focus();
 }
-
-function saveBrandEditor() {
-  if (!requirePerm(canMod('mod_conditions', 'w'))) return;
-  const marque         = (document.getElementById('be-marque').value || '').trim();
-  const fournisseurCode = document.getElementById('be-supplier').value;
-  if (!marque || !fournisseurCode) { showNotif('Fournisseur et marque obligatoires'); return; }
-  const entry = {
-    marque, fournisseurCode,
-    type:               document.getElementById('be-type').value,
-    rf:                 parseFloat(document.getElementById('be-rf').value || 0) / 100,
-    rfa:                parseFloat(document.getElementById('be-rfa').value || 0) / 100,
-    remiseEnseigne:          parseFloat(document.getElementById('be-remise-enseigne').value || 0) / 100,
-    repriseEchange:     document.getElementById('be-reprise').value === '1',
-    conditionsLivraison:document.getElementById('be-conditions').value.trim(),
-    history: (editingBrandIdx >= 0 && brandSettings[editingBrandIdx] && brandSettings[editingBrandIdx].history) || [],
-  };
-  if (editingBrandIdx === -1) brandSettings.push(entry);
-  else brandSettings[editingBrandIdx] = entry;
-  registerMarque(marque);
-  document.getElementById('brand-editor-overlay').remove();
-  renderSuppliersTable();
-  showNotif(editingBrandIdx === -1 ? 'Entree creee : ' + marque : 'Entree mise a jour : ' + marque);
+function createReferential(btn) {
+  const name = (document.getElementById('nr-name').value || '').trim();
+  const cols = [...new Set((document.getElementById('nr-cols').value || '').split('\n').map(x => x.trim()).filter(Boolean))];
+  if (!name || !cols.length) { showNotif('Nom et au moins une colonne obligatoires', 'warn'); return; }
+  if (findReferential(name)) { showNotif('Ce référentiel existe déjà', 'error'); return; }
+  const t = { id: 'ref_' + Date.now(), name, columns: cols, rows: [] };
+  refTables.push(t);
+  btn.closest('.modal-overlay').remove();
+  _refTab = t.id;
+  refAfterChange('Référentiel « ' + name + ' » créé');
 }
-
-function numericAlertAttrs() {
-  return attributes.filter(a => a.type === 'Nombre' || a.type === 'Nombre decimal' || isPercentAttr(a));
+function refTable(id) { return (refTables || []).find(t => t.id === id) || null; }
+function replaceRefInFormulas(oldRef, newRef, oldCol, newCol) {
+  const res = [[/RECHERCHE\s*\(\s*"([^"]+)"(\s*,[^,]+,\s*)"([^"]+)"\s*\)/gi, 'RECHERCHE'],
+               [/R[EÉ]F[EÉ]RENTIEL\s*\(\s*"([^"]+)"(\s*,\s*)"([^"]+)"\s*\)/gi, 'REFERENTIEL']];
+  attributes.forEach(a => ['formula', '_altFormula'].forEach(k => {
+    if (!a[k]) return;
+    res.forEach(([re, fn]) => {
+      a[k] = a[k].replace(re, (m, r, mid, c) => {
+        if (refNorm(r) !== refNorm(oldRef)) return m;
+        const col = oldCol != null && refNorm(c) === refNorm(oldCol) ? newCol : c;
+        return fn + '("' + (newRef || r) + '"' + mid + '"' + col + '")';
+      });
+    });
+  }));
+}
+function renameReferential(id, val) {
+  const t = refTable(id); const v = String(val || '').trim(); if (!t) return;
+  if (!v) { renderSuppliersPage(); return; }
+  if (findReferential(v) && refNorm(v) !== refNorm(t.name)) { showNotif('Ce nom existe déjà', 'error'); renderSuppliersPage(); return; }
+  replaceRefInFormulas(t.name, v);
+  attributes.forEach(a => { if (a.listRef && refNorm(a.listRef.ref) === refNorm(t.name)) a.listRef.ref = v; });
+  t.name = v;
+  refAfterChange('Référentiel renommé, formules mises à jour');
+}
+function addRefColumn(id) {
+  const t = refTable(id); if (!t) return;
+  let n = 1, name = 'Colonne';
+  while (t.columns.includes(name)) name = 'Colonne ' + (++n);
+  t.columns.push(name);
+  t.rows.forEach(r => { r[name] = ''; });
+  if (t.groupId) addRefAttr(t, name);
+  renderSuppliersPage();
+}
+function renameRefColumn(id, ci, val) {
+  const t = refTable(id); if (!t) return;
+  const old = t.columns[ci], v = String(val || '').trim();
+  if (!v || v === old) { renderSuppliersPage(); return; }
+  if (t.columns.some((c, k) => k !== ci && refNorm(c) === refNorm(v))) { showNotif('Cette colonne existe déjà', 'error'); renderSuppliersPage(); return; }
+  t.columns[ci] = v;
+  t.rows.forEach(r => { r[v] = r[old]; delete r[old]; });
+  if (t.keys && t.keys[old]) { t.keys[v] = t.keys[old]; delete t.keys[old]; }
+  replaceRefInFormulas(t.name, null, old, v);
+  refAfterChange('Colonne renommée');
+}
+function removeRefColumn(id, ci) {
+  const t = refTable(id); if (!t || ci === 0) return;
+  const col = t.columns[ci];
+  const users = refFormulaUsers(t.name, col);
+  if (users.length) { showNotif('Colonne lue par ' + users.map(a => a.name).join(', ') + ' : suppression impossible', 'warn'); return; }
+  openConfirmModal({ title: 'Supprimer la colonne', okLabel: 'Supprimer', lead: 'La colonne « ' + col + ' » et ses valeurs seront supprimées.',
+    onOk: () => { t.columns.splice(ci, 1); t.rows.forEach(r => delete r[col]); refAfterChange('Colonne supprimée'); } });
+}
+function deleteReferential(id) {
+  const t = refTable(id); if (!t) return;
+  const users = refFormulaUsers(t.name).concat(attributes.filter(a => a.listRef && refNorm(a.listRef.ref) === refNorm(t.name)));
+  if (users.length) { showNotif('Référentiel lu par ' + users.map(a => a.name).join(', ') + ' : suppression impossible', 'warn'); return; }
+  openConfirmModal({ title: 'Supprimer le référentiel', okLabel: 'Supprimer', lead: '« ' + t.name + ' » et ses ' + t.rows.length + ' lignes seront supprimés.',
+    onOk: () => { refTables = refTables.filter(x => x.id !== id); _refTab = 'conditions'; refAfterChange('Référentiel supprimé'); } });
 }
 
 function renderAlertsPage() {
@@ -2539,20 +2272,16 @@ function renderAlertsPage() {
   if (!page) return;
   const canW = canMod('mod_alerts', 'w');
   const canD = canMod('mod_alerts', 'd');
-  const rows = (alerts || []).map(alert => {
-    const attr = attributes.find(a => a.code === alert.attrCode);
-    const rule = alert.conds
-      ? `<td colspan="3">${escapeHtml(alertCondsText(alert))}</td>`
-      : `<td>${escapeHtml(attr ? attr.name : alert.attrCode)}</td>
-      <td>${escapeHtml(alertOpLabel(alert.op))}</td>
-      <td>${escapeHtml(alertThresholdText(alert))}</td>`;
-    return `<tr>
-      <td>${escapeHtml(alert.name || '')}</td>
-      ${rule}
+  const rows = (alerts || []).map(alert => `<tr>
+      <td style="font-weight:600">${escapeHtml(alert.name || '')}</td>
+      <td>${escapeHtml(alertCondsText(alert))}</td>
+      <td class="calc-meta">${escapeHtml(alert.description || '')}</td>
       <td>${productsForAlert(alert).length}</td>
-      <td>${canD ? `<button class="action-btn-danger btn-trash" title="Supprimer l'alerte" onclick="deleteAlert(${alert.id})">${TRASH_ICON}</button>` : ''}</td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="6" style="text-align:center;color:#a0b0c0;padding:24px">Aucune alerte.</td></tr>`;
+      <td><div class="td-actions">
+        <button class="action-btn" onclick="openAlertModal(${alert.id})">${canW ? 'Modifier' : 'Voir'}</button>
+        ${canD ? `<button class="action-btn-danger btn-trash" title="Supprimer l'alerte" onclick="deleteAlert(${alert.id})">${TRASH_ICON}</button>` : ''}
+      </div></td>
+    </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:#a0b0c0;padding:24px">Aucune alerte.</td></tr>`;
   page.innerHTML = `
     <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
       <button class="btn btn-secondary" onclick="showPage('admin',null)">&larr; Administration</button>
@@ -2560,84 +2289,316 @@ function renderAlertsPage() {
       ${canW ? `<button class="btn btn-primary" onclick="openAlertModal()">+ Alerte</button>` : ''}
     </div>
     <div class="table-container"><table>
-      <thead><tr><th>Nom</th><th>Attribut</th><th>Sens</th><th>Seuil</th><th>Produits</th><th></th></tr></thead>
+      <thead><tr><th>Nom</th><th>Conditions (toutes vraies)</th><th>Description</th><th>Produits</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 }
 
-function openAlertModal() {
-  if (!requirePerm(canMod('mod_alerts', 'w'))) return;
-  const opts = numericAlertAttrs().map(a =>
-    `<option value="${a.code}">${escapeHtml(a.name)}</option>`
-  ).join('');
+// Fenêtre de création / modification d'une alerte
+let _alertDraft = null;
+function alertAttrChoices() {
+  return attributes.filter(a => a.type !== 'Image')
+    .sort((x, y) => x.name.localeCompare(y.name, 'fr'));
+}
+function alertValueChoices(a) {
+  if (!a) return [];
+  if (a.code === 'cat') return categories.map(c => c.name);
+  if (a.code === 'etape_workflow' && typeof workflowLabels === 'function') return workflowLabels();
+  if (a.type === 'Oui / Non') return ['Oui', 'Non'];
+  return a.options || [];
+}
+
+function openAlertModal(id) {
+  const src = id ? (alerts || []).find(a => a.id === id) : null;
+  if (id && !src) return;
+  _alertDraft = {
+    id: src ? src.id : null,
+    readonly: !canMod('mod_alerts', 'w'),
+    name: src ? (src.name || '') : '',
+    description: src ? (src.description || '') : '',
+    conds: src ? src.conds.map(c => ({ ...c })) : [{ attrCode: '', op: '=', value: '' }],
+  };
+  renderAlertModal();
+}
+
+function renderAlertModal() {
+  const d = _alertDraft; if (!d) return;
+  const old = document.getElementById('alert-modal');
+  if (old) old.remove();
+  const ro = d.readonly ? ' disabled' : '';
+  const condRows = d.conds.map((c, i) => {
+    const a = attributes.find(x => x.code === c.attrCode);
+    const choices = alertValueChoices(a);
+    return `<div class="alert-cond-row">
+      <select class="form-select" onchange="_alertDraft.conds[${i}].attrCode=this.value;renderAlertModal()"${ro}>
+        <option value="">Attribut…</option>
+        ${alertAttrChoices().map(x => `<option value="${x.code}"${x.code === c.attrCode ? ' selected' : ''}>${escapeHtml(x.name)}</option>`).join('')}
+      </select>
+      <select class="form-select alert-cond-op" onchange="_alertDraft.conds[${i}].op=this.value;alertDescPlaceholder()"${ro}>
+        ${CALC_OPS.map(o => `<option${o === c.op ? ' selected' : ''}>${o}</option>`).join('')}
+      </select>
+      <input class="field-input" value="${escapeHtml(c.value || '')}"${choices.length ? ` list="alert-dl-${i}"` : ''}
+        oninput="_alertDraft.conds[${i}].value=this.value;alertDescPlaceholder()"${ro}>
+      ${choices.length ? `<datalist id="alert-dl-${i}">${choices.map(o => `<option value="${escapeHtml(o)}">`).join('')}</datalist>` : ''}
+      <span class="alert-cond-unit">${a && isPercentAttr(a) ? '%' : ''}</span>
+      ${!d.readonly && d.conds.length > 1
+        ? `<button class="action-btn-danger btn-trash" title="Retirer la condition" onclick="_alertDraft.conds.splice(${i},1);renderAlertModal()">${TRASH_ICON}</button>`
+        : '<span class="grp-x-spacer"></span>'}
+    </div>`;
+  }).join('');
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
+  overlay.id = 'alert-modal';
   overlay.style.display = 'flex';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:460px;width:100%">
-      <div class="modal-title">Nouvelle alerte</div>
-      <div class="form-grid">
-        <div class="form-field">
-          <div class="form-label">Nom</div>
-          <input class="field-input" id="al-name" placeholder="Taux de marque faible">
-        </div>
-        <div class="form-field">
-          <div class="form-label">Attribut</div>
-          <select class="form-select" id="al-attr">${opts}</select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">Sens</div>
-          <select class="form-select" id="al-op">
-            <option value="<">Inférieur à</option>
-            <option value=">">Supérieur à</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <div class="form-label">Seuil</div>
-          <input class="field-input" id="al-threshold" type="number" step="any" placeholder="20">
-        </div>
+    <div class="modal-box" style="max-width:640px;width:100%">
+      <div class="modal-title">${d.id ? (d.readonly ? 'Alerte' : 'Modifier l’alerte') : 'Nouvelle alerte'}</div>
+      <div class="form-field">
+        <div class="form-label">Nom <span class="field-required">*</span></div>
+        <input class="field-input" id="al-name" value="${escapeHtml(d.name)}" oninput="_alertDraft.name=this.value"${ro}>
+      </div>
+      <div class="form-field" style="margin-top:12px">
+        <div class="form-label">Conditions, toutes vraies <span class="field-required">*</span></div>
+        ${condRows}
+        ${d.readonly ? '' : `<button class="btn btn-secondary" style="margin-top:6px" onclick="_alertDraft.conds.push({attrCode:'',op:'=',value:''});renderAlertModal()">+ Condition</button>`}
+      </div>
+      <div class="form-field" style="margin-top:12px">
+        <div class="form-label">Description</div>
+        <input class="field-input" id="al-desc" value="${escapeHtml(d.description)}" oninput="_alertDraft.description=this.value"${ro}>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Annuler</button>
-        <button class="btn btn-primary" onclick="createAlert(this)">Creer</button>
+        <button class="btn btn-secondary" onclick="closeAlertModal()">${d.readonly ? 'Fermer' : 'Annuler'}</button>
+        ${d.readonly ? '' : `<button class="btn btn-primary" onclick="saveAlertModal()">${d.id ? 'Enregistrer' : 'Créer'}</button>`}
       </div>
     </div>`;
   document.body.appendChild(overlay);
+  alertDescPlaceholder();
 }
 
-function createAlert(btn) {
+function alertDescPlaceholder() {
+  const el = document.getElementById('al-desc');
+  if (el && _alertDraft) el.placeholder = alertCondsText({ conds: _alertDraft.conds.filter(c => c.attrCode) });
+}
+
+function closeAlertModal() {
+  const m = document.getElementById('alert-modal');
+  if (m) m.remove();
+  _alertDraft = null;
+}
+
+function saveAlertModal() {
   if (!requirePerm(canMod('mod_alerts', 'w'))) return;
-  const attrCode = document.getElementById('al-attr').value;
-  const attr = attributes.find(a => a.code === attrCode);
-  const op = document.getElementById('al-op').value === '>' ? '>' : '<';
-  const raw = parseFloat(String(document.getElementById('al-threshold').value).replace(',', '.'));
-  if (!attr || !isFinite(raw)) { showNotif('Attribut et seuil numeriques obligatoires', 'warn'); return; }
-  const threshold = isPercentAttr(attr) ? raw / 100 : raw;
-  const typed = (document.getElementById('al-name').value || '').trim();
-  alerts.push({
-    id: nextAlertId++,
-    name: typed,
-    attrCode,
-    op,
-    threshold,
-  });
-  btn.closest('.modal-overlay').remove();
+  const d = _alertDraft; if (!d) return;
+  const name = (d.name || '').trim();
+  const conds = d.conds.map(c => ({ attrCode: c.attrCode, op: c.op, value: String(c.value || '').trim() }));
+  if (!name || conds.some(c => !c.attrCode || c.value === '')) {
+    showNotif('Nom et conditions complètes obligatoires', 'warn'); return;
+  }
+  const bad = conds.find(c => !['=', '≠'].includes(c.op) && calcNum(c.value) === null);
+  if (bad) { showNotif('« ' + bad.op + ' » demande une valeur numérique', 'warn'); return; }
+  const description = (d.description || '').trim();
+  if (d.id) {
+    const a = alerts.find(x => x.id === d.id);
+    if (a) { a.name = name; a.conds = conds; a.description = description; }
+  } else {
+    alerts.push({ id: nextAlertId++, name, conds, description });
+  }
+  closeAlertModal();
   renderAlertsPage();
   renderAdminHome();
   renderDashboard();
-  showNotif('Alerte creee');
+  showNotif(d.id ? 'Alerte enregistrée' : 'Alerte créée');
 }
 
 function deleteAlert(id) {
   if (!requirePerm(canMod('mod_alerts', 'd'))) return;
   const alert = (alerts || []).find(a => a.id === id);
   if (!alert) return;
-  if (!confirm('Supprimer l\'alerte « ' + (alert.name || alertRuleText(alert)) + ' » ?')) return;
-  const idx = alerts.findIndex(a => a.id === id);
-  if (idx >= 0) alerts.splice(idx, 1);
-  if (_filterAlertId === id) _filterAlertId = null;
-  renderAlertsPage();
+  openConfirmModal({ title: 'Supprimer l’alerte', lead: '« ' + alertRuleText(alert) + ' » sera supprimée.', okLabel: 'Supprimer',
+    onOk: () => {
+      alerts = alerts.filter(a => a.id !== id);
+      if (_filterAlertId === id) _filterAlertId = null;
+      renderAlertsPage();
+      renderAdminHome();
+      renderDashboard();
+      showNotif('Alerte supprimée');
+    } });
+}
+
+
+// ============================================================
+// ADMINISTRATION > TRAMES D'IMPORT / EXPORT
+// ============================================================
+let _fmtSel = null;
+function renderExportFormatsPage() {
+  const page = document.getElementById('page-admin-export-formats');
+  if (!page) return;
+  if (!trameById(_fmtSel)) _fmtSel = null;
+  const canW = canMod('mod_trames', 'w'), canD = canMod('mod_trames', 'd');
+  const f = trameById(_fmtSel);
+  const ro = canW && f && !f.system ? '' : ' disabled';
+  const attrOpts = [...attributes].filter(a => a.type !== 'Image').sort((x, y) => x.name.localeCompare(y.name, 'fr'));
+  const srcSel = (c, i) => {
+    const v = c.fixed != null ? '__fixed' : (c.code || '');
+    return `<select class="form-select" onchange="setFmtColSource(${i},this.value)"${ro}>
+      <option value="">Vide</option>
+      <option value="__fixed"${v === '__fixed' ? ' selected' : ''}>Valeur fixe</option>
+      ${attrOpts.map(a => `<option value="${a.code}"${a.code === v ? ' selected' : ''}>${escapeHtml(a.name)}</option>`).join('')}
+    </select>`;
+  };
+  const rows = f && !f.system ? f.columns.map((c, i) => `<tr>
+      <td class="calc-meta">${i + 1}</td>
+      <td><input class="field-input" value="${escapeHtml(c.bloc || '')}" onchange="setFmtCol(${i},'bloc',this.value)"${ro}></td>
+      <td><input class="field-input" value="${escapeHtml(c.header || '')}" onchange="setFmtCol(${i},'header',this.value)"${ro}></td>
+      <td style="min-width:240px">${srcSel(c, i)}</td>
+      <td>${c.fixed != null ? `<input class="field-input" value="${escapeHtml(c.fixed)}" onchange="setFmtCol(${i},'fixed',this.value)"${ro}>` : ''}</td>
+      <td style="text-align:center"><input type="checkbox"${c.required ? ' checked' : ''} onchange="setFmtCol(${i},'required',this.checked)"${ro}></td>
+      <td style="white-space:nowrap">${canW ? `<button class="grp-x" title="Monter" onclick="moveFmtCol(${i},-1)">&#8593;</button><button class="grp-x" title="Descendre" onclick="moveFmtCol(${i},1)">&#8595;</button>` : ''}
+        ${canD ? `<button class="action-btn-danger btn-trash" title="Supprimer la colonne" onclick="removeFmtCol(${i})">${TRASH_ICON}</button>` : ''}</td>
+    </tr>`).join('') : '';
+  const filled = f && !f.system ? f.columns.filter(c => c.code || c.fixed != null).length : 0;
+  const usage = t => [t.import ? 'Import' : '', t.export ? 'Export' : ''].filter(Boolean).join(' · ');
+  const systemBody = f && f.system ? `
+      <div class="calc-meta" style="margin:4px 0 10px">Colonnes automatiques : tous les attributs des onglets de la catégorie exportée, en-tête = code technique.</div>
+      <div class="table-container"><table class="ref-table">
+        <thead><tr><th>Catégorie</th><th>Onglets</th><th>Colonnes</th></tr></thead>
+        <tbody>${categories.map(c => {
+          const gs = (c.groupIds || []).map(getGroupById).filter(Boolean);
+          const n = new Set(gs.flatMap(g => (g.attrIds || []).filter(x => typeof x === 'number'))).size;
+          return `<tr><td>${escapeHtml(c.name)}</td><td>${gs.map(g => escapeHtml(g.name)).join(', ')}</td><td>${n}</td></tr>`;
+        }).join('')}</tbody>
+      </table></div>` : '';
+  if (!f) { page.innerHTML = tramesListHtml(canW, canD, usage); return; }
+  page.innerHTML = `
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <button class="btn btn-secondary" onclick="_fmtSel=null;renderExportFormatsPage()">&larr; Trames</button>
+      <span style="font-size:15px;font-weight:700;color:#1a2332">${f ? escapeHtml(f.name) : ''}</span>
+    </div>
+    ${f ? `<div>
+      <div class="acc-toolbar">
+        <div class="form-field" style="margin:0"><div class="form-label">Nom de la trame</div>
+          <input class="field-input" value="${escapeHtml(f.name)}" onchange="setFmtProp('name',this.value)"${ro}></div>
+        ${f.system ? '' : `<div class="form-field" style="margin:0"><div class="form-label">Nom de la feuille</div>
+          <input class="field-input" value="${escapeHtml(f.sheet || '')}" onchange="setFmtProp('sheet',this.value)"${ro}></div>`}
+        <div class="form-field" style="margin:0"><div class="form-label">Usage</div>
+          <div class="trame-checks">
+            <label><input type="checkbox"${f.import ? ' checked' : ''} onchange="setFmtProp('import',this.checked)"${ro}> Import</label>
+            <label><input type="checkbox"${f.export ? ' checked' : ''} onchange="setFmtProp('export',this.checked)"${ro}> Export</label>
+          </div></div>
+        <div class="form-field" style="margin:0"><div class="form-label">Catégories (aucune = toutes)</div>
+          <div class="trame-checks">${categories.map(c => `<label><input type="checkbox"${(f.cats || []).includes(c.name) ? ' checked' : ''} onchange="toggleFmtCat('${escapeHtml(c.name)}',this.checked)"${ro}> ${escapeHtml(c.name)}</label>`).join('')}</div></div>
+        <div style="flex:1"></div>
+        ${f.system ? '' : `<div class="calc-meta" style="align-self:flex-end;padding-bottom:8px">${f.columns.length} colonnes, ${filled} remplies</div>`}
+        ${canW && !f.system ? `<button class="btn btn-secondary" style="align-self:flex-end" onclick="addFmtCol()">+ Colonne</button>` : ''}
+        ${canD && !f.system ? `<button class="action-btn-danger btn-trash" style="align-self:flex-end" title="Supprimer la trame" onclick="deleteExportFormat()">${TRASH_ICON}</button>` : ''}
+      </div>
+      ${f.system ? systemBody : `<div class="table-container"><table class="ref-table fmt-table">
+        <thead><tr><th>#</th><th>Bloc</th><th>Intitulé de la colonne</th><th>Source</th><th>Valeur fixe</th><th>Bloquante à l’export</th><th></th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="7" style="color:#a0b0c0;padding:16px">Aucune colonne.</td></tr>'}</tbody>
+      </table></div>`}
+    </div>` : '<div class="calc-meta" style="padding:16px">Aucune trame.</div>'}`;
+}
+
+// Liste des trames : un clic ouvre la trame
+function tramesListHtml(canW, canD, usage) {
+  const rows = trames.map(t => `<tr>
+      <td><button class="cell-link" onclick="_fmtSel='${t.id}';renderExportFormatsPage()">${escapeHtml(t.name)}</button>${t.system ? systemLockBadge('trame') : ''}</td>
+      <td>${usage(t) || '—'}</td>
+      <td>${(t.cats || []).length ? t.cats.map(c => catBadgeHtml(c)).join(' ') : '<span class="calc-meta">Toutes</span>'}</td>
+      <td>${t.system ? '<span class="calc-meta">automatiques</span>' : t.columns.length}</td>
+      <td>${canD && !t.system ? `<button class="action-btn-danger btn-trash" title="Supprimer la trame" onclick="_fmtSel='${t.id}';deleteExportFormat()">${TRASH_ICON}</button>` : ''}</td>
+    </tr>`).join('');
+  return `
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <button class="btn btn-secondary" onclick="showPage('admin',null)">&larr; Administration</button>
+      <span style="font-size:15px;font-weight:700;color:#1a2332">Trames d’import / export</span>
+      ${canW ? `<button class="btn btn-primary" onclick="addExportFormat()">+ Trame</button>` : ''}
+    </div>
+    <div class="table-container"><table>
+      <thead><tr><th>Nom</th><th>Usage</th><th>Catégories</th><th>Colonnes</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" style="color:#a0b0c0;padding:16px">Aucune trame.</td></tr>'}</tbody>
+    </table></div>`;
+}
+
+function toggleFmtCat(name, on) {
+  if (!requirePerm(canMod('mod_trames', 'w'))) return;
+  const f = trameById(_fmtSel); if (!f || f.system) return;
+  f.cats = (f.cats || []).filter(x => x !== name);
+  if (on) f.cats.push(name);
+  fmtAfterChange();
+}
+function fmtAfterChange(msg) {
+  if (typeof exportPick !== 'undefined') exportPick = null;
+  renderExportFormatsPage();
   renderAdminHome();
-  renderDashboard();
-  showNotif('Alerte supprimee');
+  if (msg) showNotif(msg);
+}
+function setFmtProp(prop, val) {
+  if (!requirePerm(canMod('mod_trames', 'w'))) return;
+  const f = trameById(_fmtSel); if (!f || f.system) return;
+  if (prop === 'import' || prop === 'export') { f[prop] = !!val; fmtAfterChange(); return; }
+  const v = String(val || '').trim();
+  if (prop === 'name') {
+    if (!v) { renderExportFormatsPage(); return; }
+    if (trames.some(x => x !== f && x.name.toLowerCase() === v.toLowerCase())) { showNotif('Ce nom existe déjà', 'error'); renderExportFormatsPage(); return; }
+  }
+  f[prop] = v;
+  fmtAfterChange('Trame enregistrée');
+}
+function setFmtCol(i, prop, val) {
+  if (!requirePerm(canMod('mod_trames', 'w'))) return;
+  const f = trameById(_fmtSel); const c = f && f.columns[i]; if (!c) return;
+  c[prop] = prop === 'required' ? !!val : String(val == null ? '' : val).trim();
+  if (prop === 'required' && !val) delete c.required;
+  fmtAfterChange();
+}
+function setFmtColSource(i, val) {
+  if (!requirePerm(canMod('mod_trames', 'w'))) return;
+  const f = trameById(_fmtSel); const c = f && f.columns[i]; if (!c) return;
+  delete c.code; delete c.fixed;
+  if (val === '__fixed') c.fixed = '';
+  else if (val) c.code = val;
+  fmtAfterChange();
+}
+function moveFmtCol(i, d) {
+  const f = trameById(_fmtSel); if (!f) return;
+  const j = i + d; if (j < 0 || j >= f.columns.length) return;
+  const [c] = f.columns.splice(i, 1); f.columns.splice(j, 0, c);
+  fmtAfterChange();
+}
+function addFmtCol() {
+  if (!requirePerm(canMod('mod_trames', 'w'))) return;
+  const f = trameById(_fmtSel); if (!f) return;
+  const last = f.columns[f.columns.length - 1];
+  f.columns.push({ bloc: last ? last.bloc : '', header: 'Nouvelle colonne' });
+  fmtAfterChange();
+  const inputs = document.querySelectorAll('.fmt-table tbody tr:last-child input');
+  if (inputs[1]) { inputs[1].focus(); inputs[1].select(); }
+}
+function removeFmtCol(i) {
+  if (!requirePerm(canMod('mod_trames', 'd'))) return;
+  const f = trameById(_fmtSel); const c = f && f.columns[i]; if (!c) return;
+  openConfirmModal({ title: 'Supprimer la colonne', okLabel: 'Supprimer', lead: 'La colonne « ' + (c.header || '') + ' » sera retirée de la trame ' + f.name + '.',
+    onOk: () => { f.columns.splice(i, 1); fmtAfterChange('Colonne supprimée'); } });
+}
+function addExportFormat() {
+  if (!requirePerm(canMod('mod_trames', 'w'))) return;
+  let n = 1, name = 'Nouvelle trame';
+  while (trames.some(x => x.name === name)) name = 'Nouvelle trame ' + (++n);
+  const f = { id: 'trm_' + (nextTrameId++), name, sheet: 'Export', import: true, export: true, cats: [], columns: [] };
+  trames.push(f);
+  _fmtSel = f.id;
+  fmtAfterChange('Trame créée');
+}
+function deleteExportFormat() {
+  if (!requirePerm(canMod('mod_trames', 'd'))) return;
+  const f = trameById(_fmtSel); if (!f || f.system) return;
+  openConfirmModal({ title: 'Supprimer la trame', okLabel: 'Supprimer', lead: 'La trame « ' + f.name + ' » et ses ' + f.columns.length + ' colonnes seront supprimées.',
+    onOk: () => {
+      trames = trames.filter(x => x !== f);
+      if (activeExportTemplate === f.id) activeExportTemplate = 'catalogue';
+      if (typeof importTrameId !== 'undefined' && importTrameId === f.id) importTrameId = '';
+      _fmtSel = null;
+      fmtAfterChange('Trame supprimée');
+    } });
 }

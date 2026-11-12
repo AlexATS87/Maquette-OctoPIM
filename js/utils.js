@@ -5,6 +5,203 @@
 // ============================================================
 // NAVIGATION — PAGES
 // ============================================================
+// ------------------------------------------------------------
+// QUITTER UNE PAGE AVEC DES MODIFICATIONS NON ENREGISTRÉES
+// Une seule fenêtre (fiche produit, fiche attribut, champs calculés) :
+// elle liste les champs réellement modifiés (un champ remis à sa valeur
+// d'origine n'y figure plus) ; sans modification, on part directement.
+// ------------------------------------------------------------
+let _leaveCtx = null;
+let _leaveBypass = false;
+
+function leaveVal(v) {
+  if (v === undefined || v === null) return '';
+  return String(v).trim();
+}
+
+function snapshotProduct(p) {
+  p._orig = { cat: p.cat, fields: JSON.parse(JSON.stringify(p.fields || {})),
+    forced: JSON.parse(JSON.stringify(p.forcedFields || {})), visualSrc: p.visualSrc, visuals: p.visuals,
+    thumbs: p.thumbs ? JSON.parse(JSON.stringify(p.thumbs)) : undefined };
+}
+
+function restoreProductSnapshot(p) {
+  const o = p && p._orig; if (!o) return;
+  p.cat = o.cat;
+  p.fields = JSON.parse(JSON.stringify(o.fields));
+  p.forcedFields = JSON.parse(JSON.stringify(o.forced));
+  p.visualSrc = o.visualSrc; p.visuals = o.visuals; p.thumbs = o.thumbs;
+  p.pendingChanges = [];
+  computeCalcFields(p);
+}
+
+// Champs modifiés depuis l'ouverture de la fiche
+function productChangeList(p) {
+  const o = p && p._orig;
+  if (!o) return [];
+  const out = [];
+  if (o.cat !== p.cat) out.push({ label: 'Catégorie', old: o.cat, now: p.cat });
+  const has = (obj, k) => Object.prototype.hasOwnProperty.call(obj || {}, k);
+  attributes.forEach(a => {
+    if (a.code === 'cat' || a.code === 'completion') return;
+    const fNow = has(p.forcedFields, a.code), fBefore = has(o.forced, a.code);
+    if ((a.calc || a.formula) && !fNow && !fBefore) return;
+    const ov = leaveVal(o.fields[a.code]), nv = leaveVal(p.fields[a.code]);
+    if (ov !== nv) {
+      out.push(a.type === 'Image'
+        ? { label: a.name, old: ov ? 'visuel' : '', now: nv ? 'nouveau visuel' : '' }
+        : { label: a.name, old: ov, now: nv });
+    } else if (fNow !== fBefore) {
+      out.push({ label: a.name, old: fBefore ? 'valeur forcée' : 'calculée', now: fNow ? 'valeur forcée' : 'calculée' });
+    }
+  });
+  return out;
+}
+
+// Formulaire de la fiche attribut : instantané des valeurs à l'ouverture
+let _attrFormSnap = null;
+function readAttrForm() {
+  const page = document.getElementById('page-admin-attribute-edit');
+  const out = {};
+  if (!page) return out;
+  page.querySelectorAll('input[id], select[id], textarea[id]').forEach(el => {
+    if (el.type === 'hidden') return;
+    let shown = el.type === 'checkbox' ? (el.checked ? 'Oui' : 'Non') : el.value;
+    if (el.tagName === 'SELECT' && el.selectedIndex >= 0) shown = el.options[el.selectedIndex].textContent.trim();
+    const row = el.closest('.field-row, .form-field');
+    const lab = row && row.querySelector('.field-label, .form-label');
+    let label = lab ? lab.textContent.replace('*', '').trim() : el.id;
+    // Case à cocher d'une liste de valeurs : « Afficher seulement si : Masque »
+    const own = el.type === 'checkbox' && el.closest('label');
+    if (own) label += ' : ' + own.textContent.trim();
+    out[el.id] = { label, val: shown };
+  });
+  return out;
+}
+function snapshotAttrForm() { _attrFormSnap = readAttrForm(); }
+function attrFormChangeList() {
+  if (!_attrFormSnap) return [];
+  const now = readAttrForm();
+  const out = [];
+  Object.keys(now).forEach(id => {
+    const b = _attrFormSnap[id];
+    if (b && leaveVal(b.val) !== leaveVal(now[id].val)) out.push({ label: now[id].label, old: b.val, now: now[id].val });
+  });
+  const a = attributes.find(x => x.id === editingAttrId);
+  if (a && typeof calcHasPending === 'function' && calcHasPending(a.code)) out.push({ label: 'Calcul', old: '', now: 'modifié (non enregistré)' });
+  return out;
+}
+
+function calcChangeList() {
+  if (typeof calcHasPending !== 'function' || !calcHasPending()) return [];
+  return Object.keys(_calcSnap).map(code => {
+    const a = attributes.find(x => x.code === code);
+    return { label: 'Calcul de « ' + (a ? a.name : code) + ' »', old: '', now: 'modifié' };
+  });
+}
+
+function leaveGuard(id, navEl) {
+  if (_leaveBypass) return true;
+  const cur = ((document.querySelector('.page.active') || {}).id || '').replace('page-', '');
+  if (!cur || id === cur) return true;
+
+  if (cur === 'product-detail' && id !== 'product-detail' && currentProductId) {
+    const p = products.find(x => x.id === currentProductId);
+    const items = p ? productChangeList(p) : [];
+    if (!items.length) {
+      if (p) p.pendingChanges = [];
+      productDirty = false; currentProductId = null;
+      return true;
+    }
+    openLeaveModal({ lead: 'Fiche « ' + ((p.fields && p.fields.nom) || '') + ' »', items, target: { id, navEl },
+      save: () => { saveProduct(); return !productDirty; },
+      discard: () => { restoreProductSnapshot(p); productDirty = false; currentProductId = null; } });
+    return false;
+  }
+
+  if (cur === 'admin-attribute-edit' && id !== 'admin-calc') {
+    const a = editingAttrId === 'new' ? { name: 'nouvel attribut', code: '' } : attributes.find(x => x.id === editingAttrId);
+    const items = attrFormChangeList();
+    if (items.length) {
+      openLeaveModal({ lead: 'Attribut « ' + (a ? a.name : '') + ' »', items, target: { id, navEl },
+        save: () => { saveAttributeEdit(); return !attrFormDirty; },
+        discard: () => {
+          if (a && typeof calcRestore === 'function') { calcRestore(a.code); (products || []).forEach(p => computeCalcFields(p)); }
+          attrFormDirty = false; _attrFormSnap = null; _calcReturnAttrId = null;
+        } });
+      return false;
+    }
+    _attrFormSnap = null;
+    if (typeof _calcReturnAttrId !== 'undefined') _calcReturnAttrId = null;
+  }
+
+  if (cur === 'admin-calc' && id !== 'admin-attribute-edit') {
+    const fromAttr = typeof _calcReturnAttrId !== 'undefined' && _calcReturnAttrId;
+    const items = calcChangeList().concat(fromAttr ? attrFormChangeList().filter(x => x.label !== 'Calcul') : []);
+    if (items.length) {
+      openLeaveModal({ lead: 'Champs calculés', items, target: { id, navEl },
+        save: () => {
+          Object.keys(_calcSnap).forEach(calcCommit);
+          if (fromAttr && attrFormChangeList().length) { _leaveBypass = true; try { saveAttributeEdit(); } finally { _leaveBypass = false; } }
+          (products || []).forEach(p => computeCalcFields(p));
+          return true;
+        },
+        discard: () => {
+          Object.keys(_calcSnap).forEach(calcRestore);
+          (products || []).forEach(p => computeCalcFields(p));
+          attrFormDirty = false; _attrFormSnap = null; _calcReturnAttrId = null;
+        } });
+      return false;
+    }
+    _calcReturnAttrId = null;
+  }
+  return true;
+}
+
+function openLeaveModal(ctx) {
+  _leaveCtx = ctx;
+  const esc = v => v === '' ? '<i>(vide)</i>' : escapeHtml(String(v).length > 60 ? String(v).slice(0, 57) + '…' : v);
+  document.getElementById('unsaved-lead').textContent = ctx.lead;
+  document.getElementById('unsaved-list').innerHTML = ctx.items.map(it =>
+    `<li><b>${escapeHtml(it.label)}</b>${it.old !== '' || it.now !== '' ? ` : ${it.old !== '' ? `<span class="unsaved-old">${esc(it.old)}</span> → ` : ''}${esc(it.now)}` : ''}</li>`).join('');
+  openModal('modal-unsaved');
+}
+
+// Fenêtre de confirmation générique (pas de boîte du navigateur)
+let _confirmCtx = null;
+function openConfirmModal(ctx) {
+  _confirmCtx = ctx;
+  document.getElementById('confirm-title').textContent = ctx.title;
+  document.getElementById('confirm-lead').textContent = ctx.lead || '';
+  document.getElementById('confirm-list').innerHTML = (ctx.items || []).map(it =>
+    `<li><b>${escapeHtml(it.label)}</b>${it.now ? ' : ' + escapeHtml(it.now) : ''}</li>`).join('');
+  document.getElementById('confirm-list').style.display = (ctx.items || []).length ? '' : 'none';
+  document.getElementById('confirm-ok').textContent = ctx.okLabel || 'Confirmer';
+  openModal('modal-confirm');
+}
+function confirmModalOk() {
+  const ctx = _confirmCtx; _confirmCtx = null;
+  closeModal('modal-confirm');
+  if (ctx && ctx.onOk) ctx.onOk();
+}
+function confirmModalCancel() { _confirmCtx = null; closeModal('modal-confirm'); }
+
+function leaveStay() { closeModal('modal-unsaved'); _leaveCtx = null; _productsReset = false; _productsPreset = null; }
+
+function leaveContinue(mode) {
+  const ctx = _leaveCtx; if (!ctx) return;
+  if (mode === 'save') {
+    const ok = ctx.save();
+    if (ok === false) { closeModal('modal-unsaved'); _leaveCtx = null; return; }
+  } else {
+    ctx.discard();
+  }
+  closeModal('modal-unsaved');
+  _leaveCtx = null;
+  _leaveBypass = true;
+  try { showPage(ctx.target.id, ctx.target.navEl); } finally { _leaveBypass = false; }
+}
+
 function setUnsavedPrompt(kind) {
   const lead = document.getElementById('unsaved-lead');
   const stay = document.getElementById('unsaved-stay');
@@ -18,12 +215,7 @@ function setUnsavedPrompt(kind) {
 }
 
 function showPage(id, navEl) {
-  if (typeof calcLeaveGuard === 'function' && !calcLeaveGuard(id)) return;
-  // Interception dirty check si on quitte une fiche produit
-  if (productDirty && currentProductId && id !== 'product-detail') {
-    safeShowPage(id, navEl);
-    return;
-  }
+  if (!leaveGuard(id, navEl)) return;
 
   if (!sessionLoggedIn) {
     showLoginOverlay();
@@ -31,7 +223,7 @@ function showPage(id, navEl) {
   }
 
   if (!canOpenPage(id)) {
-    showNotif('Acces non autorise', 'warn');
+    showNotif('Accès non autorisé', 'warn');
     const home = getDefaultNavPage();
     if (home && id !== home.page) {
       showPage(home.page, document.querySelector('.nav-item[data-nav="' + home.nav + '"]'));
@@ -57,10 +249,11 @@ function showPage(id, navEl) {
     'admin-attributes': 'Attributs',
     'admin-groups': 'Groupes d\'attributs',
     'admin-synthese': 'Vue synthese',
-    'admin-suppliers': 'Conditions commerciales',
+    'admin-suppliers': 'Référentiels',
     'admin-prefs': 'Preferences',
     'admin-roles': 'Utilisateurs & groupes',
     'admin-alerts': 'Alertes',
+    'admin-export-formats': 'Trames d’import / export',
     'admin-calc': 'Champs calculés',
     'admin-workflow': 'Workflow',
     'product-detail': 'Produit',
@@ -75,6 +268,9 @@ function showPage(id, navEl) {
     case 'products':
       currentProductId = null;
       productDirty     = false;
+      if (_productsReset) resetProductFilters();
+      if (_productsPreset) _productsPreset();
+      _productsReset = false; _productsPreset = null;
       renderProductsTable();
       break;
     case 'exports':
@@ -120,6 +316,9 @@ function showPage(id, navEl) {
     case 'admin-alerts':
       renderAlertsPage();
       break;
+    case 'admin-export-formats':
+      renderExportFormatsPage();
+      break;
     case 'admin-calc':
       renderCalcTablesPage();
       break;
@@ -134,51 +333,49 @@ function showPage(id, navEl) {
   }
 }
 
-function alertOpLabel(op) {
-  return op === '>' ? 'supérieur à' : 'inférieur à';
-}
-
-function alertThresholdText(alert) {
-  const a = attributes.find(x => x.code === alert.attrCode);
-  if (a && isPercentAttr(a)) {
-    const shown = formatPercentDisplay(alert.threshold);
-    return (shown === '' ? '' : shown + ' %');
-  }
-  return String(alert.threshold);
+// Alertes : une ou plusieurs conditions, toutes vraies (mêmes opérateurs
+// que les tables de calcul ; « = » et « ≠ » acceptent plusieurs valeurs
+// séparées par « ; »). Un champ vide ne déclenche jamais l'alerte.
+// Attribut affiché en pourcentage : la valeur se saisit en % (20 = 20 %).
+function alertCondValueText(c) {
+  const a = attributes.find(x => x.code === c.attrCode);
+  return String(c.value == null ? '' : c.value) + (a && isPercentAttr(a) ? ' %' : '');
 }
 
 function alertCondsText(alert) {
-  return (alert.conds || []).map(c => {
+  return ((alert && alert.conds) || []).map(c => {
     const a = attributes.find(x => x.code === c.attrCode);
-    return (a ? a.name : c.attrCode) + ' ' + c.op + ' ' + c.value;
+    return (a ? a.name : c.attrCode) + ' ' + c.op + ' ' + alertCondValueText(c);
   }).join(' et ');
 }
 
 function alertRuleText(alert) {
   if (!alert) return '';
-  if (alert.name) return alert.name;
-  if (alert.conds) return alertCondsText(alert);
-  const a = attributes.find(x => x.code === alert.attrCode);
-  return (a ? a.name : alert.attrCode) + ' ' + alertOpLabel(alert.op) + ' ' + alertThresholdText(alert);
+  return alert.name || alertCondsText(alert);
+}
+
+// Texte du survol : la description écrite, sinon les conditions telles quelles
+function alertDescText(alert) {
+  return (alert && alert.description) || alertCondsText(alert);
+}
+
+function alertCondTrue(p, c) {
+  const a = attributes.find(x => x.code === c.attrCode) || { code: c.attrCode };
+  const pct = isPercentAttr(a);
+  const v = pct ? p.fields[a.code] : getAttrFieldValue(p, a);
+  if (v === undefined || v === null || String(v).trim() === '') return false;
+  let cell = c.value;
+  if (pct) {
+    const n = calcNum(cell);
+    if (n !== null) cell = String(n / 100);
+  }
+  return calcCondTrue(c.op, cell, v);
 }
 
 function productMatchesAlert(p, alert) {
-  if (!p || !alert) return false;
+  if (!p || !alert || !(alert.conds || []).length) return false;
   computeCalcFields(p);
-  // Alerte à plusieurs conditions : toutes vraies, champs renseignés
-  if (alert.conds) {
-    return alert.conds.every(c => {
-      const v = getAttrFieldValue(p, attributes.find(x => x.code === c.attrCode) || { code: c.attrCode });
-      return String(v || '').trim() !== '' && calcCondTrue(c.op, c.value, v);
-    });
-  }
-  const raw = p.fields ? p.fields[alert.attrCode] : '';
-  if (raw === undefined || raw === null || String(raw).trim() === '') return false;
-  const n = parseFloat(String(raw).replace(',', '.'));
-  if (!isFinite(n)) return false;
-  const limit = Number(alert.threshold);
-  if (alert.op === '>') return n > limit;
-  return n < limit;
+  return alert.conds.every(c => alertCondTrue(p, c));
 }
 
 function productAlertHits(p) {
@@ -200,8 +397,10 @@ function renderAdminHome() {
   if (elGroups) elGroups.textContent = attrGroups.length;
   if (elAttrs)  elAttrs.textContent  = attributes.length;
   if (elRoles)  elRoles.textContent  = users.length;
-  if (elSup)    elSup.textContent    = suppliers.length;
+  if (elSup)    elSup.textContent    = 1 + allReferentials().length;
   if (elAlerts) elAlerts.textContent = (alerts || []).length;
+  const elFmt = document.getElementById('admin-count-export-formats');
+  if (elFmt) elFmt.textContent = (trames || []).length;
   const elBar = document.getElementById('admin-count-calc');
   const elWf  = document.getElementById('admin-count-workflow');
   if (elBar) elBar.textContent = (calcTables || []).length;
@@ -228,6 +427,7 @@ function renderAll() {
     case 'admin-suppliers':    renderSuppliersPage();   break;
     case 'admin-prefs':        renderPrefsPage();       break;
     case 'admin-alerts':       renderAlertsPage();      break;
+    case 'admin-export-formats': renderExportFormatsPage(); break;
     case 'admin-roles':        renderRoles();           break;
     case 'product-detail':
       if (currentProductId) {
@@ -249,20 +449,31 @@ function renderAll() {
 // ============================================================
 function openModal(id) {
   if (id === 'modal-create-product' && !getWritableCategories().length) {
-    showNotif('Aucune categorie accessible en modification', 'warn');
+    showNotif('Aucune catégorie accessible en modification', 'warn');
     return;
   }
   if (id === 'modal-create-category' && !canMod('mod_categories', 'w')) {
-    showNotif('Action non autorisee', 'warn');
+    showNotif('Action non autorisée', 'warn');
     return;
   }
   if (id === 'modal-create-attr' && !canMod('mod_attributes', 'w')) {
-    showNotif('Action non autorisee', 'warn');
+    showNotif('Action non autorisée', 'warn');
     return;
   }
   if (id === 'modal-create-attr') fillShowIfControls('new-attr', '', '', '');
+  if (id === 'modal-create-product') {
+    ['np-ean', 'np-name', 'np-sap', 'np-cat'].forEach(f => {
+      const el = document.getElementById(f);
+      if (!el) return;
+      el.value = '';
+      el.classList.remove('field-error');
+      const err = document.getElementById('err-' + f);
+      if (err) err.classList.remove('show');
+      if (el.tagName === 'SELECT' && typeof syncComboFromSelect === 'function') syncComboFromSelect(el);
+    });
+  }
   if (id === 'modal-create-group' && !canMod('mod_groups', 'w')) {
-    showNotif('Action non autorisee', 'warn');
+    showNotif('Action non autorisée', 'warn');
     return;
   }
   if (id === 'modal-create-group') renderAudienceChecks('new-group-audience', []);
@@ -338,7 +549,7 @@ function nowStr() {
 // Un champ rempli automatiquement (calcule, en lecture seule, ou repris de l'accord)
 // ne compte jamais dans la completion. Un champ saisi a la main compte s'il est coche.
 function isAutoFilled(a) {
-  return !!(a && (a.calc || a.formula || a.readonly || a.isConditionCommerciale));
+  return !!(a && (a.calc || a.formula || a.readonly));
 }
 
 function countsInCompletion(a) {
@@ -382,6 +593,10 @@ function getCompletionAttrs(product, roleArg) {
   return list;
 }
 
+function showIfValues(v) {
+  return String(v || '').split(';').map(x => x.trim()).filter(Boolean);
+}
+
 function isAttrShown(product, attr) {
   if (!attr) return true;
   if (attr.code === 'etape_workflow' && typeof isWorkflowOn === 'function' && !isWorkflowOn()) return false;
@@ -393,7 +608,8 @@ function isAttrShown(product, attr) {
   const pilot = attributes.find(a => a.code === attr.showIfAttr);
   if (!pilot) return true;
   const current = product && product.fields ? (product.fields[attr.showIfAttr] || '') : '';
-  return String(current) === String(attr.showIfValue || '');
+  // Plusieurs valeurs possibles, séparées par « ; »
+  return showIfValues(attr.showIfValue).includes(String(current));
 }
 
 function isCompletionValueFilled(v) {
@@ -401,10 +617,6 @@ function isCompletionValueFilled(v) {
 }
 
 function isCompletionFilled(product, attr) {
-  if (attr.isConditionCommerciale && typeof getBrandInfoForProduct === 'function') {
-    const brand = getBrandInfoForProduct(product);
-    if (brand && isCompletionValueFilled(getBrandSettingAttrValue(brand, attr))) return true;
-  }
   return isCompletionValueFilled(getAttrFieldValue(product, attr));
 }
 
@@ -431,9 +643,21 @@ function calcFormulaIcon() {
   return '<span class="calc-ico-fx">ƒx</span>';
 }
 // Badge a cote du libelle d'un champ calcule, avec son origine en infobulle
+// Contenu du survol du picto ƒx : libellé du calcul, puis formule ou conditions de la table
+function calcTitleText(a) {
+  if (!a) return '';
+  if (isTableFormula(a.formula)) {
+    const t = typeof calcTableFor === 'function' ? calcTableFor(a.code) : null;
+    const conds = t ? t.conditions.map(c => (c.attrCode === 'cat' ? 'Catégorie' : ((attributes.find(x => x.code === c.attrCode) || {}).name || c.attrCode)) + ' ' + c.op).join(', ') : '';
+    return 'Table de calcul' + (conds ? ' : ' + conds : '') + (t ? ' (' + t.lines.length + ' lignes)' : '');
+  }
+  // Un seul texte : le libellé s'il est renseigné, sinon la formule
+  return a.formulaLabel || a.formula || '';
+}
+
 function calcBadgeHtml(a) {
   if (!a || !(a.calc || a.formula)) return '';
-  return '<span class="calc-badge calc-badge-fx" title="Champ calculé">ƒx</span>';
+  return '<span class="calc-badge calc-badge-fx" title="' + escapeHtml(calcTitleText(a)) + '">ƒx</span>';
 }
 
 function isWorkflowOn() {
@@ -569,12 +793,28 @@ function getCompletionColor(pct) {
 
 // Taux de remplissage d'un attribut, limite aux produits des categories
 // qui contiennent son groupe. Sert a reperer les attributs qui ne servent plus.
+// Un attribut verrouillé : calculé par l'application ou structure du produit
+// (attributs système), ou clé d'un référentiel. La raison s'affiche au survol.
+function attrRefKeyOf(a) {
+  if (!a) return null;
+  return (refTables || []).find(t => Object.keys(t.keys || {}).some(c => t.keys[c] === a.code)) || null;
+}
+function attrLockReason(a) {
+  if (!a) return '';
+  if (a.system) return a.code === 'cat' ? 'Structure du produit : impossible à supprimer' : 'Calculé par l’application : impossible à supprimer';
+  const t = attrRefKeyOf(a);
+  return t ? 'Clé du référentiel ' + t.name + ' : impossible à supprimer tant que le référentiel l’utilise' : '';
+}
 function isProtectedAttr(a) {
-  return !!(a && a.system);
+  return !!(a && (a.system || attrRefKeyOf(a)));
+}
+function attrLockBadge(a) {
+  const t = attrLockReason(a);
+  return t ? `<span class="system-lock" title="${escapeHtml(t)}">${systemLockIcon()}</span>` : '';
 }
 
 function isProtectedGroup(g) {
-  return !!(g && (g.system || g.isBrandGroup));
+  return !!(g && g.system);
 }
 
 function systemLockIcon() {
@@ -584,24 +824,16 @@ function systemLockIcon() {
 }
 
 function systemLockBadge(kind) {
-  const title = kind === 'group'
-    ? 'Groupe systeme : impossible a supprimer'
-    : 'Attribut systeme : impossible a supprimer';
+  const title = kind === 'group' ? 'Groupe système : impossible à supprimer'
+    : kind === 'trame' ? 'Trame système : impossible à supprimer'
+    : 'Attribut système : impossible à supprimer';
   return `<span class="system-lock" title="${title}">${systemLockIcon()}</span>`;
 }
 
-function getConditionGroup() {
-  return attrGroups.find(g => g.isBrandGroup || g.code === 'conditions_commerciales') || null;
-}
 
-function getConditionAttrs() {
-  const g = getConditionGroup();
-  return g ? g.attrIds.map(id => getAttrById(id)).filter(Boolean) : [];
-}
 
 function isPercentAttr(a) {
-  return !!(a && (a.displayFormat === 'percent' || a.code === 'rf' || a.code === 'rfa'
-    || a.code === 'remiseEnseigne' || a.code === 'remise' || a.code === 'taux_marque'));
+  return !!(a && a.displayFormat === 'percent');
 }
 
 function isPercentBrandAttr(a) {
@@ -655,91 +887,55 @@ function getMarqueAttr() {
   return attributes.find(a => a.code === 'marque') || null;
 }
 
+// Valeurs d'une liste : celles de l'attribut, ou la colonne clé d'un
+// référentiel (avec, au besoin, une autre colonne comme libellé)
+function attrSelectOptions(a) {
+  if (a && a.listRef && typeof findReferential === 'function') {
+    const R = findReferential(a.listRef.ref);
+    if (R) {
+      const key = R.cols[0];
+      const lab = a.listRef.label ? R.cols.find(c => refNorm(c.name) === refNorm(a.listRef.label)) : null;
+      return R.data().filter(r => String(r[key.prop] || '').trim())
+        .map(r => ({ v: String(r[key.prop]), l: lab && r[lab.prop] ? String(r[lab.prop]) : String(r[key.prop]) }))
+        .sort((x, y) => x.l.localeCompare(y.l, 'fr'));
+    }
+  }
+  return ((a && a.options) || []).map(o => ({ v: o, l: o }));
+}
+
 function getMarqueOptions() {
-  const a = getMarqueAttr();
-  return [...new Set((a && a.options) ? a.options : [])]
-    .filter(Boolean)
+  return [...new Set(refTableRows('Marques').map(b => String(b['Marque'] || '')))].filter(Boolean)
     .sort((x, y) => x.localeCompare(y, 'fr'));
+}
+// Liste des marques de la fiche produit = référentiel Marques
+function syncMarqueOptions() {
+  const a = getMarqueAttr();
+  if (a) a.options = getMarqueOptions();
 }
 
 function registerMarque(name) {
   const n = (name || '').trim();
   if (!n) return;
-  const a = getMarqueAttr();
-  if (!a) return;
-  if (!a.options) a.options = [];
-  if (!a.options.some(o => o.toLowerCase() === n.toLowerCase())) a.options.push(n);
-  a.options.sort((x, y) => x.localeCompare(y, 'fr'));
+  const rows = refTableRows('Marques');
+  if (!rows.some(b => String(b['Marque'] || '').toLowerCase() === n.toLowerCase())) rows.push({ 'Marque': n, 'Code IWI': '', 'Fabricant': '' });
+  syncMarqueOptions();
 }
 
 function syncMarqueOptionsFromBrandSettings() {
-  (brandSettings || []).forEach(b => registerMarque(b.marque));
   (products || []).forEach(p => {
     if (p.fields && p.fields.marque) registerMarque(p.fields.marque);
   });
 }
 
-function brandAttrStorageKey(attr) {
-  if (!attr) return '';
-  if (attr.code === 'fournisseur_code') return 'fournisseurCode';
-  if (attr.code === 'cat') return 'type';
-  return attr.code;
-}
 
-function getBrandSettingAttrValue(b, attr) {
-  if (!b || !attr) return '';
-  if (attr.code === 'fournisseur_code')
-    return supplierNameByCode(b.fournisseurCode) || b.fournisseurCode || '';
-  if (attr.code === 'marque') return b.marque || '';
-  if (attr.code === 'cat') return b.type || '';
-  if (attr.code === 'segmentation') {
-    if (!b.segAttrCode) return '';
-    const sa = attributes.find(x => x.code === b.segAttrCode);
-    const label = sa ? sa.name : b.segAttrCode;
-    return b.segAttrValue ? (label + ' = ' + b.segAttrValue) : label;
-  }
-  if (attr.code === '_supplierCode') return b.fournisseurCode || '';
-  if (attr.code === '_supplierTrigram') {
-    const s = (suppliers || []).find(x => x.code === b.fournisseurCode);
-    return (s && s.trigram) || '';
-  }
-  const key = brandAttrStorageKey(attr);
-  const v = b[key];
-  if (isPercentBrandAttr(attr)) {
-    if (typeof v !== 'number') return '';
-    const digits = attr.code === 'remiseEnseigne' ? 0 : 2;
-    return (v * 100).toFixed(digits) + '%';
-  }
-  if (attr.type === 'Oui / Non' || attr.code === 'repriseEchange')
-    return v ? 'Oui' : 'Non';
-  if (v === undefined || v === null || v === '') return '';
-  return String(v);
-}
 
-function getBrandSettingSortValue(b, attr) {
-  if (!b || !attr) return '';
-  if (attr.code === 'fournisseur_code' || attr.code === '_supplierCode' || attr.code === '_supplierTrigram')
-    return getBrandSettingAttrValue(b, attr);
-  if (attr.code === 'marque') return b.marque || '';
-  if (attr.code === 'cat') return b.type || '';
-  if (attr.code === 'segmentation') return getBrandSettingAttrValue(b, attr);
-  const key = brandAttrStorageKey(attr);
-  const v = b[key];
-  if (isPercentBrandAttr(attr) || attr.type === 'Nombre') return typeof v === 'number' ? v : -1;
-  if (attr.type === 'Oui / Non' || attr.code === 'repriseEchange') return v ? 1 : 0;
-  return v == null ? '' : String(v);
-}
 
 function attrStoresInFields(a) {
   if (!a) return false;
   return a.code !== 'cat' && a.code !== 'completion'
-    && a.code !== 'created_at' && a.code !== 'updated_at'
-    && a.code !== 'segmentation';
+    && a.code !== 'created_at' && a.code !== 'updated_at';
 }
 
-function isConditionRowAttr(a) {
-  return !!(a && a.code === 'segmentation');
-}
 
 function attrHelpTip(a) {
   const text = a && a.helpText ? String(a.helpText).trim() : '';
@@ -847,16 +1043,12 @@ function categorieSelectHtml(p) {
 function categorieFieldHtml(p) {
   const a = attributes.find(x => x.code === 'cat');
   return `<div class="field-row">
-    <div class="field-label">${a ? attrLabelHtml(a) : 'Categorie <span class="field-required">*</span>'}</div>
+    <div class="field-label">${a ? attrLabelHtml(a) : 'Catégorie <span class="field-required">*</span>'}</div>
     ${categorieSelectHtml(p)}
   </div>`;
 }
 
 function formatAttrListValue(p, attr) {
-  if (attr.code === 'segmentation') {
-    const info = getBrandInfoForProduct(p);
-    return info ? (getBrandSettingAttrValue(info, attr) || '—') : '—';
-  }
   if (attr.code === 'fournisseur_code') {
     const v = p.fields[attr.code];
     if (isEmptyFieldVal(v)) return '—';
@@ -883,44 +1075,27 @@ function datalistHtml(id, values) {
 }
 
 function supplierNameByCode(code) {
-  const s = suppliers.find(x => x.code === code);
+  const s = supplierList().find(x => x.code === code);
   return s ? s.name : (code || '');
 }
 
 function resolveSupplierCode(inputVal) {
   const v = (inputVal || '').trim();
   if (!v) return '';
-  const byName = suppliers.find(s => s.name.toLowerCase() === v.toLowerCase());
+  const byName = supplierList().find(s => s.name.toLowerCase() === v.toLowerCase());
   if (byName) return byName.code;
-  const byCode = suppliers.find(s => s.code.toLowerCase() === v.toLowerCase());
+  const byCode = supplierList().find(s => s.code.toLowerCase() === v.toLowerCase());
   if (byCode) return byCode.code;
   const m = v.match(/\(([^)]+)\)\s*$/);
   if (m) {
-    const nested = suppliers.find(s => s.code === m[1]);
+    const nested = supplierList().find(s => s.code === m[1]);
     if (nested) return nested.code;
   }
   return '';
 }
 
-function matchBrandType(brandType, catName) {
-  if (!brandType) return true;
-  const norm = s => String(s).toLowerCase().replace(/s$/, '').trim();
-  return norm(brandType) === norm(catName || '');
-}
 
-function brandRowMatchesProduct(b, p) {
-  if (!p) return true;
-  if (b.type && p.cat && !matchBrandType(b.type, p.cat)) return false;
-  if (b.segAttrCode && b.segAttrValue) {
-    const seg = p.fields && p.fields[b.segAttrCode];
-    if (seg && String(seg) !== String(b.segAttrValue)) return false;
-  }
-  return true;
-}
 
-function eligibleBrandRows(p) {
-  return brandSettings.filter(b => brandRowMatchesProduct(b, p));
-}
 
 function attrShownInList(attr) {
   if (!attr || !attr.showIfCat) return true;
@@ -930,35 +1105,8 @@ function attrShownInList(attr) {
   return allowed.includes(catFilter);
 }
 
-function suppliersForProduct(p) {
-  let rows = eligibleBrandRows(p);
-  const marque = ((p.fields || {}).marque || '').trim();
-  if (marque) rows = rows.filter(b => b.marque === marque);
-  const codes = new Set(rows.map(b => b.fournisseurCode));
-  const unscoped = suppliers.filter(s => !brandSettings.some(b => b.fournisseurCode === s.code));
-  unscoped.forEach(s => codes.add(s.code));
-  const current = (p.fields || {}).fournisseur_code || '';
-  if (current) codes.add(current);
-  return suppliers.filter(s => codes.has(s.code));
-}
 
-function marquesForProduct(p) {
-  let rows = eligibleBrandRows(p);
-  const code = (p.fields || {}).fournisseur_code || '';
-  if (code) rows = rows.filter(b => b.fournisseurCode === code);
-  return [...new Set(rows.map(b => b.marque))].sort();
-}
 
-function marquesForSupplier(fournisseurCode, catName) {
-  return [...new Set(
-    brandSettings
-      .filter(b =>
-        (!fournisseurCode || b.fournisseurCode === fournisseurCode) &&
-        (!catName || !b.type || matchBrandType(b.type, catName))
-      )
-      .map(b => b.marque)
-  )].sort();
-}
 
 function autocompleteInput(id, listId, value, values, onchange, placeholder) {
   return `<input class="field-input" id="${id}" list="${listId}"
@@ -1019,6 +1167,7 @@ const PAGE_MOD_MAP = {
   'admin-roles':         'mod_roles',
   'admin-prefs':         'mod_prefs',
   'admin-alerts':        'mod_alerts',
+  'admin-export-formats':'mod_trames',
   'admin-calc':          'mod_calc',
   'admin-workflow':      'mod_workflow',
 };
@@ -1104,7 +1253,7 @@ function getAccessibleProducts() {
 
 function requirePerm(ok, msg) {
   if (ok) return true;
-  showNotif(msg || 'Action non autorisee', 'warn');
+  showNotif(msg || 'Action non autorisée', 'warn');
   return false;
 }
 
@@ -1146,7 +1295,7 @@ function canOpenPage(id) {
 }
 
 function refreshCategorySelects() {
-  fillCatSelect(document.getElementById('filter-cat'), getReadableCategories(), 'Toutes categories');
+  fillCatSelect(document.getElementById('filter-cat'), getReadableCategories(), 'Toutes catégories');
   fillCatSelect(document.getElementById('np-cat'), getWritableCategories(), '-- Choisir --');
 }
 
@@ -1279,7 +1428,7 @@ function openPreferencesFromMenu() {
 }
 
 function renderUserPrefsPage() {
-  updateTopbarTitle('Preferences d\'affichage');
+  updateTopbarTitle('Préférences d\'affichage');
   const page = document.getElementById('page-user-prefs');
   if (!page) return;
   const theme = userPrefs.theme === 'dark' ? 'dark' : 'light';
@@ -1303,7 +1452,7 @@ function renderUserPrefsPage() {
             <span style="font-size:16px">&#9728;</span>
             <div>
               <div style="font-size:13px;font-weight:700;color:#1a2332">Clair</div>
-              <div style="font-size:11px;color:#a0b0c0">Theme par defaut</div>
+              <div style="font-size:11px;color:#a0b0c0">Thème par défaut</div>
             </div>
           </label>
           <label class="import-action-radio ${theme === 'dark' ? 'selected' : ''}"
@@ -1323,7 +1472,7 @@ function renderUserPrefsPage() {
 function setUserTheme(theme) {
   userPrefs.theme = theme === 'dark' ? 'dark' : 'light';
   renderUserPrefsPage();
-  showNotif('Theme enregistre (application a venir)');
+  showNotif('Thème enregistré (application à venir)');
 }
 
 function switchUser(userId) {
@@ -1516,7 +1665,7 @@ function calcFieldInput(p, a, val) {
          title="Valeur forcee manuellement">&#9998;</div>`
     : `<input class="field-input" data-calc="${a.code}" value="${safeVal}" readonly
          style="background:#fffde7;color:#795548;padding-right:32px">
-       <div style="${badgeStyle}background:#ffd54f;color:#5d4037" title="Champ calculé">ƒx</div>`;
+       <div style="${badgeStyle}background:#ffd54f;color:#5d4037;cursor:help" title="${escapeHtml(calcTitleText(a))}">ƒx</div>`;
 
   const action = forced
     ? `<button class="action-btn" style="font-size:11px;padding:2px 8px"
@@ -1559,7 +1708,7 @@ function unforceCalcField(productId, code) {
   computeCalcFields(p);
   refreshCalcFieldCell(p, code);
   refreshCalcFields(productId);
-  showNotif('Retour a la valeur calculee sur ' + (attr ? attr.name : code));
+  showNotif('Retour à la valeur calculée sur ' + (attr ? attr.name : code));
 }
 
 function onForcedFieldInput(productId, el, code) {
@@ -1689,7 +1838,7 @@ function comboRenderList(sel, input, list, query) {
   if (!shown.length) {
     const empty = document.createElement('div');
     empty.className = 'combo-empty';
-    empty.textContent = 'Aucun resultat';
+    empty.textContent = 'Aucun résultat';
     list.appendChild(empty);
   }
   shown.forEach(function(o, idx) {

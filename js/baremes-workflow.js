@@ -98,7 +98,14 @@ function calcRestore(code) {
   delete _calcSnap[code];
 }
 
-function calcCommit(code) { delete _calcSnap[code]; }
+// Enregistrer : on ne garde que le mode affiché (table OU formule)
+function calcCommit(code) {
+  delete _calcSnap[code];
+  const a = attributes.find(x => x.code === code);
+  if (!a) return;
+  if (isTableFormula(a.formula)) { delete a._altFormula; delete a._altLabel; }
+  else calcTables = calcTables.filter(t => t.attrCode !== code);
+}
 
 function calcCancelField(code) {
   calcRestore(code);
@@ -109,28 +116,6 @@ function calcSaveField(code) {
   if (!requirePerm(canMod('mod_calc', 'w'))) return;
   calcCommit(code);
   afterCalcChange('Calcul enregistré');
-}
-
-// Appelée par showPage : on ne quitte pas le module (ou l'attribut qui y
-// renvoie) en laissant des modifications non enregistrées.
-function calcLeaveGuard(target) {
-  const cur = (document.querySelector('.page.active') || {}).id || '';
-  if (cur === 'page-admin-calc' && target !== 'admin-calc' && target !== 'admin-attribute-edit' && calcHasPending()) {
-    if (!confirm('Abandonner les modifications non enregistrées des champs calculés ?')) return false;
-    Object.keys(_calcSnap).forEach(calcRestore);
-    (products || []).forEach(p => computeCalcFields(p));
-    _calcReturnAttrId = null;
-  }
-  if (cur === 'page-admin-attribute-edit' && target !== 'admin-calc' && target !== 'admin-attribute-edit') {
-    const a = attributes.find(x => x.id === editingAttrId);
-    if (a && calcHasPending(a.code)) {
-      if (!confirm('Abandonner les modifications du calcul de « ' + a.name + ' » ?')) return false;
-      calcRestore(a.code);
-      (products || []).forEach(p => computeCalcFields(p));
-    }
-    _calcReturnAttrId = null;
-  }
-  return true;
 }
 
 function calcFields() {
@@ -204,8 +189,8 @@ function renderCalcFormulaBody(a, canW) {
         onchange="setCalcFormula('${a.code}',this.value)">${escapeHtml(a.formula || '')}</textarea>
     </div>
     <div class="form-field" style="margin-top:8px">
-      <div class="form-label">Libellé du calcul</div>
-      <input class="field-input" value="${escapeHtml(a.formulaLabel || '')}" onchange="setCalcFormulaLabel('${a.code}',this.value)">
+      <div class="form-label">Libellé</div>
+      <input class="field-input" value="${escapeHtml(a.formulaLabel || '')}" placeholder="${escapeHtml(a.formula || '')}" onchange="setCalcFormulaLabel('${a.code}',this.value)">
     </div>
     <div class="calc-tokens"><b>Opérateurs</b> ${ops}</div>
     <details class="calc-tokens"><summary>Champs (${attributes.length - 1})</summary><div class="calc-codes">${codes}</div></details>`;
@@ -244,7 +229,7 @@ function renderCalcFieldCard(a, canW, canD) {
   const bar = calcHasPending(a.code) && canW ? `<div class="calc-savebar">
       <button class="btn btn-secondary" onclick="calcCancelField('${a.code}')">Annuler</button>
       ${fromAttr
-        ? `<button class="btn btn-primary" onclick="returnToAttrFromCalc()">&larr; Retour à l’attribut</button>`
+        ? `<button class="btn btn-primary" onclick="returnToAttrFromCalc()">&larr; Retour à l’attribut pour enregistrer</button>`
         : `<button class="btn btn-primary" onclick="calcSaveField('${a.code}')">Enregistrer</button>`}
     </div>` : '';
   return `<div class="table-container calc-card open${calcHasPending(a.code) ? ' calc-pending' : ''}">${head}<div class="calc-body">${body}${bar}</div></div>`;
@@ -273,7 +258,7 @@ function renderCalcTablesPage() {
         <option value="table"${_calcModeFilter === 'table' ? ' selected' : ''}>Tables</option>
         <option value="formula"${_calcModeFilter === 'formula' ? ' selected' : ''}>Formules</option>
       </select>
-      ${back ? `<button class="btn btn-primary" style="margin-left:auto" onclick="returnToAttrFromCalc()">&larr; Retour à l’attribut « ${escapeHtml(back.name)} »</button>` : ''}
+      ${back ? `<button class="btn btn-primary" style="margin-left:auto" onclick="returnToAttrFromCalc()">&larr; Retour à l’attribut « ${escapeHtml(back.name)} » pour enregistrer</button>` : ''}
     </div>
     ${list.map(a => renderCalcFieldCard(a, canW, canD)).join('') || '<div style="color:#a0b0c0">Aucun champ.</div>'}`;
 }
@@ -297,7 +282,6 @@ function openCalcFieldFromAttr(code) {
 // Retour à la fiche de l'attribut, restée ouverte avec ses modifications
 function returnToAttrFromCalc() {
   const id = _calcReturnAttrId;
-  _calcReturnAttrId = null;
   if (id && id === editingAttrId) showPage('admin-attribute-edit', null);
   else if (id) editAttribute(id);
   else showPage('admin-attributes', null);
@@ -355,11 +339,14 @@ function insertCalcToken(code, token) {
 function uncalcField(code) {
   if (!requirePerm(canMod('mod_calc', 'd'))) return;
   const a = attributes.find(x => x.code === code); if (!a) return;
-  if (!confirm('« ' + a.name + ' » ne sera plus calculé et redeviendra un champ saisi. Continuer ?')) return;
-  calcTables = calcTables.filter(x => x.attrCode !== code);
-  a.calc = false; a.formula = ''; a.formulaLabel = '';
-  if (_openCalcCode === code) _openCalcCode = null;
-  afterCalcChange('« ' + a.name + ' » redevient un champ saisi');
+  openConfirmModal({ title: 'Ne plus calculer ce champ', okLabel: 'Continuer',
+    lead: '« ' + a.name + ' » ne sera plus calculé et redeviendra un champ saisi.',
+    onOk: () => {
+      calcTables = calcTables.filter(x => x.attrCode !== code);
+      a.calc = false; a.formula = ''; a.formulaLabel = '';
+      if (_openCalcCode === code) _openCalcCode = null;
+      afterCalcChange('« ' + a.name + ' » redevient un champ saisi');
+    } });
 }
 
 // Compatibilité : anciens appels par id de table
@@ -461,11 +448,14 @@ function addCalcCond(id) {
 function removeCalcCond(id, ci) {
   if (!requirePerm(canMod('mod_calc', 'w'))) return;
   const t = calcT(id); if (!t) return;
-  calcTouch(t.attrCode);
-  if (!confirm('Supprimer la condition « ' + calcAttrName(t.conditions[ci].attrCode) + ' » et sa colonne ?')) return;
-  t.conditions.splice(ci, 1);
-  t.lines.forEach(l => l.vals.splice(ci, 1));
-  afterCalcChange();
+  openConfirmModal({ title: 'Supprimer la condition', okLabel: 'Supprimer',
+    lead: 'La condition « ' + calcAttrName(t.conditions[ci].attrCode) + ' » et sa colonne seront supprimées.',
+    onOk: () => {
+      calcTouch(t.attrCode);
+      t.conditions.splice(ci, 1);
+      t.lines.forEach(l => l.vals.splice(ci, 1));
+      afterCalcChange();
+    } });
 }
 
 function addCalcLine(id) {
@@ -703,22 +693,18 @@ function addWorkflowStep() {
 function deleteWorkflowStep(stepId) {
   if (!requirePerm(canMod('mod_workflow', 'd'))) return;
   const s = workflowSteps.find(x => x.id === stepId);
-  if (!s || !confirm('Supprimer le jalon « ' + s.name + ' » ? L\'étape des produits sera recalculée.')) return;
-  workflowSteps = workflowSteps.filter(x => x.id !== stepId);
-  afterWorkflowChange();
+  if (!s) return;
+  openConfirmModal({ title: 'Supprimer le jalon', okLabel: 'Supprimer',
+    lead: '« ' + s.name + ' » sera supprimé. L’étape des produits sera recalculée.',
+    onOk: () => {
+      workflowSteps = workflowSteps.filter(x => x.id !== stepId);
+      afterWorkflowChange();
+    } });
 }
 
 // Ouvre la liste filtree sur une etape : 0 = « En création », n = n-ieme jalon
 function showWorkflowProducts(index) {
   const label = workflowLabels()[index];
   if (!label || !isWorkflowOn()) return;
-  colFilters = { etape_workflow: new Set([label]) };
-  _filterIncomplets = false;
-  _filterAlertId = null;
-  const search = document.getElementById('products-search');
-  if (search) search.value = '';
-  const cat = document.getElementById('filter-cat');
-  if (cat) cat.value = '';
-  currentPage = 1;
-  showPage('products', document.querySelector('.nav-item[data-nav="products"]'));
+  openProductsList(null, () => { colFilters = { etape_workflow: new Set([label]) }; });
 }

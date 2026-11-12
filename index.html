@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <title>OctoPIM</title>
-  <link rel="stylesheet" href="css/style.css?v=43">
+  <link rel="stylesheet" href="css/style.css?v=59">
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
 </head>
@@ -28,7 +28,7 @@
         <span class="nav-item-icon">&#127968;</span>
         <span>Tableau de bord</span>
       </div>
-      <div class="nav-item" data-nav="products" onclick="showPage('products', this)">
+      <div class="nav-item" data-nav="products" onclick="openProductsList(this)">
         <span class="nav-item-icon">&#128230;</span>
         <span>Produits</span>
       </div>
@@ -64,7 +64,7 @@
           <button type="button" class="account-menu-trigger" onclick="toggleAccountMenu(event)">
             <div class="account-menu-text">
               <div class="account-menu-name" id="account-name">J. Doe</div>
-              <div class="account-menu-role" id="account-role">Admin Systeme</div>
+              <div class="account-menu-role" id="account-role">Admin Système</div>
             </div>
             <div class="account-avatar" id="account-avatar" title="Compte">JD</div>
           </button>
@@ -111,7 +111,7 @@
           <div class="dash-kpi-card">
             <div style="font-size:12px;font-weight:700;color:#607080;
               text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">
-              Repartition par categorie
+              Répartition par catégorie
             </div>
             <div style="display:flex;align-items:center;gap:16px">
               <svg id="donut-svg" width="90" height="90"
@@ -183,7 +183,7 @@
             </div>
             <div style="font-size:11px;font-weight:700;color:#a0b0c0;
               text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
-              Detail par categorie
+              Détail par catégorie
             </div>
             <div id="dashboard-completion-cats"></div>
           </div>
@@ -209,7 +209,7 @@
             oninput="onSearchInput()">
           <select class="filter-select" id="filter-cat"
             onchange="onCatFilterChange()">
-            <option value="">Toutes categories</option>
+            <option value="">Toutes catégories</option>
           </select>
           <button class="btn btn-secondary" id="btn-clear-filters"
             style="display:none" onclick="clearAllFilters()">
@@ -219,9 +219,9 @@
           <div style="flex:1"></div>
           <div class="view-toggle-pill">
             <button id="btn-view-synth" class="view-toggle-btn active"
-              onclick="switchView('synth')">Synthese</button>
+              onclick="switchView('synth')">Synthèse</button>
             <button id="btn-view-detail" class="view-toggle-btn"
-              onclick="switchView('detail')">Detaillee</button>
+              onclick="switchView('detail')">Détaillée</button>
           </div>
           <button class="btn btn-primary" id="btn-new-product"
             onclick="openModal('modal-create-product')">
@@ -235,7 +235,7 @@
           <div style="font-size:12px;color:#a0b0c0" id="pagination-info"></div>
           <div id="pagination-container"></div>
         </div>
-        <div class="table-container">
+        <div class="table-container products-scroll" id="products-scroll">
           <table id="products-table">
             <thead id="products-thead"></thead>
             <tbody id="products-tbody"></tbody>
@@ -288,11 +288,11 @@
           </div>
           <div class="admin-card" data-mod="mod_synthese" onclick="showPage('admin-synthese',null)">
             <div class="admin-card-icon">&#9783;</div>
-            <div class="admin-card-title">Groupe Synthese</div>
+            <div class="admin-card-title">Groupe Synthèse</div>
           </div>
           <div class="admin-card" data-mod="mod_conditions" onclick="showPage('admin-suppliers',null)">
             <div class="admin-card-icon">&#127970;</div>
-            <div class="admin-card-title">Conditions commerciales</div>
+            <div class="admin-card-title">Référentiels</div>
             <div class="admin-card-count" id="admin-count-suppliers">—</div>
           </div>
           <div class="admin-card" data-mod="mod_roles" onclick="showPage('admin-roles',null)">
@@ -304,6 +304,11 @@
             <div class="admin-card-icon">&#9888;</div>
             <div class="admin-card-title">Alertes</div>
             <div class="admin-card-count" id="admin-count-alerts">—</div>
+          </div>
+          <div class="admin-card" data-mod="mod_trames" onclick="showPage('admin-export-formats',null)">
+            <div class="admin-card-icon">&#128228;</div>
+            <div class="admin-card-title">Trames d’import / export</div>
+            <div class="admin-card-count" id="admin-count-export-formats">—</div>
           </div>
           <div class="admin-card" data-mod="mod_calc" onclick="showPage('admin-calc',null)">
             <div class="admin-card-icon">&#9638;</div>
@@ -317,7 +322,7 @@
           </div>
           <div class="admin-card" data-mod="mod_prefs" onclick="showPage('admin-prefs',null)">
             <div class="admin-card-icon">&#9881;</div>
-            <div class="admin-card-title">Preferences application</div>
+            <div class="admin-card-title">Préférences application</div>
           </div>
         </div>
       </div>
@@ -328,7 +333,7 @@
           <button class="btn btn-secondary"
             onclick="showPage('admin',null)">&larr; Administration</button>
           <button class="btn btn-primary" id="btn-new-category"
-            onclick="openModal('modal-create-category')">+ Nouvelle categorie</button>
+            onclick="openModal('modal-create-category')">+ Nouvelle catégorie</button>
         </div>
         <div class="table-container">
           <table>
@@ -347,13 +352,13 @@
       <div class="page" id="page-admin-category-edit">
         <div style="margin-bottom:16px">
           <button class="btn btn-secondary"
-            onclick="showPage('admin-categories',null)">&larr; Categories</button>
+            onclick="showPage('admin-categories',null)">&larr; Catégories</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
           <div class="field-group">
             <div class="field-group-title">Informations</div>
             <div class="field-row">
-              <div class="field-label">Nom *</div>
+              <div class="field-label">Nom <span class="field-required">*</span></div>
               <input class="field-input" id="edit-cat-name"
                 oninput="autoSlug('edit-cat-name','edit-cat-code')">
             </div>
@@ -375,7 +380,7 @@
             </div>
           </div>
           <div class="field-group">
-            <div class="field-group-title">Groupes associes</div>
+            <div class="field-group-title">Groupes associés</div>
             <div id="cat-group-order-list" style="margin-bottom:14px"></div>
             <div class="field-group-title" style="margin-top:16px">Ajouter un groupe</div>
             <input type="text" class="search-input" placeholder="Rechercher..."
@@ -397,7 +402,7 @@
             oninput="renderAttrsTable()"
             style="max-width:260px">
           <button class="btn btn-primary" id="btn-new-attr"
-            onclick="openModal('modal-create-attr')">+ Nouvel attribut</button>
+            onclick="openNewAttribute()">+ Nouvel attribut</button>
         </div>
         <div class="table-container">
           <table>
@@ -414,25 +419,24 @@
             onclick="showPage('admin-attributes',null)">&larr; Attributs</button>
         </div>
         <div id="ea-system-note" class="attr-system-note" style="display:none">
-          Attribut systeme : consultation seule.
+          Attribut système : consultation seule.
         </div>
         <div class="attr-edit-layout">
           <div class="field-group">
-            <div class="field-group-title">Identite</div>
+            <div class="field-group-title">Identité</div>
             <div class="field-row">
-              <div class="field-label">Nom *</div>
-              <input class="field-input" id="ea-name"
-                oninput="autoSlug('ea-name','ea-code')">
+              <div class="field-label">Nom <span class="field-required">*</span></div>
+              <input class="field-input" id="ea-name">
             </div>
             <div class="field-row">
-              <div class="field-label">Code technique</div>
-              <input class="field-input" id="ea-code"
-                style="font-family:monospace;background:#f8fafc;color:#a0b0c0" readonly>
+              <div class="field-label">Code technique <span class="field-required">*</span></div>
+              <input class="field-input field-code" id="ea-code" readonly>
             </div>
             <div class="field-row">
-              <div class="field-label">Type</div>
+              <div class="field-label">Type <span class="field-required">*</span></div>
               <select class="form-select" id="ea-type"
                 onchange="onEditAttrTypeChange()">
+                <option value="">Choisir…</option>
                 <option>Texte</option>
                 <option>Texte long</option>
                 <option>Nombre</option>
@@ -456,7 +460,7 @@
               </select>
             </div>
             <div class="field-row">
-              <div class="field-label">Compte dans la completion</div>
+              <div class="field-label">Compte dans la complétion</div>
               <select class="form-select" id="ea-completion">
                 <option value="1">Oui</option>
                 <option value="0">Non</option>
@@ -465,20 +469,27 @@
             <div class="field-row">
               <div class="field-label">Afficher seulement si</div>
               <select class="form-select" id="ea-show-if" onchange="onShowIfAttrChange('ea')">
-                <option value="">Toujours affiche</option>
+                <option value="">Toujours affiché</option>
               </select>
               <div id="ea-show-if-value-wrap" style="display:none;margin-top:8px">
-                <select class="form-select" id="ea-show-if-value"></select>
+                <div class="showif-vals" id="ea-show-if-value"></div>
               </div>
             </div>
             <div class="field-row">
               <div class="field-label">Largeur sur la fiche</div>
-              <select class="form-select" id="ea-width" data-combo="off">
+              <select class="form-select" id="ea-width">
                 <option value="">Automatique</option>
                 <option value="narrow">Étroite</option>
                 <option value="normal">Normale</option>
                 <option value="wide">Large</option>
                 <option value="full">Pleine ligne</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Afficher sur la fiche</div>
+              <select class="form-select" id="ea-onsheet">
+                <option value="1">Oui</option>
+                <option value="0">Non</option>
               </select>
 </div>
           </div>
@@ -487,7 +498,7 @@
             <div class="field-row" id="ea-formula-wrap">
               <div class="field-label">Champ calculé</div>
               <div style="display:flex;gap:8px;align-items:center">
-                <select class="form-select" id="ea-calc" data-combo="off" style="max-width:120px" onchange="onEaCalcChange()">
+                <select class="form-select" id="ea-calc" style="max-width:120px" onchange="onEaCalcChange()">
                   <option value="0">Non</option><option value="1">Oui</option>
                 </select>
                 <button type="button" class="btn btn-secondary" id="ea-calc-open" onclick="openCalcFieldFromAttr(document.getElementById('ea-code').value)">Régler le calcul</button>
@@ -498,7 +509,7 @@
             <div class="field-row">
               <div class="field-label">Texte d'aide</div>
               <input class="field-input" id="ea-helptext"
-                placeholder="? a cote du libelle">
+                placeholder="? à côté du libellé">
             </div>
             <div class="field-row" id="ea-maxlength-wrap" style="display:none">
               <div class="field-label">Longueur maximale</div>
@@ -507,7 +518,7 @@
             </div>
             <div id="ea-number-wrap" style="display:none">
               <div class="field-row">
-                <div class="field-label">Incrementation</div>
+                <div class="field-label">Incrémentation</div>
                 <select class="field-input form-select" id="ea-step-enabled">
                   <option value="0">Saisie libre</option>
                   <option value="1">Avec fleches</option>
@@ -529,7 +540,14 @@
                   placeholder="vide = aucun" onwheel="event.preventDefault();this.blur()">
               </div>
               <div class="field-row">
-                <div class="field-label">Decimales</div>
+                <div class="field-label">Affichage</div>
+                <select class="form-select" id="ea-format">
+                  <option value="">Nombre</option>
+                  <option value="percent">Pourcentage</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <div class="field-label">Décimales</div>
                 <select class="form-select" id="ea-decimals">
                   <option value="0">0</option>
                   <option value="1">1</option>
@@ -580,7 +598,7 @@
           <div class="field-group">
             <div class="field-group-title">Informations</div>
             <div class="field-row">
-              <div class="field-label">Nom *</div>
+              <div class="field-label">Nom <span class="field-required">*</span></div>
               <input class="field-input" id="edit-group-name"
                 oninput="autoSlug('edit-group-name','edit-group-code')">
             </div>
@@ -615,12 +633,10 @@
 
       <!-- ADMIN ROLES -->
       <div class="page" id="page-admin-roles">
-        <div style="margin-bottom:16px">
+        <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <button class="btn btn-secondary"
             onclick="showPage('admin',null)">&larr; Administration</button>
-        </div>
-        <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:16px">
-          Utilisateurs & groupes d'affectation
+          <span style="font-size:15px;font-weight:700;color:#1a2332">Utilisateurs & groupes d’affectation</span>
         </div>
         <div class="roles-grid" id="roles-grid"></div>
       </div>
@@ -628,6 +644,7 @@
       <!-- ADMIN PREFERENCES -->
       <div class="page" id="page-admin-prefs"></div>
       <div class="page" id="page-admin-alerts"></div>
+      <div class="page" id="page-admin-export-formats"></div>
       <div class="page" id="page-admin-calc"></div>
       <div class="page" id="page-admin-workflow"></div>
 
@@ -655,43 +672,43 @@
   <div class="modal-box">
     <div class="modal-title">Nouveau produit</div>
     <div class="field-row">
-      <div class="field-label">Code SAP</div>
-      <input class="field-input" id="np-sap"
-        placeholder="ex: M908642300001" style="font-family:monospace">
-    </div>
-    <div class="field-row">
-      <div class="field-label">Code EAN/GTIN *</div>
+      <div class="field-label">Code EAN/GTIN <span class="field-required">*</span></div>
       <input class="field-input" id="np-ean"
         placeholder="ex: 02000000079688" style="font-family:monospace">
       <div class="field-error-msg" id="err-np-ean">Code EAN/GTIN obligatoire.</div>
     </div>
     <div class="field-row">
-      <div class="field-label">Nom produit *</div>
+      <div class="field-label">Nom produit <span class="field-required">*</span></div>
       <input class="field-input" id="np-name"
         placeholder="ex: Monture Vogue VO4279S">
       <div class="field-error-msg" id="err-np-name">Nom obligatoire.</div>
     </div>
     <div class="field-row">
-      <div class="field-label">Categorie *</div>
+      <div class="field-label">Catégorie <span class="field-required">*</span></div>
       <select class="form-select" id="np-cat">
         <option value="">-- Choisir --</option>
       </select>
-      <div class="field-error-msg" id="err-np-cat">Categorie obligatoire.</div>
+      <div class="field-error-msg" id="err-np-cat">Catégorie obligatoire.</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Code SAP</div>
+      <input class="field-input" id="np-sap"
+        placeholder="ex: M908642300001" style="font-family:monospace">
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary"
         onclick="closeModal('modal-create-product')">Annuler</button>
       <button class="btn btn-primary"
-        onclick="createProduct()">Creer et ouvrir la fiche</button>
+        onclick="createProduct()">Créer et ouvrir la fiche</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-create-category">
   <div class="modal-box">
-    <div class="modal-title">Nouvelle categorie</div>
+    <div class="modal-title">Nouvelle catégorie</div>
     <div class="field-row">
-      <div class="field-label">Nom *</div>
+      <div class="field-label">Nom <span class="field-required">*</span></div>
       <input class="field-input" id="new-cat-name" placeholder="ex: Montures"
         oninput="autoSlug('new-cat-name','new-cat-code')">
     </div>
@@ -720,7 +737,7 @@
     <div class="modal-title">Nouvel attribut</div>
     <div class="form-grid">
       <div class="form-field">
-        <div class="form-label">Nom *</div>
+        <div class="form-label">Nom <span class="field-required">*</span></div>
         <input class="field-input" id="new-attr-name"
           placeholder="ex: Code douanier"
           oninput="autoSlug('new-attr-name','new-attr-code')">
@@ -761,7 +778,7 @@
         </select>
       </div>
       <div class="form-field">
-        <div class="form-label">Compte dans la completion</div>
+        <div class="form-label">Compte dans la complétion</div>
         <select class="form-select" id="new-attr-completion">
           <option value="1">Oui</option>
           <option value="0">Non</option>
@@ -770,10 +787,10 @@
       <div class="form-field">
         <div class="form-label">Afficher seulement si</div>
         <select class="form-select" id="new-attr-show-if" onchange="onShowIfAttrChange('new-attr')">
-          <option value="">Toujours affiche</option>
+          <option value="">Toujours affiché</option>
         </select>
         <div id="new-attr-show-if-value-wrap" style="display:none;margin-top:8px">
-          <select class="form-select" id="new-attr-show-if-value"></select>
+          <div class="showif-vals" id="new-attr-show-if-value"></div>
         </div>
       </div>
       <div class="form-field">
@@ -789,7 +806,7 @@
     </div>
     <div class="form-grid" id="new-attr-number-wrap" style="display:none">
       <div class="form-field">
-        <div class="form-label">Incrementation</div>
+        <div class="form-label">Incrémentation</div>
         <select class="field-input form-select" id="new-attr-step-enabled">
           <option value="0">Non, saisie libre sans fleches</option>
           <option value="1">Oui, avec fleches d'increment</option>
@@ -830,7 +847,7 @@
     <div class="field-row" style="margin-top:14px">
       <div class="field-label">Texte d'aide (tooltip)</div>
       <input class="field-input" id="new-attr-helptext"
-        placeholder="Affiche un ? a cote du libelle sur la fiche produit">
+        placeholder="Affiche un ? à côté du libellé sur la fiche produit">
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary"
@@ -845,7 +862,7 @@
   <div class="modal-box">
     <div class="modal-title">Nouveau groupe d'attributs</div>
     <div class="field-row">
-      <div class="field-label">Nom *</div>
+      <div class="field-label">Nom <span class="field-required">*</span></div>
       <input class="field-input" id="new-group-name"
         placeholder="ex: Caracteristiques monture"
         oninput="autoSlug('new-group-name','new-group-code')">
@@ -869,27 +886,34 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-unsaved">
-  <div class="modal-box">
-    <div class="modal-title">Modifications non sauvegardees</div>
-    <p id="unsaved-lead" style="font-size:13px;color:#607080;margin-bottom:8px">
-      Des modifications sont en cours sur cette fiche produit.
-    </p>
-    <p style="font-size:13px;color:#607080">
-      Voulez-vous quitter sans enregistrer ?
-    </p>
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal-box" style="max-width:540px">
+    <div class="modal-title" id="confirm-title"></div>
+    <p id="confirm-lead" style="font-size:13px;color:#607080;margin-bottom:8px"></p>
+    <ul id="confirm-list" class="unsaved-list"></ul>
     <div class="modal-footer">
-      <button class="btn btn-secondary"
-        onclick="cancelLeaveUnsaved()">Rester sur la fiche</button>
-      <button class="btn btn-danger"
-        onclick="confirmLeaveUnsaved()">Quitter sans enregistrer</button>
+      <button class="btn btn-secondary" onclick="confirmModalCancel()">Annuler</button>
+      <button class="btn btn-danger" id="confirm-ok" onclick="confirmModalOk()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-unsaved">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title">Modifications non enregistrées</div>
+    <p id="unsaved-lead" style="font-size:13px;color:#607080;margin-bottom:8px"></p>
+    <ul id="unsaved-list" class="unsaved-list"></ul>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="leaveStay()">Rester</button>
+      <button class="btn btn-danger" onclick="leaveContinue('discard')">Quitter sans enregistrer</button>
+      <button class="btn btn-primary" onclick="leaveContinue('save')">Enregistrer et continuer</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-seuil">
   <div class="modal-box">
-    <div class="modal-title">Modifier le seuil de completion</div>
+    <div class="modal-title">Modifier le seuil de complétion</div>
     <div class="field-row">
       <div class="field-label">Seuil (%)</div>
       <input type="number" class="field-input" id="seuil-input"
@@ -917,15 +941,15 @@
 </div>
 
 <!-- SCRIPTS -->
-<script src="js/data.js?v=55"></script>
-<script src="js/utils.js?v=46"></script>
-<script src="js/dashboard.js?v=26"></script>
-<script src="js/products.js?v=32"></script>
-<script src="js/admin.js?v=44"></script>
-<script src="js/baremes-workflow.js?v=8"></script>
-<script src="js/detail.js?v=43"></script>
-<script src="js/export.js?v=26"></script>
-<script src="js/import.js?v=22"></script>
+<script src="js/data.js?v=71"></script>
+<script src="js/utils.js?v=58"></script>
+<script src="js/dashboard.js?v=30"></script>
+<script src="js/products.js?v=38"></script>
+<script src="js/admin.js?v=60"></script>
+<script src="js/baremes-workflow.js?v=11"></script>
+<script src="js/detail.js?v=53"></script>
+<script src="js/export.js?v=30"></script>
+<script src="js/import.js?v=31"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {

@@ -2,14 +2,20 @@
 // FICHE PRODUIT — FLAG DIRTY
 // ============================================================
 
-// Normalise le type brandSettings vs nom de categorie
-function matchBrandType(brandType,catName){
-  if(!brandType)return true;
-  const norm=s=>s.toLowerCase().replace(/s$/,'').trim();
-  return norm(brandType)===norm(catName);
+
+// Champ du bandeau révélé dans son onglet (jusqu'au changement d'onglet ou de produit)
+let _synthRevealed = null;
+function synthHiddenClass(code) {
+  if (!synthHeaderCodes().has(code)) return '';
+  return code === _synthRevealed ? ' synth-hidden synth-revealed' : ' synth-hidden';
+}
+function clearSynthReveal() {
+  _synthRevealed = null;
+  document.querySelectorAll('.synth-revealed').forEach(el => el.classList.remove('synth-revealed'));
 }
 
 function openProductDetail(id){
+  _synthRevealed = null;
   currentProductId=id;
   const p=products.find(x=>x.id===id);if(!p)return;
   if(!requirePerm(canCat(p.cat,'r'),'Produit non accessible')){
@@ -19,6 +25,7 @@ function openProductDetail(id){
   if(!p.history)p.history=[];
   if(!p.pendingChanges)p.pendingChanges=[];
   computeCalcFields(p);
+  snapshotProduct(p);
   productDirty=false;
   updateTopbarTitle('Produit');
   const cat=getCatByName(p.cat);
@@ -32,27 +39,10 @@ function openProductDetail(id){
 // ============================================================
 // INTERCEPTION NAVIGATION — POP-UP DIRTY
 // ============================================================
-function safeShowPage(id,navEl){
-  if(productDirty&&currentProductId){
-    pendingNavTarget={id,navEl};
-    openModal('modal-unsaved');
-  }else{
-    productDirty=false;currentProductId=null;
-    showPage(id,navEl);
-  }
-}
-function confirmLeaveUnsaved(){
-  const p=products.find(x=>x.id===currentProductId);
-  if(p)p.pendingChanges=[];
-  productDirty=false;
-  attrFormDirty=false;
-  currentProductId=null;
-  closeModal('modal-unsaved');
-  if(pendingNavTarget){showPage(pendingNavTarget.id,pendingNavTarget.navEl);pendingNavTarget=null;}
-}
-function cancelLeaveUnsaved(){
-  closeModal('modal-unsaved');pendingNavTarget=null;
-}
+// La vérification des modifications non enregistrées est dans showPage (leaveGuard)
+function safeShowPage(id,navEl){ showPage(id,navEl); }
+function confirmLeaveUnsaved(){ leaveContinue('discard'); }
+function cancelLeaveUnsaved(){ leaveStay(); }
 
 // ============================================================
 // HEADER PRODUIT
@@ -107,30 +97,61 @@ function fieldAlertMark(p, a) {
 // Bandeau de la fiche : résumé en lecture seule des éléments de la vue
 // synthèse. Un clic sur un élément ouvre l'onglet où il se modifie.
 // Complétion et étape ont leurs barres, juste en dessous.
+// Éléments de la vue synthèse affichés dans le bandeau (hors complétion et
+// étape, qui ont leurs barres). Chacun n'est modifiable qu'à un endroit :
+//  - 'inline' : champ simple, modifié sur place dans le bandeau ;
+//  - 'reveal' : visuel ou champ calculé (forçable), masqué dans son onglet et
+//    révélé au clic ;
+//  - 'none'   : non modifiable (dates système, champs en lecture seule).
+function synthAttrOf(code) {
+  const codes = synthCodeAliases(code);
+  return attributes.find(x => codes.includes(x.code)) || null;
+}
+function synthEditMode(p, a) {
+  if (!a || a.code === 'created_at' || a.code === 'updated_at' || a.code === 'completion') return 'none';
+  return 'reveal';
+}
+function synthHeaderCodes() {
+  const set = new Set();
+  activeSynthItems().filter(i => i.kind === 'attr' && i.code !== 'completion' && i.code !== 'etape_workflow')
+    .forEach(i => synthCodeAliases(i.code).forEach(c => set.add(c)));
+  return set;
+}
+
 function renderProductHeader(p, cat) {
   const headerLeft = document.getElementById('product-header-left');
   if (!headerLeft) return;
+  computeCalcFields(p);
   const titleItem = getSynthTitleItem();
+  const titleAttr = titleItem ? synthAttrOf(titleItem.code) : attributes.find(a => a.code === 'nom');
   const title = titleItem ? (getSynthValue(p, titleItem.code) || '—') : (p.fields.nom || '—');
+  const missing = a => a && countsInCompletion(a) && isAttrShown(p, a) && !isCompletionFilled(p, a);
+  const clickFor = (code, a) => {
+    const m = synthEditMode(p, a);
+    return m === 'reveal' ? `onclick="goToProductField('${a.code}')"` : '';
+  };
   const chips = activeSynthItems()
     .filter(i => i.kind === 'attr' && i !== titleItem && !isVisualCode(i.code)
       && i.code !== 'completion' && i.code !== 'etape_workflow')
     .map(i => {
+      const a = synthAttrOf(i.code);
+      const mode = synthEditMode(p, a);
       const val = i.code === 'cat'
         ? `<span class="badge" style="${getCatBadgeStyle(p.cat)}">${escapeHtml(p.cat)}</span>`
         : escapeHtml(getSynthValue(p, i.code) || '—');
-      return `<span class="synth-chip" onclick="goToProductField('${i.code}')">
+      return `<span class="synth-chip synth-${mode}${missing(a) ? ' synth-missing' : ''}" data-synth-code="${a ? a.code : i.code}" ${a ? clickFor(i.code, a) : ''}>
         <span class="synth-chip-label">${escapeHtml(i.label)}</span><span class="synth-chip-val">${val}</span></span>`;
     }).join('');
   const visual = getSynthVisualItem();
-  computeCalcFields(p);
+  const visualAttr = visual ? synthAttrOf(visual.code) : null;
   const comp = calcCompletion(p), color = getCompletionColor(comp);
   headerLeft.innerHTML = `
     <div class="product-head">
-      <div class="product-head-visual" ${visual ? `onclick="goToProductField('${visual.code}')"` : ''}>${summaryVisual(p)}</div>
+      <div class="product-head-visual${missing(visualAttr) ? ' synth-missing' : ''}" ${visualAttr ? clickFor(visual.code, visualAttr) : ''}>${summaryVisual(p)}</div>
       <div class="ph-main">
         <div class="ph-top">
-          <div class="product-title" title="${escapeHtml(title)}" onclick="goToProductField('${titleItem ? titleItem.code : 'nom'}')">${escapeHtml(title)}</div>${alertPictoHtml(p)}
+          <div class="product-title synth-${synthEditMode(p, titleAttr)}${missing(titleAttr) ? ' synth-missing' : ''}" title="${escapeHtml(title)}"
+            data-synth-code="${titleAttr ? titleAttr.code : 'nom'}" ${titleAttr ? clickFor('nom', titleAttr) : ''}>${escapeHtml(title)}</div>${alertPictoHtml(p)}
           <div class="product-status">
         <div class="ps-item">
           <span class="ps-label">Complétion</span>
@@ -146,7 +167,6 @@ function renderProductHeader(p, cat) {
     </div>`;
 }
 
-// Ouvre l'onglet qui porte le champ, puis place le curseur dessus
 function goToProductField(code) {
   const codes = synthCodeAliases(code);
   const contents = [...document.querySelectorAll('#product-tab-contents .tab-content')];
@@ -159,46 +179,14 @@ function goToProductField(code) {
   if (!row) return;
   const tabs = document.querySelectorAll('#product-tabs .tab');
   if (tabs[idx]) tabs[idx].click();
+  _synthRevealed = row.dataset.attrRow || row.dataset.visuelCode;
+  row.classList.add('synth-revealed');
   row.scrollIntoView({ block: 'center', behavior: 'smooth' });
   const input = row.querySelector('input:not([type=hidden]), select, textarea');
   if (input && !input.disabled && !input.readOnly) input.focus({ preventScroll: true });
   row.classList.remove('field-flash'); void row.offsetWidth; row.classList.add('field-flash');
 }
 
-function getBrandInfoForProduct(p) {
-  if (!p.fields.marque) return null;
-  const fCode  = p.fields.fournisseur_code || '';
-  const marque = p.fields.marque;
-
-  // Filtrer les candidats par marque + fournisseur
-  const candidates = brandSettings.filter(b =>
-    b.marque === marque && (!fCode || b.fournisseurCode === fCode)
-  );
-  if (!candidates.length) return null;
-
-  // Priorité 1 : ligne avec segmentation dont la valeur correspond au produit
-  const withSeg = candidates.filter(b =>
-    b.segAttrCode && p.fields[b.segAttrCode] === b.segAttrValue
-  );
-  if (withSeg.length) {
-    const b   = withSeg[0];
-    const sup = suppliers.find(s => s.code === b.fournisseurCode);
-    return { ...b, sup: sup ? sup.name : b.fournisseurCode };
-  }
-
-  // Priorité 2 : ligne sans segmentation correspondant à la catégorie
-  const noSeg = candidates.filter(b => !b.segAttrCode);
-  const exact = noSeg.find(b => b.type === p.cat) || noSeg[0];
-  if (exact) {
-    const sup = suppliers.find(s => s.code === exact.fournisseurCode);
-    return { ...exact, sup: sup ? sup.name : exact.fournisseurCode };
-  }
-
-  // Priorité 3 : premier candidat disponible
-  const b   = candidates[0];
-  const sup = suppliers.find(s => s.code === b.fournisseurCode);
-  return { ...b, sup: sup ? sup.name : b.fournisseurCode };
-}
 
 function getCatBadgeStyle(catName){
   const cat=getCatByName(catName);
@@ -232,7 +220,7 @@ function triggerVisualUpload(productId,attrCode){
       updateDetailCompletion(p);
       renderProductsTable();
       productDirty=true;
-      showNotif('Visuel mis a jour : '+(attr?attr.name:attrCode));
+      showNotif('Visuel mis à jour : '+(attr?attr.name:attrCode));
     };
     reader.readAsDataURL(file);
   };
@@ -268,6 +256,7 @@ function renderProductTabs(p,cat){
     tabEl.className='tab'+(i===0?' active':'');
     tabEl.innerHTML=escapeHtml(g.name)+(g._isHist?'':`<span class="tab-comp" id="tab-comp-${g.id}"></span>`);
     tabEl.onclick=(function(gid){return function(){
+      clearSynthReveal();
       document.querySelectorAll('#product-tabs .tab').forEach(t=>t.classList.remove('active'));
       document.querySelectorAll('#product-tab-contents .tab-content').forEach(t=>t.classList.remove('active'));
       tabEl.classList.add('active');
@@ -279,7 +268,6 @@ function renderProductTabs(p,cat){
     content.id='tab-group-'+g.id;
     if(g._isHist)content.innerHTML=renderTabHistory(p);
     else if(g.code==='visuels')content.innerHTML=renderTabVisuels(p);
-    else if(g.isBrandGroup)content.innerHTML=renderTabMarque(p,g);
     else content.innerHTML=renderTabAttrGroup(p,g);
     contentsEl.appendChild(content);
   });
@@ -308,7 +296,7 @@ function updateTabCompletions(p) {
 // ============================================================
 function renderTabHistory(p){
   const history=p.history||[];
-  if(!history.length)return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucune modification enregistree.</div>';
+  if(!history.length)return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucune modification enregistrée.</div>';
   let rows='';
   [...history].reverse().forEach(h=>{
     rows+=`<tr>
@@ -384,7 +372,7 @@ function renderTabVisuels(p) {
   let slots = '';
   visualAttrs.forEach(va => {
     const hasImg = !!p.fields[va.code];
-    slots += `<div class="image-attr-slot" data-visuel-code="${va.code}">
+    slots += `<div class="image-attr-slot${synthHiddenClass(va.code)}" data-visuel-code="${va.code}">
       ${hasImg
         ? `<img src="${p.fields[va.code]}" class="image-attr-preview"
              onclick="triggerVisualUpload(${p.id},'${va.code}')"
@@ -425,157 +413,18 @@ function renderAttrFieldHtml(p,a,labelOverride){
 // ============================================================
 // ONGLET MARQUE / FOURNISSEUR
 // ============================================================
-function renderTabMarque(p, g) {
-  computeCalcFields(p);
-  const catName = p.cat;
-  const eligibleSuppliers = suppliersForProduct(p);
-  const currentSup    = p.fields.fournisseur_code || '';
-  const currentMarque = p.fields.marque || '';
-  const availableMarques = currentSup ? marquesForProduct(p) : getMarqueOptions();
-  const brandInfo = getBrandInfoForProduct(p);
-  const segBits = [...new Set(
-    brandSettings.filter(b => b.segAttrCode && (!b.type || matchBrandType(b.type, catName)))
-      .map(b => b.segAttrCode)
-  )].map(code => {
-    const a = attributes.find(x => x.code === code);
-    const val = p.fields[code];
-    return (a ? a.name : code) + (val ? ' = ' + val : ' (non renseigne)');
-  });
-  const filterHint = ['categorie : ' + catName].concat(segBits).join(', ');
 
-  return `<div class="fields-grid">
-    <div class="field-group">
-      <div class="field-group-title">Couple Fournisseur / Marque</div>
-      <div style="font-size:12px;color:#a0b0c0;margin-bottom:12px">
-        Listes filtrees sur <strong style="color:#607080">${filterHint}</strong>.
-        Fournisseur puis marque, ou marque puis fournisseur.
-      </div>
-      <div class="field-row">
-        <div class="field-label">${attrLabelHtml(attributes.find(a => a.code === 'fournisseur_code') || { name: 'Fournisseur' })}</div>
-        ${autocompleteInput(
-          'detail-fournisseur-' + p.id,
-          'dl-sup-' + p.id,
-          supplierNameByCode(currentSup),
-          eligibleSuppliers.map(s => s.name),
-          'onFournisseurChange(' + p.id + ',this)',
-          'Rechercher un fournisseur'
-        )}
-      </div>
-      <div class="field-row">
-        <div class="field-label">${attrLabelHtml(attributes.find(a => a.code === 'marque') || { name: 'Marque' })}</div>
-        ${autocompleteInput(
-          'detail-marque-' + p.id,
-          'dl-marque-' + p.id,
-          currentMarque,
-          availableMarques,
-          'onMarqueChange(' + p.id + ',this)',
-          'Rechercher une marque'
-        )}
-      </div>
-    </div>
-    <div class="field-group" id="brand-info-panel-${p.id}">
-      ${renderBrandInfoPanel(brandInfo)}
-    </div>
-  </div>`;
-}
 
-function renderBrandInfoPanel(brandInfo) {
-  if (!brandInfo) {
-    return `<div class="field-group-title">Conditions commerciales</div>
-      <div style="color:#a0b0c0;font-size:13px;padding:8px">
-        Selectionnez un fournisseur et une marque pour afficher les conditions.
-      </div>`;
-  }
-  const skip = new Set(['fournisseur_code', 'marque', 'cat', 'segmentation']);
-  const sup = (suppliers || []).find(s => s.code === brandInfo.fournisseurCode);
-  const rows = [
-    { label: 'Code fournisseur', val: brandInfo.fournisseurCode || '—' },
-    { label: 'Trigramme', val: (sup && sup.trigram) || '—' },
-  ].concat(getConditionAttrs()
-    .filter(a => !skip.has(a.code))
-    .map(a => ({ label: a.name, val: getBrandSettingAttrValue(brandInfo, a) || '—' })));
-  let html = `<div class="field-group-title">Conditions — ${escapeHtml(brandInfo.marque || '')}</div>`;
-  rows.forEach(r => {
-    html += `<div class="field-row" style="display:flex;justify-content:space-between;
-      align-items:center;padding:5px 0;border-bottom:1px solid #f0f4f8">
-      <div class="field-label" style="margin:0;flex:1">${escapeHtml(r.label)}</div>
-      <div style="font-size:13px;color:#1a2332;text-align:right">${escapeHtml(r.val)}</div>
-    </div>`;
-  });
-  return html;
-}
 
-function onFournisseurChange(productId, el) {
-  const p = products.find(x => x.id === productId);
-  if (!p || !requirePerm(canEditProduct(p))) return;
-  const code = resolveSupplierCode(el.value);
-  if (code) {
-    const s = suppliers.find(x => x.code === code);
-    if (s && el.value !== s.name) el.value = s.name;
-  }
-  const oldVal = p.fields.fournisseur_code || '';
-  p.fields.fournisseur_code = code;
-  addPendingChange(p, 'Fournisseur', oldVal, code);
-  productDirty = true;
-
-  const available = marquesForProduct(p);
-  const marqueInput = document.getElementById('detail-marque-' + productId);
-  if (marqueInput && p.fields.marque && !available.includes(p.fields.marque)) {
-    addPendingChange(p, 'Marque', p.fields.marque, '');
-    p.fields.marque = '';
-    marqueInput.value = '';
-  }
-
-  refreshBrandCoupleLists(p);
-  refreshBrandInfoPanel(p);
-  renderProductHeader(p, getCatByName(p.cat));
-}
-
-function onMarqueChange(productId,el){
-  const p=products.find(x=>x.id===productId);if(!p||!requirePerm(canEditProduct(p)))return;
-  const oldVal=p.fields.marque||'';
-  p.fields.marque=el.value;
-  registerMarque(el.value);
-  addPendingChange(p,'Marque',oldVal,el.value);
-  productDirty=true;
-
-  const availableSups = suppliersForProduct(p);
-  const currentCode = p.fields.fournisseur_code;
-  if (currentCode && !availableSups.some(s => s.code === currentCode)) {
-    addPendingChange(p, 'Fournisseur', currentCode, '');
-    p.fields.fournisseur_code = '';
-    const supInput = document.getElementById('detail-fournisseur-' + productId);
-    if (supInput) supInput.value = '';
-  }
-
-  refreshBrandCoupleLists(p);
-  refreshBrandInfoPanel(p);
-  renderProductHeader(p,getCatByName(p.cat));
-}
-function refreshBrandCoupleLists(p) {
-  const supDl = document.getElementById('dl-sup-' + p.id);
-  const marDl = document.getElementById('dl-marque-' + p.id);
-  if (supDl) {
-    const names = suppliersForProduct(p).map(s => s.name);
-    supDl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">`).join('');
-  }
-  if (marDl) {
-    const marques = marquesForProduct(p);
-    marDl.innerHTML = marques.map(m => `<option value="${escapeHtml(m)}">`).join('');
-  }
-}
-function refreshBrandInfoPanel(p){
-  const panel=document.getElementById('brand-info-panel-'+p.id);if(!panel)return;
-  panel.innerHTML=renderBrandInfoPanel(getBrandInfoForProduct(p));
-}
 
 // ============================================================
 // ONGLET GROUPE D'ATTRIBUTS GENERIQUE
 // ============================================================
 function groupCompletionStats(p, g) {
   const seen = new Set();
+  const inHeader = synthHeaderCodes();
   const list = (g.attrIds || []).map(id => getAttrById(id)).filter(a => {
-    if (!a || a.code === 'completion' || seen.has(a.id)) return false;
+    if (!a || a.code === 'completion' || seen.has(a.id) || inHeader.has(a.code)) return false;
     seen.add(a.id);
     return countsInCompletion(a) && isAttrShown(p, a);
   });
@@ -600,7 +449,7 @@ function groupCompletionHtml(p, g) {
 function renderTabAttrGroup(p, g, opts) {
   // Strictement les attributs du groupe dans l'ordre de attrIds, sauf ceux
   // déjà dans le bandeau (éléments de la vue synthèse)
-  const attrs = g.attrIds.map(id => getAttrById(id)).filter(Boolean);
+  const attrs = g.attrIds.map(id => getAttrById(id)).filter(a => a && !a.hideOnSheet);
 
   if (!attrs.length)
     return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
@@ -609,6 +458,7 @@ function renderTabAttrGroup(p, g, opts) {
   const shown = attrs.filter(a => a.code !== 'completion');
   let html = '';
   const rowHtml = {};
+  const headerCodes = g.code === 'synth' ? new Set() : synthHeaderCodes();
 
   shown.forEach(a => {
     const val = getAttrFieldValue(p, a);
@@ -638,13 +488,10 @@ function renderTabAttrGroup(p, g, opts) {
       input = `<input class="field-input"
         style="background:#f0f4f8;color:#607080" value="${escapeHtml(val || '')}" readonly>`;
     } else if (a.type === 'Simple select') {
-      const locked = selectFormulaLock(p, a);
-      const shown = locked ? 'A désactiver' : val;
-      const opts = (a.options || []).map(o =>
-        `<option${o === shown ? ' selected' : ''}>${o}</option>`
+      const opts = attrSelectOptions(a).map(o =>
+        `<option value="${escapeHtml(o.v)}"${o.v === val ? ' selected' : ''}>${escapeHtml(o.l)}</option>`
       ).join('');
       input = `<select class="field-input form-select" data-field-code="${a.code}"
-        ${locked ? 'disabled data-formula-lock="1" title="A désactiver : aucun canal ne vaut Actif ou En cours"' : ''}
         onchange="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">
         <option value="">-- Choisir --</option>${opts}
       </select>`;
@@ -683,7 +530,7 @@ function renderTabAttrGroup(p, g, opts) {
     const wide = a.type === 'Texte long' || a.type === 'Image';
     const shownRow = isAttrShown(p, a);
     const missing = shownRow && countsInCompletion(a) && !isCompletionFilled(p, a);
-    rowHtml[a.id] = `<div class="field-row ${fieldWidthClass(a)}${missing ? ' field-missing' : ''}" data-attr-row="${a.code}" style="${shownRow ? '' : 'display:none'}">
+    rowHtml[a.id] = `<div class="field-row ${fieldWidthClass(a)}${missing ? ' field-missing' : ''}${headerCodes.has(a.code) ? synthHiddenClass(a.code) : ''}" data-attr-row="${a.code}" style="${shownRow ? '' : 'display:none'}">
       <div class="field-label">
         ${attrLabelHtml(a)}${fieldAlertMark(p, a)}
       </div>
@@ -694,13 +541,17 @@ function renderTabAttrGroup(p, g, opts) {
   // Blocs séparés par les intertitres du groupe ; un bloc dont tous les
   // champs sont masqués disparaît (CSS :has)
   const blocks = [];
-  let cur = { title: '', rows: [] };
+  let cur = { title: '', rows: [], own: 0 };
   (g.attrIds || []).forEach(id => {
-    if (isAttrSection(id)) { blocks.push(cur); cur = { title: attrSectionTitle(id), rows: [] }; return; }
-    if (rowHtml[id]) cur.rows.push(rowHtml[id]);
+    if (isAttrSection(id)) { blocks.push(cur); cur = { title: attrSectionTitle(id), rows: [], own: 0 }; return; }
+    if (rowHtml[id]) {
+      cur.rows.push(rowHtml[id]);
+      const at = getAttrById(id);
+      if (at && !headerCodes.has(at.code)) cur.own++;
+    }
   });
   blocks.push(cur);
-  html += blocks.filter(b => b.rows.length).map(b => `<div class="field-block">
+  html += blocks.filter(b => b.rows.length).map(b => `<div class="field-block${b.own ? '' : ' block-synth-only'}">
       ${b.title ? `<div class="field-section">${escapeHtml(b.title)}</div>` : ''}
       <div class="fields-flow">${b.rows.join('')}</div>
     </div>`).join('');
@@ -750,6 +601,16 @@ function evaluateFormula(formula, fields) {
   // =TABLE() : le resultat vient du module Champs calcules (computeCalcFields)
   if (/^TABLE\s*\(\s*\)$/i.test(expr)) return '';
 
+  // REFERENTIEL("référentiel", "colonne") : valeur de la colonne dans la ligne
+  // du référentiel qui correspond au produit (colonnes clés)
+  const refOnly = /^R[EÉ]F[EÉ]RENTIEL\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)$/i.exec(expr);
+  if (refOnly) return String(refValueForProduct(refOnly[1], refOnly[2], fields));
+  if (/R[EÉ]F[EÉ]RENTIEL\s*\(/i.test(expr)) {
+    const solved = expr.replace(/R[EÉ]F[EÉ]RENTIEL\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/gi,
+      (m, ref, col) => '"' + String(refValueForProduct(ref, col, fields)).replace(/"/g, "'") + '"');
+    if (solved !== expr) return evaluateFormula('=' + solved, fields);
+  }
+
   // RECHERCHE("référentiel", [champ], "colonne") : remplacée par sa valeur
   // avant le reste du calcul, elle s'utilise partout (SI, CONCAT...)
   if (/RECHERCHE\s*\(/i.test(expr)) {
@@ -757,9 +618,6 @@ function evaluateFormula(formula, fields) {
       (m, ref, field, col) => '"' + String(lookupReferential(ref, fields[field], col)).replace(/"/g, "'") + '"');
     if (solved !== expr) return evaluateFormula('=' + solved, fields);
   }
-
-  const brand = expr.match(/^IWI_MARQUE\s*\(\s*([A-Za-z0-9_]+)\s*\)$/i);
-  if (brand) return iwiMarqueLabel(fields[brand[1]]);
 
   const mapped = expr.match(/^MAP\s*\(\s*([A-Za-z0-9_]+)\s*,([\s\S]*)\)$/i);
   if (mapped) {
@@ -812,24 +670,16 @@ function evalConcat(argsStr, fields) {
   }).join('');
 }
 
-// Reassort verrouille a « A désactiver » quand les deux canaux sont renseignes
-// et qu'aucun ne vaut Actif ou En cours (meme regle que la formule)
-function selectFormulaLock(p, a) {
-  return false; // plus de verrou : « à désactiver » est une alerte (module Alertes)
-  const o = String(p.fields.active_o || ''), l = String(p.fields.active_l || '');
-  const keeps = v => v === 'Actif' || v === 'En cours';
-  return o !== '' && l !== '' && !keeps(o) && !keeps(l);
-}
 
 function refreshCalcFields(productId){
   const p=products.find(x=>x.id===productId);if(!p)return;
-  const reassortBefore = p.fields.reassort_sap ?? '';
+  const calcAttrs = attributes.filter(a => a.calc || a.formula);
+  const before = Object.fromEntries(calcAttrs.map(a => [a.code, p.fields[a.code] ?? '']));
   computeCalcFields(p);
-  if (String(reassortBefore) !== String(p.fields.reassort_sap ?? '')) {
-    const attr = attributes.find(a => a.code === 'reassort_sap');
-    addPendingChange(p, attr ? attr.name : 'Réassort automatique SAP', reassortBefore, p.fields.reassort_sap || '');
-    productDirty = true;
-  }
+  calcAttrs.forEach(a => {
+    const now = p.fields[a.code] ?? '';
+    if (String(before[a.code]) !== String(now)) { addPendingChange(p, a.name, before[a.code], now); productDirty = true; }
+  });
   document.querySelectorAll('[data-calc]').forEach(el=>{
     if(el===document.activeElement)return;
     const code=el.getAttribute('data-calc');
@@ -840,13 +690,8 @@ function refreshCalcFields(productId){
     const code=el.getAttribute('data-field-code');
     const attr=attributes.find(a=>a.code===code);
     if(!attr || !attr.formula)return;
-    const locked=selectFormulaLock(p, attr);
-    el.value=locked ? 'A désactiver' : (p.fields[code] || '');
-    el.disabled=locked;
+    el.value=p.fields[code] || '';
     if (typeof syncComboFromSelect === 'function') syncComboFromSelect(el);
-    if (locked) el.setAttribute('data-formula-lock', '1');
-    else el.removeAttribute('data-formula-lock');
-    el.title=locked ? 'A désactiver : aucun canal ne vaut Actif ou En cours' : '';
   });
   updateDetailCompletion(p);
 }
@@ -861,18 +706,6 @@ function onFieldChange(productId, el, fieldKey) {
   const attr = attributes.find(a => a.code === fieldKey);
   let newVal = el.value;
   if (attr && isPercentAttr(attr)) newVal = percentFromDisplay(el.value);
-  if (fieldKey === 'optique_solaire' && newVal === 'Solaire') {
-    const teinteAttr = attributes.find(a => a.code === 'teinte_verres');
-    const cur = p.fields.teinte_verres || '';
-    if (teinteAttr && cur && !(teinteAttr.options || []).includes(cur)) {
-      p.fields.teinte_verres = '';
-      const teinteEl = document.querySelector('[data-attr-row="teinte_verres"] [data-field-code="teinte_verres"]');
-      if (teinteEl) {
-        teinteEl.value = '';
-        if (typeof syncComboFromSelect === 'function') syncComboFromSelect(teinteEl);
-      }
-    }
-  }
   p.fields[fieldKey] = newVal;
   addPendingChange(p, attr ? attr.name : fieldKey, oldVal, newVal);
   productDirty = true;
@@ -889,13 +722,6 @@ function onFieldChange(productId, el, fieldKey) {
   refreshConditionalRows(p);
   renderProductHeader(p, getCatByName(p.cat));
 
-  // Si le champ modifié est un attribut de segmentation utilisé dans brandSettings,
-  // rafraîchir le panneau conditions commerciales
-  const isSegAttr = brandSettings.some(b => b.segAttrCode === fieldKey);
-  if (isSegAttr) {
-    refreshBrandCoupleLists(p);
-    refreshBrandInfoPanel(p);
-  }
 }
 
 function onMultiSelectChange(productId,el,fieldKey){
@@ -913,7 +739,7 @@ function onCatChange(productId,el){
   const p=products.find(x=>x.id===productId);if(!p||!requirePerm(canEditProduct(p)))return;
   if(!canCat(el.value,'w')){
     el.value=p.cat;
-    showNotif('Categorie non accessible en modification','warn');
+    showNotif('Catégorie non accessible en modification','warn');
     return;
   }
   const oldCat=p.cat;p.cat=el.value;
@@ -952,7 +778,7 @@ function validateRequiredFields(p){
 
 function saveProduct(){
   const p=products.find(x=>x.id===currentProductId);if(!p)return;
-  if(!requirePerm(canEditProduct(p),'Enregistrement non autorise'))return;
+  if(!requirePerm(canEditProduct(p),'Enregistrement non autorisé'))return;
   const missing=validateRequiredFields(p);
   if(missing.length){
     showNotif('Champs obligatoires manquants : '+missing.join(', '),'error');
@@ -961,8 +787,9 @@ function saveProduct(){
   p.maj=nowStr();
   flushPendingChanges(p);
   productDirty=false;
+  snapshotProduct(p);
   const histTab=document.getElementById('tab-group-hist');
   if(histTab)histTab.innerHTML=renderTabHistory(p);
   renderProductsTable();renderDashboard();
-  showNotif('Produit enregistre — '+p.maj);
+  showNotif('Produit enregistré — '+p.maj);
 }

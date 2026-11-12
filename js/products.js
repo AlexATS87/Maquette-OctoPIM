@@ -60,15 +60,15 @@ function listOptions(code) {
 }
 
 function suggestSource(code) {
-  if (code === 'fournisseur_code') return (suppliers || []).map(s => s.name).filter(Boolean);
-  if (code === 'marque') return [...new Set((brandSettings || []).map(b => b.marque).filter(Boolean))];
+  if (code === 'fournisseur_code') return supplierList().map(s => s.name).filter(Boolean);
+  if (code === 'marque') return getMarqueOptions();
   return [];
 }
 
 function displayedColValue(p, code) {
   const raw = getListColValue(p, code);
   if (code !== 'fournisseur_code') return raw;
-  const s = (suppliers || []).find(x => x.code === raw || x.name === raw);
+  const s = supplierList().find(x => x.code === raw || x.name === raw);
   return s ? s.name : raw;
 }
 
@@ -321,7 +321,7 @@ function openColFilter(code, label, iconEl) {
     itemsHtml += `<div class="col-filter-item" id="cfa-row-${code}">
       <input type="checkbox" id="cfa-${code}" ${allChecked ? 'checked' : ''}
         onchange="toggleColFilterAll('${code}',this)">
-      <label for="cfa-${code}" style="font-weight:600">Tout selectionner</label>
+      <label for="cfa-${code}" style="font-weight:600">Tout sélectionner</label>
     </div>`;
     vals.forEach((v, i) => {
       const checked = !active || active.has(v);
@@ -439,6 +439,37 @@ function clearColFilter(code) {
   renderProductsTable();
 }
 
+// Liste des produits « neuve » : aucun filtre, aucune sélection, vue synthèse
+function resetProductFilters() {
+  colFilters = {};
+  _filterIncomplets = false;
+  _filterAlertId = null;
+  selectedProductIds = [];
+  compareMode = false;
+  currentPage = 1;
+  const search = document.getElementById('products-search');
+  if (search) search.value = '';
+  const cat = document.getElementById('filter-cat');
+  if (cat) cat.value = '';
+  if (typeof syncComboFromSelect === 'function' && cat) syncComboFromSelect(cat);
+  if (currentView === 'detail') {
+    currentView = 'synth';
+    const bs = document.getElementById('btn-view-synth');
+    const bd = document.getElementById('btn-view-detail');
+    if (bs) bs.classList.add('active');
+    if (bd) bd.classList.remove('active');
+  }
+}
+
+// Menu Produits : la liste repart sans filtre. Tableau de bord : la liste
+// repart sans filtre puis applique celui de la tuile cliquée.
+let _productsReset = false, _productsPreset = null;
+function openProductsList(navEl, preset) {
+  _productsReset = true;
+  _productsPreset = preset || null;
+  showPage('products', navEl || document.querySelector('.nav-item[data-nav="products"]'));
+}
+
 function clearAllFilters() {
   colFilters = {};
   _filterIncomplets = false;
@@ -448,7 +479,7 @@ function clearAllFilters() {
   const cat = document.getElementById('filter-cat');
   if (cat) cat.value = '';
   renderProductsTable();
-  showNotif('Filtres reinitialises');
+  showNotif('Filtres réinitialisés');
 }
 
 function isColFilterActive(code) { return colFilters[code] !== undefined; }
@@ -461,15 +492,45 @@ function passesColFilters(product) {
 function hasActiveFilters() {
   const search = (document.getElementById('products-search') || {}).value || '';
   const cat    = (document.getElementById('filter-cat') || {}).value || '';
-  return search.trim().length >= 2 || cat !== '' || Object.keys(colFilters).length > 0 || _filterIncomplets;
+  return search.trim().length >= 2 || cat !== '' || Object.keys(colFilters).length > 0 || _filterIncomplets || _filterAlertId != null;
 }
 
 // ============================================================
 // TABLEAU PRODUITS — POINT D'ENTREE
 // ============================================================
 function renderProductsTable() {
-  return withCalcBatch(renderProductsTableNow);
+  const out = withCalcBatch(renderProductsTableNow);
+  requestAnimationFrame(applyStickyTable);
+  return out;
 }
+
+// Tableau des produits : en-têtes figés en haut, case à cocher, visuel et
+// nom figés à gauche ; le tableau défile dans sa zone, la barre horizontale
+// reste donc visible.
+function applyStickyTable() {
+  const table = document.getElementById('products-table');
+  if (!table || !table.tHead || !table.tHead.rows.length) return;
+  const head = table.tHead;
+  const items = activeSynthItems();
+  const titleIdx = items.indexOf(getSynthTitleItem());
+  const n = 1 + (titleIdx >= 0 ? titleIdx + 1 : 0);
+  if (head.rows.length > 1) {
+    const h = head.rows[0].getBoundingClientRect().height;
+    [...head.rows[1].cells].forEach(c => { c.style.top = h + 'px'; });
+  }
+  let left = 0;
+  const lefts = [...head.rows[0].cells].slice(0, n).map(c => { const l = left; left += c.getBoundingClientRect().width; return l; });
+  [...table.rows].forEach(tr => {
+    if (tr.parentElement === head && tr !== head.rows[0]) return;
+    [...tr.cells].slice(0, n).forEach((c, i) => {
+      if (c.colSpan > 1) return;
+      c.classList.add('sticky-col');
+      c.classList.toggle('sticky-last', i === n - 1);
+      c.style.left = lefts[i] + 'px';
+    });
+  });
+}
+window.addEventListener('resize', () => requestAnimationFrame(applyStickyTable));
 
 function renderProductsTableNow() {
   const searchVal = (document.getElementById('products-search') || {}).value || '';
@@ -488,6 +549,12 @@ function renderProductsTableNow() {
     }
     return true;
   });
+
+  // La sélection ne garde que les produits affichés par les filtres en cours
+  const shownIds = new Set(filtered.map(p => p.id));
+  const before = selectedProductIds.length;
+  selectedProductIds = selectedProductIds.filter(id => shownIds.has(id));
+  if (selectedProductIds.length !== before && typeof renderCompareBar === 'function') setTimeout(renderCompareBar, 0);
 
   if (compareMode && selectedProductIds.length > 0)
     filtered = filtered.filter(p => selectedProductIds.includes(p.id));
@@ -649,9 +716,9 @@ function renderSynthRows(tbody, filtered) {
     if (isSelected) tr.className = 'row-selected';
 
     // Checkbox
-    let cells = `<td style="width:36px;text-align:center">
+    let cells = `<td class="td-check"><span class="td-check-in">
       <input type="checkbox" ${isSelected ? 'checked' : ''}
-        onchange="toggleSelectProduct(${p.id},this)">
+        onchange="toggleSelectProduct(${p.id},this)">${alertPictoHtml(p)}</span>
     </td>`;
 
     activeSynthItems().forEach(item => {
@@ -676,7 +743,7 @@ function alertPictoHtml(p) {
   const hits = typeof productAlertHits === 'function' ? productAlertHits(p) : [];
   if (!hits.length) return '';
   const title = hits.map(a => alertRuleText(a)).join(' · ');
-  return `<span title="${escapeHtml(title)}" style="color:#c62828;margin-left:6px;cursor:help">&#9888;</span>`;
+  return `<span class="alert-picto" title="${escapeHtml(title)}">&#9888;</span>`;
 }
 
 function renderSynthCell(p, item, comp) {
@@ -707,7 +774,7 @@ function renderSynthCell(p, item, comp) {
   if (isSynthTitleCode(code)) {
     return `<td class="td-name">
       <span class="product-link"
-        onclick="openProductDetail(${p.id})">${inner}</span>${alertPictoHtml(p)}
+        onclick="openProductDetail(${p.id})">${inner}</span>
     </td>`;
   }
 
@@ -836,9 +903,9 @@ function renderDetailRows(tbody, filtered) {
     if (isSelected) tr.className = 'row-selected';
 
     // Checkbox
-    let cells = `<td style="width:36px;text-align:center">
+    let cells = `<td class="td-check"><span class="td-check-in">
       <input type="checkbox" ${isSelected ? 'checked' : ''}
-        onchange="toggleSelectProduct(${p.id},this)">${alertPictoHtml(p)}
+        onchange="toggleSelectProduct(${p.id},this)">${alertPictoHtml(p)}</span>
     </td>`;
 
     // Colonnes synthese (meme logique que renderSynthRows)
@@ -911,7 +978,7 @@ function renderCompareBar() {
       justify-content:space-between;background:#1565c0;color:#fff;
       padding:10px 16px;border-radius:8px;margin-bottom:10px;gap:12px">
       <span style="font-size:13px;font-weight:600">
-        ${selectedProductIds.length} produit(s) selectionne(s)
+        ${selectedProductIds.length} produit(s) sélectionné(s)
       </span>
       <div style="position:relative">
         <button class="btn" id="bulk-actions-btn"
@@ -968,7 +1035,7 @@ function renderCompareBar() {
               display:flex;align-items:center;gap:8px"
             onmouseover="this.style.background='#f0f4f8'"
             onmouseout="this.style.background=''">
-            &#10005; Deselectionner tout
+            &#10005; Désélectionner tout
           </div>
         </div>
       </div>
@@ -1019,7 +1086,7 @@ function startCompare() {
   if (currentView !== 'detail') {
     const catFilter = (document.getElementById('filter-cat') || {}).value || '';
     if (!catFilter) {
-      showNotif('Selectionnez une categorie pour activer la vue detaillee', 'warn');
+      showNotif('Sélectionnez une catégorie pour activer la vue détaillée', 'warn');
       return;
     }
     switchView('detail');
@@ -1120,7 +1187,7 @@ function applyBulkEdit(btn) {
   });
   btn.closest('.modal-overlay').remove();
   renderProductsTable();
-  showNotif(selectedProductIds.length + ' produit(s) mis a jour : ' + attr.name);
+  showNotif(selectedProductIds.length + ' produit(s) mis à jour : ' + attr.name);
 }
 
 // Actions groupees de la barre de selection
@@ -1131,7 +1198,7 @@ function bulkDelete() {
     return p && canDeleteProduct(p);
   });
   if (!ids.length) {
-    showNotif('Aucun produit selectionne ne peut etre supprime', 'warn');
+    showNotif('Aucun produit sélectionné ne peut être supprimé', 'warn');
     return;
   }
   pendingDelete = { type: 'mass', ids };
@@ -1147,7 +1214,7 @@ function bulkExport() {
   if (!selectedProductIds.length) return;
   captureExportSnapshot();
   showPage('exports', document.querySelector('.nav-item[data-nav="exports"]'));
-  showNotif('Export prepare sur ' + selectedProductIds.length + ' produit(s) selectionne(s)');
+  showNotif('Export préparé sur ' + selectedProductIds.length + ' produit(s) sélectionné(s)');
 }
 
 function executeMassDelete() {
@@ -1157,7 +1224,7 @@ function executeMassDelete() {
   compareMode = false;
   closeModal('modal-confirm-delete');
   renderAll();
-  showNotif(pendingDelete.ids.length + ' produit(s) supprimes');
+  showNotif(pendingDelete.ids.length + ' produit(s) supprimés');
   pendingDelete = null;
 }
 
@@ -1213,7 +1280,7 @@ function switchView(mode) {
           sel.removeEventListener('change', onceChange);
         });
       }
-      showNotif('Veuillez selectionner une categorie pour acceder a la vue detaillee');
+      showNotif('Veuillez sélectionner une catégorie pour accéder à la vue détaillée');
       return;
     }
   }
@@ -1283,7 +1350,7 @@ function toggleGroupFilter(groupId) {
 // ============================================================
 function createProduct() {
   if (!getWritableCategories().length) {
-    showNotif('Aucune categorie accessible en modification', 'warn');
+    showNotif('Aucune catégorie accessible en modification', 'warn');
     return;
   }
   const sapEl  = document.getElementById('np-sap');
@@ -1307,7 +1374,7 @@ function createProduct() {
   if (!name) { document.getElementById('np-name').classList.add('field-error'); document.getElementById('err-np-name').classList.add('show'); valid = false; }
   if (!cat)  { document.getElementById('np-cat').classList.add('field-error');  document.getElementById('err-np-cat').classList.add('show');  valid = false; }
   if (cat && !canCat(cat, 'w')) {
-    showNotif('Creation non autorisee sur cette categorie', 'warn');
+    showNotif('Création non autorisée sur cette catégorie', 'warn');
     return;
   }
   if (!valid) return;
@@ -1331,7 +1398,7 @@ function createProduct() {
   document.getElementById('np-cat').value = '';
 
   renderAll();
-  showNotif('Produit "' + name + '" cree — ouverture de la fiche');
+  showNotif('Produit "' + name + '" créé — ouverture de la fiche');
 
   // Etape 2 : ouvre directement la fiche pour compléter
   setTimeout(() => openProductDetail(newProduct.id), 300);
@@ -1446,40 +1513,6 @@ function renderProductHeader(p, cat) {
   </div>`;
 }
 
-function getBrandInfoForProduct(p) {
-  const marque = p.fields.marque || '';
-  const fCode  = p.fields.fournisseur_code || '';
-  if (!marque && !fCode) return null;
-
-  // Chercher d'abord une ligne avec segmentation correspondante
-  const withSeg = brandSettings.filter(b =>
-    b.marque === marque &&
-    (b.fournisseurCode === fCode || !fCode) &&
-    b.segAttrCode &&
-    p.fields[b.segAttrCode] === b.segAttrValue
-  );
-  if (withSeg.length) {
-    const b = withSeg[0];
-    return { ...b, sup: (suppliers.find(s => s.code === b.fournisseurCode) || {}).name || b.fournisseurCode };
-  }
-
-  // Sinon chercher une ligne sans segmentation
-  const noSeg = brandSettings.filter(b =>
-    b.marque === marque &&
-    (b.fournisseurCode === fCode || !fCode) &&
-    !b.segAttrCode
-  );
-
-  // Compatibilite avec l'ancien champ "type" = categorie du produit
-  const exact = noSeg.find(b => b.type === p.cat);
-  const fallback = noSeg[0];
-  const b = exact || fallback;
-  if (!b) return null;
-  return { ...b, sup: (suppliers.find(s => s.code === b.fournisseurCode) || {}).name || b.fournisseurCode };
-}
-function calcEtatVisuel(p) {
-  return (p.fields.visuel_face && p.fields.visuel_tq && p.fields.visuel_profil) ? 'Oui' : 'Non';
-}
 
 // ============================================================
 // UPLOAD VISUEL
@@ -1507,7 +1540,7 @@ function triggerVisualUpload(productId, attrCode) {
       updateDetailCompletion(p);
       renderProductsTable();
       productDirty = true;
-      showNotif('Visuel mis a jour : ' + (attr ? attr.name : attrCode));
+      showNotif('Visuel mis à jour : ' + (attr ? attr.name : attrCode));
     };
     reader.readAsDataURL(file);
   };
@@ -1564,7 +1597,6 @@ function renderProductTabs(p, cat) {
 
     if (g._isHist)              content.innerHTML = renderTabHistory(p);
     else if (g.code === 'visuels')         content.innerHTML = renderTabVisuels(p);
-    else if (g.isBrandGroup)               content.innerHTML = renderTabMarque(p, g);
     else                                   content.innerHTML = renderTabAttrGroup(p, g);
 
     contentsEl.appendChild(content);
@@ -1577,7 +1609,7 @@ function renderProductTabs(p, cat) {
 function renderTabHistory(p) {
   const history = p.history || [];
   if (!history.length)
-    return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucune modification enregistree.</div>';
+    return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucune modification enregistrée.</div>';
   let rows = '';
   [...history].reverse().forEach(h => {
     rows += `<tr>
@@ -1658,150 +1690,12 @@ function renderTabVisuels(p) {
 // ============================================================
 // ONGLET MARQUE / FOURNISSEUR
 // ============================================================
-function matchBrandType(brandType, catName) {
-  if (!brandType) return true;
-  const norm = s => s.toLowerCase().replace(/s$/, '').trim();
-  return norm(brandType) === norm(catName);
-}
 
-function renderTabMarque(p, g) {
-  computeCalcFields(p);
-  const catName = p.cat;
-  const eligibleSuppliers = suppliersForProduct(p);
-  const currentSup = p.fields.fournisseur_code || '';
-  const availableMarques = currentSup ? marquesForProduct(p) : getMarqueOptions();
-  const brandInfo = getBrandInfoForProduct(p);
-  const segBits = [...new Set(
-    brandSettings.filter(b => b.segAttrCode && (!b.type || matchBrandType(b.type, catName)))
-      .map(b => b.segAttrCode)
-  )].map(code => {
-    const a = attributes.find(x => x.code === code);
-    const val = p.fields[code];
-    return (a ? a.name : code) + (val ? ' = ' + val : ' (non renseigne)');
-  });
-  const filterHint = ['categorie : ' + catName].concat(segBits).join(', ');
 
-  return `<div class="fields-grid">
-    <div class="field-group">
-      <div class="field-group-title">Couple Fournisseur / Marque</div>
-      <div style="font-size:12px;color:#a0b0c0;margin-bottom:12px">
-        Listes filtrees sur <strong style="color:#607080">${filterHint}</strong>.
-        Fournisseur puis marque, ou marque puis fournisseur.
-      </div>
-      <div class="field-row">
-        <div class="field-label">Fournisseur</div>
-        ${autocompleteInput(
-          'detail-fournisseur-' + p.id,
-          'dl-sup-' + p.id,
-          supplierNameByCode(currentSup),
-          eligibleSuppliers.map(s => s.name),
-          'onFournisseurChange(' + p.id + ',this)',
-          'Rechercher un fournisseur'
-        )}
-      </div>
-      <div class="field-row">
-        <div class="field-label">Marque <span class="field-required">*</span></div>
-        ${autocompleteInput(
-          'detail-marque-' + p.id,
-          'dl-marque-' + p.id,
-          p.fields.marque || '',
-          availableMarques,
-          'onMarqueChange(' + p.id + ',this)',
-          'Rechercher une marque'
-        )}
-      </div>
-    </div>
-    <div class="field-group" id="brand-info-panel-${p.id}">
-      ${renderBrandInfoPanel(brandInfo)}
-    </div>
-  </div>`;
-}
 
-function renderBrandInfoPanel(brandInfo) {
-  if (!brandInfo) {
-    return `<div class="field-group-title">Conditions commerciales</div>
-      <div style="color:#a0b0c0;font-size:13px;padding:8px">
-        Selectionnez un fournisseur et une marque pour afficher les conditions.
-      </div>`;
-  }
-  const skip = new Set(['fournisseur_code', 'marque', 'cat', 'segmentation']);
-  const rows = getConditionAttrs()
-    .filter(a => !skip.has(a.code))
-    .map(a => ({ label: a.name, val: getBrandSettingAttrValue(brandInfo, a) || '—' }));
-  let html = `<div class="field-group-title">Conditions — ${escapeHtml(brandInfo.marque || '')}</div>`;
-  rows.forEach(r => {
-    html += `<div class="field-row" style="display:flex;justify-content:space-between;
-      align-items:center;padding:5px 0;border-bottom:1px solid #f0f4f8">
-      <div class="field-label" style="margin:0;flex:1">${escapeHtml(r.label)}</div>
-      <div style="font-size:13px;color:#1a2332;text-align:right">${escapeHtml(r.val)}</div>
-    </div>`;
-  });
-  return html;
-}
 
-function onFournisseurChange(productId, el) {
-  const p = products.find(x => x.id === productId);
-  if (!p) return;
-  const code = resolveSupplierCode(el.value);
-  if (code) {
-    const s = suppliers.find(x => x.code === code);
-    if (s && el.value !== s.name) el.value = s.name;
-  }
-  const oldVal = p.fields.fournisseur_code || '';
-  p.fields.fournisseur_code = code;
-  addPendingChange(p, 'Fournisseur', oldVal, code);
-  productDirty = true;
-  const available = marquesForProduct(p);
-  const marqueInput = document.getElementById('detail-marque-' + productId);
-  if (marqueInput && p.fields.marque && !available.includes(p.fields.marque)) {
-    addPendingChange(p, 'Marque', p.fields.marque, '');
-    p.fields.marque = '';
-    marqueInput.value = '';
-  }
-  refreshBrandCoupleLists(p);
-  refreshBrandInfoPanel(p);
-  renderProductHeader(p, getCatByName(p.cat));
-}
 
-function onMarqueChange(productId, el) {
-  const p = products.find(x => x.id === productId);
-  if (!p) return;
-  const oldVal = p.fields.marque || '';
-  p.fields.marque = el.value;
-  registerMarque(el.value);
-  addPendingChange(p, 'Marque', oldVal, el.value);
-  productDirty = true;
-  const availableSups = suppliersForProduct(p);
-  const currentCode = p.fields.fournisseur_code;
-  if (currentCode && !availableSups.some(s => s.code === currentCode)) {
-    addPendingChange(p, 'Fournisseur', currentCode, '');
-    p.fields.fournisseur_code = '';
-    const supInput = document.getElementById('detail-fournisseur-' + productId);
-    if (supInput) supInput.value = '';
-  }
-  refreshBrandCoupleLists(p);
-  refreshBrandInfoPanel(p);
-  renderProductHeader(p, getCatByName(p.cat));
-}
 
-function refreshBrandCoupleLists(p) {
-  const supDl = document.getElementById('dl-sup-' + p.id);
-  const marDl = document.getElementById('dl-marque-' + p.id);
-  if (supDl) {
-    const names = suppliersForProduct(p).map(s => s.name);
-    supDl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">`).join('');
-  }
-  if (marDl) {
-    const marques = marquesForProduct(p);
-    marDl.innerHTML = marques.map(m => `<option value="${escapeHtml(m)}">`).join('');
-  }
-}
-
-function refreshBrandInfoPanel(p) {
-  const panel = document.getElementById('brand-info-panel-' + p.id);
-  if (!panel) return;
-  panel.innerHTML = renderBrandInfoPanel(getBrandInfoForProduct(p));
-}
 
 // ============================================================
 // ONGLET GROUPE D'ATTRIBUTS GENERIQUE
@@ -1982,5 +1876,5 @@ function saveProduct() {
   if (histTab) histTab.innerHTML = renderTabHistory(p);
   renderProductsTable();
   renderDashboard();
-  showNotif('Produit enregistre — ' + p.maj);
+  showNotif('Produit enregistré — ' + p.maj);
 }

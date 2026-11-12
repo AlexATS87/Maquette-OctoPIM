@@ -11,6 +11,7 @@ let importMappedRows  = [];      // lignes après mapping colonnes
 let importAction      = 'add';   // 'add' | 'update' | 'delete'
 let importCategory    = '';      // categorie cible
 let importColMapping  = {};      // { colFichier: codeAttribut }
+let importTrameId     = '';      // trame d'import choisie (correspondance d'office)
 
 // ============================================================
 // RENDU PAGE IMPORT
@@ -54,8 +55,8 @@ function renderImportPage() {
 function importStepperHtml(active) {
   const steps = [
     { n: 1, label: 'Configuration' },
-    { n: 2, label: 'Apercu & Mapping' },
-    { n: 3, label: 'Resultat' },
+    { n: 2, label: 'Aperçu & Mapping' },
+    { n: 3, label: 'Résultat' },
   ];
   return `<div class="import-stepper-inner">
     ${steps.map(s => `
@@ -79,9 +80,9 @@ function renderImportStep1() {
   ).join('');
 
   const actions = [
-    { val: 'add',    label: 'Ajout',        sub: 'Creer les produits du fichier',           icon: '&#10133;', show: writable.length > 0 },
-    { val: 'update', label: 'Modification',  sub: 'Mettre a jour les produits existants',    icon: '&#9999;&#65039;', show: writable.length > 0 },
-    { val: 'delete', label: 'Suppression',   sub: 'Supprimer les produits identifies',       icon: '&#128465;&#65039;', show: deletable.length > 0 },
+    { val: 'add',    label: 'Ajout',        sub: 'Créer les produits du fichier',           icon: '&#10133;', show: writable.length > 0 },
+    { val: 'update', label: 'Modification',  sub: 'Mettre à jour les produits existants',    icon: '&#9999;&#65039;', show: writable.length > 0 },
+    { val: 'delete', label: 'Suppression',   sub: 'Supprimer les produits identifiés',       icon: '&#128465;&#65039;', show: deletable.length > 0 },
   ].filter(a => a.show);
 
   return `
@@ -89,10 +90,10 @@ function renderImportStep1() {
 
       <!-- Colonne gauche : parametres -->
       <div class="field-group">
-        <div class="field-group-title">Parametres de l'import</div>
+        <div class="field-group-title">Paramètres de l'import</div>
 
         <div class="field-row">
-          <div class="field-label">Action *</div>
+          <div class="field-label">Action <span class="field-required">*</span></div>
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
             ${actions.map(a => `
               <label class="import-action-radio ${importAction === a.val ? 'selected' : ''}"
@@ -110,23 +111,29 @@ function renderImportStep1() {
         </div>
 
         <div class="field-row" style="margin-top:16px">
-          <div class="field-label">Categorie cible *</div>
+          <div class="field-label">Catégorie cible <span class="field-required" id="import-cat-req"${importAction === 'add' ? '' : ' style="display:none"'}>*</span></div>
           <select class="form-select" id="import-cat" onchange="onImportCatChange(this.value)">
             <option value="">-- Choisir --</option>
             ${catOptions}
           </select>
-          <div style="font-size:11px;color:#a0b0c0;margin-top:4px">
-            Definit les attributs disponibles pour le mapping.
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">Trame</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1;min-width:0">
+              <select class="form-select" id="import-trame" onchange="onImportTrameChange(this.value)">
+                <option value="">Aucune</option>
+                ${tramesFor('import', importCategory).map(t => `<option value="${t.id}"${t.id === importTrameId ? ' selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}
+              </select>
+            </div>
+            <button class="btn btn-secondary" title="Télécharger la trame choisie (sans trame : Catalogue de la catégorie)" onclick="downloadTrame()">&#8681; Télécharger</button>
           </div>
         </div>
 
         <div class="field-row">
           <div class="field-label">Champs obligatoires</div>
           <div id="import-required-list">${renderImportRequiredListHtml()}</div>
-          <div style="font-size:11px;color:#a0b0c0;margin-top:6px">
-            Minimum a fournir dans le fichier. Les en-tetes doivent etre les
-            <strong>codes techniques</strong> (ex. ean, nom, cat).
-          </div>
         </div>
       </div>
 
@@ -135,14 +142,14 @@ function renderImportStep1() {
 
         <!-- Zone upload -->
         <div class="field-group" style="flex:1">
-          <div class="field-group-title">Fichier a importer</div>
+          <div class="field-group-title">Fichier à importer</div>
           <div class="import-dropzone" id="import-dropzone"
             ondragover="event.preventDefault();this.classList.add('drag-over')"
             ondragleave="this.classList.remove('drag-over')"
             ondrop="onImportFileDrop(event)">
             <div style="font-size:32px;margin-bottom:8px">&#128196;</div>
             <div style="font-size:13px;font-weight:600;color:#1a2332;margin-bottom:4px">
-              Glisser-deposer votre fichier ici
+              Glisser-déposer votre fichier ici
             </div>
             <div style="font-size:12px;color:#a0b0c0;margin-bottom:12px">
               ou
@@ -154,7 +161,7 @@ function renderImportStep1() {
             <input type="file" id="import-file-input" accept=".xlsx,.csv"
               style="display:none" onchange="onImportFileSelect(this)">
             <div style="font-size:11px;color:#a0b0c0;margin-top:10px">
-              Formats acceptes : .xlsx, .csv — 10 Mo max
+              Formats acceptés : .xlsx, .csv — 10 Mo max
             </div>
           </div>
           <div id="import-file-info" style="display:none;margin-top:10px">
@@ -171,21 +178,6 @@ function renderImportStep1() {
                 style="background:none;border:none;color:#a0b0c0;font-size:16px;
                 cursor:pointer">&#10005;</button>
             </div>
-          </div>
-        </div>
-
-        <!-- Telechargement trame -->
-        <div class="field-group">
-          <div class="field-group-title">Telecharger une trame</div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <select class="form-select" id="trame-cat" style="flex:1;min-width:160px">
-              <option value="">-- Toutes categories --</option>
-              ${catOptions}
-            </select>
-            <button class="btn btn-secondary" style="font-size:12px"
-              onclick="downloadTrame()">
-              &#8681; Trame .xlsx
-            </button>
           </div>
         </div>
 
@@ -206,9 +198,33 @@ function selectImportAction(val) {
   document.querySelectorAll('.import-action-radio').forEach(el => {
     el.classList.toggle('selected', el.querySelector('input').value === val);
   });
+  const req = document.getElementById('import-cat-req');
+  if (req) req.style.display = val === 'add' ? '' : 'none';
+}
+
+// Une trame limitée à une seule catégorie la présélectionne
+function onImportTrameChange(val) {
+  importTrameId = val;
+  const t = trameById(val);
+  const sel = document.getElementById('import-cat');
+  if (t && (t.cats || []).length === 1 && sel && !sel.value && [...sel.options].some(o => o.value === t.cats[0])) {
+    sel.value = t.cats[0];
+    if (typeof syncComboFromSelect === 'function') syncComboFromSelect(sel);
+    onImportCatChange(sel.value);
+  }
 }
 
 function onImportCatChange(val) {
+  if (importTrameId) {
+    const t = trameById(importTrameId);
+    if (t && val && (t.cats || []).length && !t.cats.includes(val)) importTrameId = '';
+  }
+  const sel = document.getElementById('import-trame');
+  if (sel) {
+    sel.innerHTML = '<option value="">Aucune</option>' + tramesFor('import', val).map(t =>
+      `<option value="${t.id}"${t.id === importTrameId ? ' selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
+    if (typeof syncComboFromSelect === 'function') syncComboFromSelect(sel);
+  }
   importCategory = val || '';
   refreshImportRequiredList();
 }
@@ -217,17 +233,22 @@ function getImportTargetAttrs() {
   return getImportTargetAttrsFor(importCategory);
 }
 
+function importableAttr(a) {
+  return a && !a.readonly && !['completion', 'created_at', 'updated_at', 'etape_workflow'].includes(a.code) && a.type !== 'Image';
+}
+function isCalcAttr(a) { return !!(a && (a.calc || a.formula)); }
+
 function getImportTargetAttrsFor(catName) {
-  if (!catName) return attributes.filter(a => !a.calc && !a.readonly && a.code !== 'completion');
+  if (!catName) return attributes.filter(importableAttr);
   const cat = getCatByName(catName);
-  if (!cat) return attributes.filter(a => !a.calc && !a.readonly && a.code !== 'completion');
+  if (!cat) return attributes.filter(importableAttr);
   const seen = new Set();
   return cat.groupIds
     .map(gid => getGroupById(gid))
     .filter(Boolean)
     .flatMap(g => g.attrIds.map(id => getAttrById(id)).filter(Boolean))
     .filter(a => {
-      if (a.calc || a.readonly || a.code === 'completion') return false;
+      if (!importableAttr(a)) return false;
       if (seen.has(a.code)) return false;
       seen.add(a.code);
       return true;
@@ -251,7 +272,7 @@ function renderImportRequiredListHtml() {
   const req = getRequiredImportAttrs(importCategory);
   if (!req.length) {
     return `<div style="font-size:13px;color:#a0b0c0;margin-top:6px">
-      Aucun champ obligatoire. Choisissez une categorie pour affiner la liste.
+      Aucun champ obligatoire. Choisissez une catégorie pour affiner la liste.
     </div>`;
   }
   return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
@@ -304,7 +325,7 @@ function handleImportFile(file) {
       if (ext === 'csv') {
         importParsedRows = parseCSV(e.target.result);
       } else {
-        const wb   = XLSX.read(e.target.result, { type: 'binary' });
+        const wb   = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
         const ws   = wb.Sheets[wb.SheetNames[0]];
         importParsedRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
       }
@@ -376,10 +397,13 @@ function renderImportStep2() {
 
   // Mapping auto : si le header du fichier correspond exactement au code ou nom d'un attribut
   importColMapping = {};
+  const trame = importTrameId ? trameById(importTrameId) : null;
   fileHeaders.forEach(h => {
-    const hNorm = h.toLowerCase().trim();
-    const match = targetAttrs.find(a => a.code.toLowerCase() === hNorm)
-      || targetAttrs.find(a => a.name.toLowerCase() === hNorm);
+    const hNorm = importNorm(h);
+    const col = trame ? trame.columns.find(c => c.code && importNorm(c.header) === hNorm) : null;
+    const match = (col && targetAttrs.find(a => a.code === col.code))
+      || targetAttrs.find(a => importNorm(a.code) === hNorm)
+      || targetAttrs.find(a => importNorm(a.name) === hNorm);
     if (match) importColMapping[h] = match.code;
   });
 
@@ -388,7 +412,7 @@ function renderImportStep2() {
   const attrOptionsFor = (selected) =>
     `<option value="">-- Ignorer --</option>` +
     targetAttrs.map(a =>
-      `<option value="${a.code}"${a.code === selected ? ' selected' : ''}>${a.code} — ${a.name}${a.required ? ' *' : ''}</option>`
+      `<option value="${a.code}"${a.code === selected ? ' selected' : ''}>${a.code} — ${a.name}${a.required ? ' *' : ''}${isCalcAttr(a) ? ' (calculé : forcé si différent)' : ''}</option>`
     ).join('');
 
   return `
@@ -437,7 +461,7 @@ function renderImportStep2() {
     <!-- Apercu donnees -->
     <div class="field-group" style="margin-bottom:20px">
       <div class="field-group-title">
-        Apercu — ${Math.min(5, importParsedRows.length)} premiere${importParsedRows.length > 1 ? 's' : ''} ligne${importParsedRows.length > 1 ? 's' : ''}
+        Aperçu — ${Math.min(5, importParsedRows.length)} première${importParsedRows.length > 1 ? 's' : ''} ligne${importParsedRows.length > 1 ? 's' : ''}
       </div>
       <div class="table-container" style="max-height:220px;overflow:auto">
         <table>
@@ -459,6 +483,12 @@ function renderImportStep2() {
         </table>
       </div>
     </div>
+
+    ${canMod('mod_trames', 'w') ? `
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px">
+      <input class="field-input" id="import-trame-name" placeholder="Nom d'une nouvelle trame" style="max-width:240px">
+      <button class="btn btn-secondary" onclick="saveImportTrame()">Enregistrer la correspondance comme trame</button>
+    </div>` : ''}
 
     <!-- Navigation -->
     <div style="display:flex;justify-content:space-between">
@@ -512,54 +542,184 @@ function findImportedProduct(fields) {
   }) || null;
 }
 
+// ============================================================
+// CONVERSION SOUPLE DES VALEURS
+// Casse, accents, apostrophes et espaces ignorés pour retrouver une valeur
+// de liste ; OUI / NON, O / N, 1 / 0 ; dates Excel, AAAA-MM-JJ ou JJ/MM/AAAA ;
+// nombres avec virgule, espaces, € ou %. « - », « N/A », « #N/A » = vide.
+// Une valeur qui ne correspond à rien n'est pas reprise et est signalée.
+// ============================================================
+function importNorm(v) {
+  return String(v == null ? '' : v).normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[’'`]/g, ' ').replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
+}
+const IMPORT_EMPTY = new Set(['', '-', '—', 'n/a', 'na', '#n/a', '#value!', '#ref!', 'null']);
+const IMPORT_YES = new Set(['oui', 'o', 'yes', 'y', '1', 'vrai', 'true', 'x']);
+const IMPORT_NO = new Set(['non', 'n', 'no', '0', 'faux', 'false']);
+
+function importDate(raw) {
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = d => pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+  if (raw instanceof Date && !isNaN(raw)) return fmt(raw);
+  if (typeof raw === 'number' && raw > 20000 && raw < 80000) {
+    return fmt(new Date(Math.round((raw - 25569) * 86400000) + new Date().getTimezoneOffset() * 60000));
+  }
+  const t = String(raw).trim();
+  let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return pad(m[3]) + '/' + pad(m[2]) + '/' + m[1];
+  m = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+  if (m) return pad(m[1]) + '/' + pad(m[2]) + '/' + (m[3].length === 2 ? '20' + m[3] : m[3]);
+  return null;
+}
+
+function importListMatch(opts, raw) {
+  const k = importNorm(raw);
+  return (opts || []).find(o => importNorm(o) === k);
+}
+
+function importCoerce(attr, raw) {
+  if (raw === undefined || raw === null) return { value: '' };
+  if (!(raw instanceof Date) && IMPORT_EMPTY.has(importNorm(raw))) return { value: '' };
+  if (!attr) return { value: String(raw).trim() };
+  const txt = raw instanceof Date ? importDate(raw) : String(raw).trim();
+  if (attr.code === 'cat') {
+    const c = importListMatch(categories.map(x => x.name), txt);
+    return c ? { value: c } : { value: '', warn: 'catégorie inconnue' };
+  }
+  switch (attr.type) {
+    case 'Date': {
+      const d = importDate(raw);
+      return d ? { value: d } : { value: '', warn: 'date illisible' };
+    }
+    case 'Nombre':
+    case 'Nombre decimal': {
+      if (typeof raw === 'number') return { value: isPercentAttr(attr) ? coercePercentStored(raw) : String(raw) };
+      const pct = /%/.test(txt);
+      const n = parseFloat(txt.replace(/[\s\u00a0€]/g, '').replace('%', '').replace(',', '.'));
+      if (!isFinite(n)) return { value: '', warn: 'nombre illisible' };
+      if (isPercentAttr(attr)) return { value: coercePercentStored(pct ? n / 100 : n) };
+      return { value: String(n) };
+    }
+    case 'Oui / Non': {
+      const opts = (attr.options && attr.options.length) ? attr.options : ['Oui', 'Non'];
+      const hit = importListMatch(opts, txt);
+      if (hit) return { value: hit };
+      const k = importNorm(txt);
+      if (IMPORT_YES.has(k)) return { value: opts[0] };
+      if (IMPORT_NO.has(k)) return { value: opts[1] || 'Non' };
+      return { value: '', warn: 'ni oui ni non' };
+    }
+    case 'Simple select': {
+      if (attr.listRef) {
+        const hit = attrSelectOptions(attr).find(o => importNorm(o.v) === importNorm(txt) || importNorm(o.l) === importNorm(txt));
+        return hit ? { value: hit.v } : { value: '', warn: 'absent du référentiel ' + attr.listRef.ref };
+      }
+      if (!(attr.options || []).length) return { value: txt };
+      const hit = importListMatch(attr.options, txt);
+      return hit ? { value: hit } : { value: '', warn: 'hors liste' };
+    }
+    case 'Multi select': {
+      const parts = txt.split(/[;,|]/).map(x => x.trim()).filter(Boolean);
+      const hits = parts.map(x => importListMatch(attr.options, x));
+      if (hits.some(h => !h)) return { value: '', warn: 'hors liste' };
+      return { value: [...new Set(hits)].join(', ') };
+    }
+    default:
+      return { value: typeof raw === 'number' ? String(raw) : txt };
+  }
+}
+
+// Champ calculé lu dans le fichier : identique au calcul = rien ; différent =
+// valeur forcée (comme « Forcer la valeur » sur la fiche)
+function importSameCalc(attr, a, b) {
+  const x = String(a == null ? '' : a).trim(), y = String(b == null ? '' : b).trim();
+  if (x === y) return true;
+  const nx = parseFloat(x.replace(',', '.')), ny = parseFloat(y.replace(',', '.'));
+  return isFinite(nx) && isFinite(ny) && Math.abs(nx - ny) < 0.005;
+}
+function importApplyCalc(p, calcVals, report) {
+  const codes = Object.keys(calcVals);
+  if (!codes.length) return;
+  if (p.forcedFields) codes.forEach(c => delete p.forcedFields[c]);
+  computeCalcFields(p);
+  codes.forEach(code => {
+    const v = calcVals[code];
+    if (v === '') return;
+    const attr = attributes.find(a => a.code === code);
+    if (importSameCalc(attr, p.fields[code], v)) { report.same[code] = (report.same[code] || 0) + 1; return; }
+    const r = report.forced[code] = report.forced[code] || { n: 0, ex: [] };
+    r.n++;
+    if (r.ex.length < 3) r.ex.push((p.fields.sap || p.fields.ean || p.fields.nom || '') + ' : ' + (p.fields[code] || '(vide)') + ' → ' + v);
+    if (!p.forcedFields) p.forcedFields = {};
+    p.forcedFields[code] = v;
+    p.fields[code] = v;
+  });
+}
+
 function runImport() {
   if (importAction === 'delete' && !categories.some(c => canCat(c.id, 'd'))) {
-    showNotif('Suppression par import non autorisee', 'warn');
+    showNotif('Suppression par import non autorisée', 'warn');
     return;
   }
   if ((importAction === 'add' || importAction === 'update') && !getWritableCategories().length) {
-    showNotif('Import non autorise', 'warn');
+    showNotif('Import non autorisé', 'warn');
     return;
   }
   const targetCat = importCategory;
   if (targetCat) {
     if (importAction === 'delete' && !canCat(targetCat, 'd')) {
-      showNotif('Suppression non autorisee sur cette categorie', 'warn');
+      showNotif('Suppression non autorisée sur cette catégorie', 'warn');
       return;
     }
     if (importAction !== 'delete' && !canCat(targetCat, 'w')) {
-      showNotif('Import non autorise sur cette categorie', 'warn');
+      showNotif('Import non autorisé sur cette catégorie', 'warn');
       return;
     }
   }
   const mappedCodes = Object.values(importColMapping).filter(Boolean);
+  if (importAction === 'add' && !importCategory && !mappedCodes.includes('cat')) {
+    showNotif('Choisissez la catégorie des produits à créer, ou reliez une colonne Catégorie', 'error');
+    return;
+  }
   const requiredAttrs = getRequiredImportAttrs(importCategory);
   const missingReq = requiredAttrs.filter(a => !mappedCodes.includes(a.code));
-  if (importAction !== 'delete' && missingReq.length) {
+  // En ajout, toutes les colonnes obligatoires ; en modification, seules
+  // les colonnes présentes sont contrôlées (on ne vide pas un obligatoire)
+  if (importAction === 'add' && missingReq.length) {
     showNotif('Champs obligatoires non mappees : ' + missingReq.map(a => a.code).join(', '), 'error');
     return;
   }
   if (importAction === 'delete' && !mappedCodes.includes('ean') && !mappedCodes.includes('sap')) {
-    showNotif('Mappez ean ou sap pour identifier les produits a supprimer', 'error');
+    showNotif('Mappez ean ou sap pour identifier les produits à supprimer', 'error');
     return;
   }
 
   let added = 0, updated = 0, deleted = 0, errors = [];
+  const report = { warns: {}, forced: {}, same: {} };
 
   importParsedRows.forEach((row, idx) => {
-    const fields = {};
+    const fields = {}, calcVals = {};
     Object.keys(importColMapping).forEach(col => {
       const attrCode = importColMapping[col];
-      if (attrCode) fields[attrCode] = (row[col] || '').toString().trim();
+      if (!attrCode) return;
+      const attr = attributes.find(a => a.code === attrCode);
+      const res = importCoerce(attr, row[col]);
+      if (res.warn) {
+        const key = (attr ? attr.name : attrCode) + ' — « ' + String(row[col]).trim() + ' » (' + res.warn + ')';
+        const w = report.warns[key] = report.warns[key] || { n: 0, first: idx + 2 };
+        w.n++;
+        if (importAction === 'update') return;          // valeur actuelle gardée
+      }
+      if (isCalcAttr(attr)) calcVals[attrCode] = res.value;
+      else fields[attrCode] = res.value;
     });
     Object.keys(fields).forEach(code => {
-      const attr = attributes.find(a => a.code === code);
-      if (attr && isPercentAttr(attr)) fields[code] = coercePercentStored(fields[code]);
-      if (code === 'marque') registerMarque(fields[code]);
+      if (code === 'marque' && fields[code]) registerMarque(fields[code]);
     });
 
     if (importAction !== 'delete') {
-      const emptyReq = requiredAttrs.filter(a => !(fields[a.code] || '').toString().trim());
+      const checked = importAction === 'update' ? requiredAttrs.filter(a => mappedCodes.includes(a.code)) : requiredAttrs;
+      const emptyReq = checked.filter(a => !(fields[a.code] || '').toString().trim());
       if (emptyReq.length) {
         errors.push(`Ligne ${idx + 2} : champs obligatoires manquants (${emptyReq.map(a => a.code).join(', ')})`);
         return;
@@ -585,12 +745,16 @@ function runImport() {
 
     if (importAction === 'add') {
       if (existing) {
-        errors.push(`Ligne ${idx + 2} : produit deja existant (${keyHint}), ignore`);
+        errors.push(`Ligne ${idx + 2} : produit déjà existant (${keyHint}), ignoré`);
         return;
       }
-      const catName = fields.cat || importCategory || (getWritableCategories()[0] ? getWritableCategories()[0].name : '');
+      const catName = fields.cat || importCategory;
+      if (!catName) {
+        errors.push(`Ligne ${idx + 2} : catégorie manquante, produit non créé`);
+        return;
+      }
       if (!canCat(catName, 'w')) {
-        errors.push(`Ligne ${idx + 2} : creation non autorisee`);
+        errors.push(`Ligne ${idx + 2} : création non autorisée`);
         return;
       }
       const storeFields = {};
@@ -610,6 +774,7 @@ function runImport() {
         pendingChanges: [],
         fields: storeFields,
       });
+      importApplyCalc(products[products.length - 1], calcVals, report);
       added++;
     } else if (importAction === 'update') {
       if (!existing) {
@@ -645,6 +810,7 @@ function runImport() {
           existing.fields[code] = fields[code];
         }
       });
+      importApplyCalc(existing, calcVals, report);
       existing.maj = nowStr();
       updated++;
     }
@@ -654,7 +820,7 @@ function runImport() {
   const stepper = document.getElementById('import-stepper');
   const content = document.getElementById('import-step-content');
   if (stepper) stepper.innerHTML = importStepperHtml(3);
-  if (content) content.innerHTML = renderImportStep3(added, updated, deleted, errors);
+  if (content) content.innerHTML = renderImportStep3(added, updated, deleted, errors, report);
 
   renderAll();
 }
@@ -662,7 +828,11 @@ function runImport() {
 // ============================================================
 // STEP 3 — RESULTAT
 // ============================================================
-function renderImportStep3(added, updated, deleted, errors) {
+function renderImportStep3(added, updated, deleted, errors, report) {
+  report = report || { warns: {}, forced: {}, same: {} };
+  const warnKeys = Object.keys(report.warns).sort((a, b) => report.warns[b].n - report.warns[a].n);
+  const forcedCodes = Object.keys(report.forced);
+  const attrName = c => (attributes.find(a => a.code === c) || {}).name || c;
   const total   = added + updated + deleted;
   const hasErr  = errors.length > 0;
   const success = total > 0;
@@ -673,10 +843,10 @@ function renderImportStep3(added, updated, deleted, errors) {
         ${success ? '&#9989;' : '&#9888;&#65039;'}
       </div>
       <div style="font-size:18px;font-weight:700;color:#1a2332;margin-bottom:6px">
-        Import ${success ? 'termine' : 'sans resultat'}
+        Import ${success ? 'terminé' : 'sans résultat'}
       </div>
       <div style="font-size:13px;color:#607080">
-        ${total} operation${total > 1 ? 's' : ''} effectuee${total > 1 ? 's' : ''}
+        ${total} opération${total > 1 ? 's' : ''} effectuée${total > 1 ? 's' : ''}
       </div>
     </div>
 
@@ -684,9 +854,9 @@ function renderImportStep3(added, updated, deleted, errors) {
     <div style="display:flex;justify-content:center;gap:16px;
       flex-wrap:wrap;margin-bottom:24px">
       ${[
-        { label: 'Ajoutes',    val: added,   color: '#2e7d32', bg: '#e8f5e9' },
-        { label: 'Modifies',   val: updated, color: '#1565c0', bg: '#e3f2fd' },
-        { label: 'Supprimes',  val: deleted, color: '#c62828', bg: '#fce4ec' },
+        { label: 'Ajoutés',    val: added,   color: '#2e7d32', bg: '#e8f5e9' },
+        { label: 'Modifiés',   val: updated, color: '#1565c0', bg: '#e3f2fd' },
+        { label: 'Supprimés',  val: deleted, color: '#c62828', bg: '#fce4ec' },
         { label: 'Erreurs',    val: errors.length, color: '#e65100', bg: '#fff3e0' },
       ].map(r => `
         <div style="background:${r.bg};border-radius:12px;padding:16px 24px;
@@ -697,6 +867,20 @@ function renderImportStep3(added, updated, deleted, errors) {
         </div>`
       ).join('')}
     </div>
+
+    ${warnKeys.length ? `
+      <div class="field-group" style="margin-bottom:20px">
+        <div class="field-group-title" style="color:#e65100">Valeurs non reprises (${warnKeys.length})</div>
+        <div style="max-height:220px;overflow-y:auto">
+          ${warnKeys.map(k => `<div class="import-report-line"><span>${escapeHtml(k)}</span><b>${report.warns[k].n} ligne${report.warns[k].n > 1 ? 's' : ''}</b></div>`).join('')}
+        </div>
+      </div>` : ''}
+    ${forcedCodes.length ? `
+      <div class="field-group" style="margin-bottom:20px">
+        <div class="field-group-title" style="color:#1565c0">Champs calculés forcés (valeur du fichier différente du calcul)</div>
+        ${forcedCodes.map(c => `<div class="import-report-line"><span><b>${escapeHtml(attrName(c))}</b> : ${report.forced[c].n} forcé${report.forced[c].n > 1 ? 's' : ''}, ${report.same[c] || 0} identique${(report.same[c] || 0) > 1 ? 's' : ''} au calcul
+          <span class="calc-meta">${report.forced[c].ex.map(escapeHtml).join(' · ')}</span></span></div>`).join('')}
+      </div>` : ''}
 
     <!-- Erreurs -->
     ${hasErr ? `
@@ -729,13 +913,41 @@ function renderImportStep3(added, updated, deleted, errors) {
 // ============================================================
 // TRAME EXCEL
 // ============================================================
+// Enregistre la correspondance de l'étape 2 comme trame d'import (et d'export)
+function saveImportTrame() {
+  if (!requirePerm(canMod('mod_trames', 'w'))) return;
+  const name = ((document.getElementById('import-trame-name') || {}).value || '').trim();
+  if (!name) { showNotif('Donnez un nom à la trame', 'warn'); return; }
+  if (trames.some(t => t.name.toLowerCase() === name.toLowerCase())) { showNotif('Cette trame existe déjà', 'error'); return; }
+  const columns = Object.keys(importParsedRows[0] || {}).filter(h => importColMapping[h])
+    .map(h => ({ header: h, code: importColMapping[h] }));
+  if (!columns.length) { showNotif('Aucune colonne reliée', 'warn'); return; }
+  const t = { id: 'trm_' + (nextTrameId++), name, import: true, export: true,
+    cats: importCategory ? [importCategory] : [], sheet: 'Import', columns };
+  trames.push(t);
+  importTrameId = t.id;
+  showNotif('Trame enregistrée : ' + name);
+}
+
 function downloadTrame() {
   if (typeof XLSX === 'undefined') {
     showNotif('Erreur : librairie SheetJS non chargee', 'error');
     return;
   }
 
-  const catName = (document.getElementById('trame-cat') || {}).value || '';
+  // Trame choisie dans la liste « Trame » ; sans trame, Catalogue de la catégorie
+  const chosen = trameById(importTrameId) || trameById('catalogue');
+  if (chosen && !chosen.dynamic) {
+    const t = chosen;
+    const ws = XLSX.utils.aoa_to_sheet([t.columns.map(c => c.header)]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, t.sheet || 'Import');
+    XLSX.writeFile(wb, 'trame_' + t.name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_') + '.xlsx');
+    showNotif('Trame téléchargée : ' + t.name);
+    return;
+  }
+  // Catalogue : champs de la catégorie choisie à gauche (toutes sinon)
+  const catName = (document.getElementById('import-cat') || {}).value || '';
   const req     = getRequiredImportAttrs(catName);
   const rest    = getImportTargetAttrsFor(catName)
     .map(a => a.code)
@@ -769,15 +981,15 @@ function downloadTrame() {
   const noticeRows = [
     ['OctoPIM — Trame d\'import', ''],
     ['', ''],
-    ['Categorie cible', catName || 'Toutes'],
+    ['Catégorie cible', catName || 'Toutes'],
     ['Date generation', todayStr()],
     ['', ''],
     ['CHAMPS OBLIGATOIRES (codes techniques en en-tete)', ''],
     ...req.map(a => [a.code, 'Obligatoire — ' + a.name]),
     ['', ''],
     ['ACTIONS DISPONIBLES', ''],
-    ['Ajout',       'Creer de nouveaux produits — matching sur ean puis sap'],
-    ['Modification','Mettre a jour des produits existants — matching sur ean puis sap'],
+    ['Ajout',       'Créer de nouveaux produits — matching sur ean puis sap'],
+    ['Modification','Mettre à jour des produits existants — matching sur ean puis sap'],
     ['Suppression', 'Supprimer des produits — matching sur ean puis sap'],
     ['', ''],
     ['NOTES', ''],
@@ -792,5 +1004,5 @@ function downloadTrame() {
   const catStr  = catName ? '_' + catName.replace(/\s+/g, '_') : '';
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   XLSX.writeFile(wb, `trame_import${catStr}_${dateStr}.xlsx`);
-  showNotif('Trame telechargee');
+  showNotif('Trame téléchargée');
 }

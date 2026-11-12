@@ -36,12 +36,7 @@ function renderDashboardNow() {
 }
 
 function showAlertProducts(alertId) {
-  _filterAlertId = alertId;
-  _filterIncomplets = false;
-  currentPage = 1;
-  const navEl = document.querySelector('.nav-item[data-nav="products"]');
-  showPage('products', navEl);
-  renderProductsTable();
+  openProductsList(null, () => { _filterAlertId = alertId; });
 }
 
 // Nombre de produits visibles a chaque etape du workflow. Un clic ouvre la
@@ -78,14 +73,9 @@ function renderDashboardAlerts() {
   }
   const cards = list.map(alert => {
     const n = productsForAlert(alert).length;
-    const rule = escapeHtml(alertRuleText(alert));
-    const detail = alert.conds ? escapeHtml(alertCondsText(alert))
-      : escapeHtml((attributes.find(a => a.code === alert.attrCode) || {}).name || '')
-      + ' ' + escapeHtml(alertOpLabel(alert.op)) + ' ' + escapeHtml(alertThresholdText(alert));
     return `<div class="dash-kpi-card" style="cursor:pointer" onclick="showAlertProducts(${alert.id})">
-      <div class="kpi-label">${rule}</div>
+      <div class="kpi-label alert-kpi-label"><span>${escapeHtml(alertRuleText(alert))}</span><span class="help-tip" title="${escapeHtml(alertDescText(alert))}">?</span></div>
       <div class="kpi-value" style="color:${n ? '#c62828' : '#607080'};font-size:40px;line-height:1.1;margin-top:4px">${n}</div>
-      <div style="font-size:12px;color:#607080;margin-top:8px">${detail}</div>
     </div>`;
   }).join('');
   box.innerHTML = `<div class="dashboard-section-label">Alertes</div>
@@ -123,12 +113,7 @@ function renderDashboardKpis() {
 }
 
 function showIncomplets() {
-  _filterIncomplets = true;
-  _filterAlertId = null;
-  currentPage = 1;
-  const navEl = document.querySelector('.nav-item[data-nav="products"]');
-  showPage('products', navEl);
-  renderProductsTable();
+  openProductsList(null, () => { _filterIncomplets = true; });
 }
 
 function openSeuilModal() {
@@ -144,7 +129,7 @@ function saveSeuil() {
     closeModal('modal-seuil');
     renderDashboard();
     renderProductsTable();
-    showNotif('Seuil mis a jour : ' + val + '%');
+    showNotif('Seuil mis à jour : ' + val + '%');
   }
 }
 
@@ -320,20 +305,23 @@ function renderDashboardSuppliers() {
     return data[name];
   };
 
-  brandSettings.forEach(b => {
-    if (b.type && !canCat(b.type, 'r')) return;
-    const sup = suppliers.find(s => s.code === b.fournisseurCode);
-    const name = sup ? sup.name : (b.fournisseurCode || 'Inconnu');
-    const row = ensureRow(name, b.fournisseurCode);
-    if (b.marque) {
-      if (!row.marques[b.marque]) row.marques[b.marque] = { combos: 0, products: 0 };
-      row.marques[b.marque].combos++;
+  // Couples fournisseur / marque des conditions commerciales
+  const cond = (refTables || []).find(t => t.id === 'ref_conditions');
+  (cond ? cond.rows : []).forEach(b => {
+    if (b['Catégorie'] && !canCat(b['Catégorie'], 'r')) return;
+    const code = b['Fournisseur'] || '';
+    const sup = supplierList().find(s => s.code === code);
+    const name = sup ? sup.name : (code || 'Inconnu');
+    const row = ensureRow(name, code);
+    if (b['Marque']) {
+      if (!row.marques[b['Marque']]) row.marques[b['Marque']] = { combos: 0, products: 0 };
+      row.marques[b['Marque']].combos++;
     }
   });
 
   catalog.forEach(p => {
     const code = p.fields.fournisseur_code || '';
-    const sup  = code ? suppliers.find(s => s.code === code) : null;
+    const sup  = code ? supplierList().find(s => s.code === code) : null;
     const name = code ? (sup ? sup.name : code) : 'Inconnu';
     const row  = ensureRow(name, code || 'Inconnu');
     row.cats[p.cat] = (row.cats[p.cat] || 0) + 1;
@@ -440,16 +428,10 @@ function renderDashboardSuppliers() {
 }
 
 function filterBySupplier(codeOrName) {
-  const navEl = document.querySelector('.nav-item[data-nav="products"]');
-  showPage('products', navEl);
-  const filterCat = document.getElementById('filter-cat');
-  if (filterCat) filterCat.value = '';
-  colFilters = {};
-  _filterIncomplets = false;
-  currentPage = 1;
-  const search = document.getElementById('products-search');
-  if (search) search.value = codeOrName;
-  renderProductsTable();
+  openProductsList(null, () => {
+    const search = document.getElementById('products-search');
+    if (search) search.value = codeOrName;
+  });
   showNotif('Filtre fournisseur : ' + codeOrName);
 }
 

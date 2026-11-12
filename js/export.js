@@ -5,7 +5,8 @@
 // ============================================================
 // POINT D'ENTREE — RENDU PAGE EXPORT
 // ============================================================
-function renderExportPage() {
+function renderExportPage() { return withCalcBatch(renderExportPageNow); }
+function renderExportPageNow() {
   captureExportSnapshot();
   const page = document.getElementById('page-exports');
   if (!page) return;
@@ -145,14 +146,6 @@ function selectExportTemplate(id) {
   activeExportTemplate = id;
   exportPick = null;
   renderExportPage();
-  const saved = exportTemplates.find(t => t.id === id);
-  if (saved && saved.pick && exportPick) {
-    exportPick.mode = saved.pick.mode || exportPick.mode;
-    exportPick.groups = new Set(saved.pick.groups);
-    exportPick.attrs = new Set(saved.pick.attrs);
-    if (saved.pick.format) exportPick.format = saved.pick.format;
-    renderExportPage();
-  }
 }
 
 function setExportFormat(v) {
@@ -205,23 +198,28 @@ function toggleExportAttr(gid, code, on) {
   renderExportPage();
 }
 
-function toggleExportIwiGroup(section, on) {
+function exportFormatBlocs() {
+  return [...new Set(exportFormatCols().map(c => c.bloc || ''))];
+}
+function toggleExportIwiGroup(blocIdx, on) {
   ensureExportPick();
-  if (on) exportPick.groups.add(section);
-  else exportPick.groups.delete(section);
+  const bloc = exportFormatBlocs()[blocIdx];
+  if (bloc === undefined) return;
+  if (on) exportPick.groups.add(bloc);
+  else exportPick.groups.delete(bloc);
   exportPick.attrs = new Set();
-  IWI_COLUMNS.forEach((col, i) => {
-    if (exportPick.groups.has(col.section)) exportPick.attrs.add(String(i));
+  exportFormatCols().forEach((col, i) => {
+    if (exportPick.groups.has(col.bloc || '')) exportPick.attrs.add(String(i));
   });
   renderExportPage();
 }
 
 function toggleExportIwiCol(index, on) {
   ensureExportPick();
-  const col = IWI_COLUMNS[index];
+  const col = exportFormatCols()[index];
   if (!col) return;
   if (on) {
-    exportPick.groups.add(col.section);
+    exportPick.groups.add(col.bloc || '');
     exportPick.attrs.add(String(index));
   } else {
     exportPick.attrs.delete(String(index));
@@ -229,36 +227,47 @@ function toggleExportIwiCol(index, on) {
   renderExportPage();
 }
 
+// Enregistre la sélection comme trame (droit sur le volet Trames) : colonnes
+// cochées, dans l'ordre ; depuis Catalogue, en-tête = code technique
 function saveExportTemplate() {
+  if (!requirePerm(canMod('mod_trames', 'w'))) return;
   const input = document.getElementById('export-template-name');
   const name = input ? input.value.trim() : '';
-  if (!name) { showNotif('Donnez un nom a la trame', 'warn'); return; }
+  if (!name) { showNotif('Donnez un nom à la trame', 'warn'); return; }
+  if (trames.some(t => t.name.toLowerCase() === name.toLowerCase())) { showNotif('Cette trame existe déjà', 'error'); return; }
   ensureExportPick();
-  const id = 'tpl_' + Date.now();
-  exportTemplates.push({
-    id, name, builtin: false,
-    pick: {
-      mode: exportPick.mode || 'catalogue',
-      groups: [...exportPick.groups],
-      attrs: [...exportPick.attrs],
-      format: exportPick.format || 'xlsx',
-    },
-  });
-  activeExportTemplate = id;
-  exportPick.template = id;
-  showNotif('Trame enregistree : ' + name);
+  let columns;
+  if (exportPick.mode === 'format') {
+    columns = iwiSelectedColumns().map(x => JSON.parse(JSON.stringify(x.c)));
+  } else {
+    const seen = new Set(); columns = [];
+    exportPick.groups.forEach(gid => {
+      const g = getGroupById(gid);
+      (g && g.attrIds || []).forEach(id => {
+        const a = getAttrById(id);
+        if (!a || seen.has(a.code) || !exportPick.attrs.has(a.code)) return;
+        seen.add(a.code);
+        columns.push({ bloc: g.name, header: a.code, code: a.code });
+      });
+    });
+  }
+  if (!columns.length) { showNotif('Aucune colonne cochée', 'warn'); return; }
+  const src = currentExportFormat();
+  const t = { id: 'trm_' + (nextTrameId++), name, export: true, import: true,
+    cats: exportPick.cat ? [exportPick.cat] : [], sheet: (src && src.sheet) || 'Export', columns };
+  trames.push(t);
+  activeExportTemplate = t.id;
+  exportPick = null;
+  showNotif('Trame enregistrée : ' + name);
   renderExportPage();
 }
 
+// Cellule d'une colonne de modèle d'export : valeur fixe, attribut, ou vide
 function iwiCell(p, col) {
-  if (col.constant != null && col.constant !== '') return col.constant;
-  if (col.code === '@createdAt') return p.createdAt || '';
+  if (col.fixed != null && col.fixed !== '') return col.fixed;
+  if (!col.code) return '';
   computeCalcFields(p);
-  if (col.code === '@nomFournisseur') {
-    const s = (suppliers || []).find(x => x.code === ((p.fields && p.fields.fournisseur_code) || ''));
-    return s ? s.name : '';
-  }
-  const attr = col.code ? attributes.find(a => a.code === col.code) : null;
+  const attr = attributes.find(a => a.code === col.code);
   const val = attr ? getAttrFieldValue(p, attr) : (col.code ? (p.fields[col.code] || '') : '');
   if (attr && (attr.type === 'Nombre' || attr.type === 'Nombre decimal')) return formatAttrNumber(attr, val);
   return val !== undefined && val !== null ? String(val) : '';
@@ -270,12 +279,13 @@ function exportAttrCell(p, a) {
   return val !== undefined && val !== null ? String(val) : '';
 }
 
-function iwiMissingCounts(prods) {
+function iwiMissingCounts(prods) { return withCalcBatch(() => iwiMissingCountsNow(prods)); }
+function iwiMissingCountsNow(prods) {
   const counts = {};
   prods.forEach(p => {
-    IWI_COLUMNS.forEach((col, i) => {
+    exportFormatCols().forEach((col, i) => {
       if (!exportPick || !exportPick.attrs.has(String(i))) return;
-      if (!col.required || (col.constant != null && col.constant !== '')) return;
+      if (!col.required || (col.fixed != null && col.fixed !== '')) return;
       if (!String(iwiCell(p, col) || '').trim()) counts[i] = (counts[i] || 0) + 1;
     });
   });
@@ -299,21 +309,23 @@ function downloadBlob(blob, name) {
 }
 
 function iwiSelectedColumns() {
-  return IWI_COLUMNS.map((c, i) => ({ c, i })).filter(x =>
-    exportPick.groups.has(x.c.section) && exportPick.attrs.has(String(x.i))
+  return exportFormatCols().map((c, i) => ({ c, i })).filter(x =>
+    exportPick.groups.has(x.c.bloc || '') && exportPick.attrs.has(String(x.i))
   );
 }
 
-function iwiSheet(prods) {
+function iwiSheet(prods) { return withCalcBatch(() => iwiSheetNow(prods)); }
+function iwiSheetNow(prods) {
   const cols = iwiSelectedColumns();
   if (!cols.length) { showNotif('Aucun champ coche'); return null; }
-  const sections = cols.map((x, n) => (n === 0 || x.c.section !== cols[n - 1].c.section) ? x.c.section : '');
+  const sections = cols.map((x, n) => (n === 0 || x.c.bloc !== cols[n - 1].c.bloc) ? (x.c.bloc || '') : '');
   const header = cols.map(x => x.c.header);
   const rows = prods.map(p => cols.map(x => iwiCell(p, x.c)));
   return [sections, header, ...rows];
 }
 
-function catalogueSheet(prods) {
+function catalogueSheet(prods) { return withCalcBatch(() => catalogueSheetNow(prods)); }
+function catalogueSheetNow(prods) {
   const seen = new Set();
   const cols = [];
   exportPick.groups.forEach(gid => {
@@ -342,12 +354,20 @@ function runExport() {
   if (!prods.length) { showNotif('Aucun produit a exporter'); return; }
   prods.forEach(p => computeCalcFields(p));
 
-  const iwi = exportPick.mode === 'iwi';
+  const iwi = exportPick.mode === 'format';
+  const fmt = iwi ? currentExportFormat() : null;
   if (iwi && Object.keys(iwiMissingCounts(prods)).length) {
     renderExportPage();
-    showNotif('Export IWI bloque : des colonnes exigees sont vides', 'warn');
+    showNotif('Export « ' + (fmt ? fmt.name : '') + ' » bloqué : des colonnes bloquantes sont vides', 'warn');
     return;
   }
+
+  const aoa = iwi ? iwiSheet(prods) : catalogueSheet(prods);
+  if (!aoa) return;
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const slug = t => String(t || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  const base = 'export_' + (fmt ? slug(fmt.name) : 'produits') + '_';
+  const format = exportPick.format || 'xlsx';
   if (format === 'csv') {
     downloadBlob(new Blob(['\uFEFF' + sheetToCsv(aoa)], { type: 'text/csv;charset=utf-8' }), base + dateStr + '.csv');
     showNotif('Export termine : ' + base + dateStr + '.csv');
@@ -356,7 +376,7 @@ function runExport() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   applySheetStyles(ws, aoa[0].length, aoa.length - 1, 2);
-  XLSX.utils.book_append_sheet(wb, ws, iwi ? 'Montures' : 'Export');
+  XLSX.utils.book_append_sheet(wb, ws, (fmt && fmt.sheet) || 'Export');
   const xlsxName = base + dateStr + '.xlsx';
   if (format === 'zip') {
     if (typeof JSZip === 'undefined') { showNotif('Librairie ZIP non chargee'); return; }
