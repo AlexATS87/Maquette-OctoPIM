@@ -812,7 +812,7 @@ function renderDetailHeader(thead) {
   initGroupFilters();
   const catGroups     = getGroupsForCurrentCat();
   const visibleGroups = catGroups.filter(g =>
-    activeGroupFilters.has(g.id) && g.code !== 'visuels'
+    activeGroupFilters.has(g.id)
   );
 
   const row1 = document.createElement('tr');
@@ -882,7 +882,7 @@ function renderDetailRows(tbody, filtered) {
   initGroupFilters();
   const catGroups     = getGroupsForCurrentCat();
   const visibleGroups = catGroups.filter(g =>
-    activeGroupFilters.has(g.id) && g.code !== 'visuels'
+    activeGroupFilters.has(g.id)
   );
 
   const allValues = {};
@@ -930,7 +930,7 @@ function renderDetailRows(tbody, filtered) {
         let isDiff = false;
         if (compareMode && allValues[attr.code])
           isDiff = new Set(allValues[attr.code].map(v => String(v == null ? '' : v).trim())).size > 1;
-        cells += `<td class="${isDiff ? 'cell-diff' : ''}" style="white-space:nowrap;font-size:12px;
+        cells += `<td class="${isDiff ? 'cell-diff' : ''}${attr.type === 'Image' ? ' td-thumb' : ''}" style="white-space:nowrap;font-size:12px;
           background:${isDiff ? '#fff9c4' : color.bg + '55'}">${val}</td>`;
       });
     });
@@ -1407,285 +1407,41 @@ function createProduct() {
 // ============================================================
 // FICHE PRODUIT — OUVERTURE
 // ============================================================
-function openProductDetail(id) {
-  currentProductId = id;
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  if (!requirePerm(canCat(p.cat, 'r'), 'Produit non accessible')) {
-    currentProductId = null;
-    return;
-  }
-  if (!p.history)        p.history = [];
-  if (!p.pendingChanges) p.pendingChanges = [];
-  computeCalcFields(p);
-  productDirty = false;
-  const cat = getCatByName(p.cat);
-  renderProductHeader(p, cat);
-  renderProductTabs(p, cat);
-  updateDetailCompletion(p);
-  showPage('product-detail', null);
-  applyAccessControl();
-}
 
 // ============================================================
 // INTERCEPTION NAVIGATION — POP-UP DIRTY
 // ============================================================
-function safeShowPage(id, navEl) {
-  if (productDirty && currentProductId) {
-    pendingNavTarget = { id, navEl };
-    openModal('modal-unsaved');
-  } else {
-    productDirty = false;
-    currentProductId = null;
-    showPage(id, navEl);
-  }
-}
 
-function confirmLeaveUnsaved() {
-  const p = products.find(x => x.id === currentProductId);
-  if (p) p.pendingChanges = [];
-  productDirty = false;
-  currentProductId = null;
-  closeModal('modal-unsaved');
-  if (pendingNavTarget) {
-    showPage(pendingNavTarget.id, pendingNavTarget.navEl);
-    pendingNavTarget = null;
-  }
-}
 
-function cancelLeaveUnsaved() {
-  closeModal('modal-unsaved');
-  pendingNavTarget = null;
-}
 
 // ============================================================
 // HEADER PRODUIT
 // ============================================================
 // Une info du bloc resume, pilotee par un element de syntheseItems
-function summaryChip(p, item) {
-  const code = item.code;
-  if (code === 'cat')
-    return `<span><span class="badge" style="${getCatBadgeStyle(p.cat)}">${p.cat}</span></span>`;
-  if (code === 'completion') {
-    const c = calcCompletion(p);
-    return `<span>${item.label} : <strong style="color:${getCompletionColor(c)}">${c}%</strong></span>`;
-  }
-  return `<span>${item.label} : ${getSynthValue(p, code) || '—'}</span>`;
-}
 
 // Vignette du bloc resume : attribut Image configure dans la vue synthese
-function summaryVisual(p) {
-  const visual = getSynthVisualItem();
-  if (!visual) return '';
-  const src = p.fields[visual.code];
-  return `<div onclick="triggerVisualUpload(${p.id},'${visual.code}')"
-      style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;overflow:hidden;
-             cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-             background:#f8fafc;" title="Cliquer pour modifier : ${visual.label}">
-      ${src
-        ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;">`
-        : `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#c0d0e0">
-             <span style="font-size:28px">&#128247;</span>
-             <span style="font-size:10px">Ajouter</span>
-           </div>`}
-    </div>`;
-}
 
-function renderProductHeader(p, cat) {
-  const headerLeft = document.getElementById('product-header-left');
-  if (!headerLeft) return;
-
-  // Memes champs et meme ordre que la vue synthese, hors actions.
-  // La premiere information sert de titre, l'attribut Image sert de vignette.
-  const titleItem = getSynthTitleItem();
-  const title     = titleItem ? (getSynthValue(p, titleItem.code) || '—') : (p.fields.nom || '—');
-  const metaHtml  = activeSynthItems()
-    .filter(i => i.kind === 'attr' && i !== titleItem && !isVisualCode(i.code))
-    .map(i => summaryChip(p, i))
-    .join('');
-
-  headerLeft.innerHTML = `<div style="display:flex;align-items:flex-start;gap:16px">
-    ${summaryVisual(p)}
-    <div style="flex:1">
-      <div class="product-title">${title}</div>
-      <div class="product-meta">${metaHtml}</div>
-    </div>
-  </div>`;
-}
 
 
 // ============================================================
 // UPLOAD VISUEL
 // ============================================================
-function triggerVisualUpload(productId, attrCode) {
-  const input   = document.createElement('input');
-  input.type    = 'file';
-  input.accept  = 'image/*';
-  input.onchange = function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const p = products.find(x => x.id === productId);
-      if (!p) return;
-      const old = p.fields[attrCode] ? '(visuel existant)' : '(vide)';
-      p.fields[attrCode] = ev.target.result;
-      if (attrCode === 'visuel_face') p.visualSrc = ev.target.result;
-      const visualCodes = ['visuel_face', 'visuel_tq', 'visuel_profil', 'visuel_ambiance'];
-      p.visuals = visualCodes.filter(c => p.fields[c]).length;
-      const attr = attributes.find(a => a.code === attrCode);
-      addPendingChange(p, attr ? attr.name : attrCode, old, '(visuel uploade)');
-      renderProductHeader(p, getCatByName(p.cat));
-      refreshVisuelSlot(p, attrCode);
-      updateDetailCompletion(p);
-      renderProductsTable();
-      productDirty = true;
-      showNotif('Visuel mis à jour : ' + (attr ? attr.name : attrCode));
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
-}
 
-function refreshVisuelSlot(p, attrCode) {
-  const slot = document.querySelector(`[data-visuel-code="${attrCode}"]`);
-  if (!slot) return;
-  const img         = slot.querySelector('.image-attr-preview');
-  const placeholder = slot.querySelector('.image-attr-placeholder');
-  if (p.fields[attrCode]) {
-    if (img) { img.src = p.fields[attrCode]; }
-    else if (placeholder) {
-      const newImg    = document.createElement('img');
-      newImg.src      = p.fields[attrCode];
-      newImg.className = 'image-attr-preview';
-      newImg.onclick  = () => triggerVisualUpload(p.id, attrCode);
-      placeholder.replaceWith(newImg);
-    }
-  }
-}
 
 // ============================================================
 // ONGLETS PRODUIT
 // ============================================================
-function renderProductTabs(p, cat) {
-  const tabsEl     = document.getElementById('product-tabs');
-  const contentsEl = document.getElementById('product-tab-contents');
-  tabsEl.innerHTML = '';
-  contentsEl.innerHTML = '';
-  const groupIds = cat ? cat.groupIds : [1];
-  const tabs     = groupIds.map(gid => getGroupById(gid)).filter(Boolean);
-  const allTabs  = [...tabs, { id: 'hist', name: 'Historique', _isHist: true }];
-
-  allTabs.forEach((g, i) => {
-    const tabEl       = document.createElement('div');
-    tabEl.className   = 'tab' + (i === 0 ? ' active' : '');
-    tabEl.textContent = g.name;
-    tabEl.onclick     = (function(gid) {
-      return function() {
-        document.querySelectorAll('#product-tabs .tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('#product-tab-contents .tab-content').forEach(t => t.classList.remove('active'));
-        tabEl.classList.add('active');
-        const c = document.getElementById('tab-group-' + gid);
-        if (c) c.classList.add('active');
-      };
-    })(g.id);
-    tabsEl.appendChild(tabEl);
-
-    const content     = document.createElement('div');
-    content.className = 'tab-content' + (i === 0 ? ' active' : '');
-    content.id        = 'tab-group-' + g.id;
-
-    if (g._isHist)              content.innerHTML = renderTabHistory(p);
-    else if (g.code === 'visuels')         content.innerHTML = renderTabVisuels(p);
-    else                                   content.innerHTML = renderTabAttrGroup(p, g);
-
-    contentsEl.appendChild(content);
-  });
-}
 
 // ============================================================
 // HISTORIQUE
 // ============================================================
-function renderTabHistory(p) {
-  const history = p.history || [];
-  if (!history.length)
-    return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucune modification enregistrée.</div>';
-  let rows = '';
-  [...history].reverse().forEach(h => {
-    rows += `<tr>
-      <td style="white-space:nowrap;color:#607080">${h.ts}</td>
-      <td><span style="font-weight:600;color:#1a2332">${h.user}</span></td>
-      <td><span class="history-field-badge">${h.field}</span></td>
-      <td>
-        <span class="history-val-old">${h.old || '(vide)'}</span>
-        <span class="history-arrow">→</span>
-        <span class="history-val-new">${h.new || '(vide)'}</span>
-      </td>
-    </tr>`;
-  });
-  return `<div style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.07)">
-    <table class="history-table">
-      <thead><tr><th>Date</th><th>Utilisateur</th><th>Champ</th><th>Modification</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
-}
 
-function addPendingChange(p, fieldName, oldVal, newVal) {
-  if (!p.pendingChanges) p.pendingChanges = [];
-  if (String(oldVal || '') === String(newVal || '')) return;
-  const existing = p.pendingChanges.find(c => c.field === fieldName);
-  if (existing) { existing.new = String(newVal || ''); }
-  else { p.pendingChanges.push({ field: fieldName, old: String(oldVal || ''), new: String(newVal || '') }); }
-}
 
-function flushPendingChanges(p) {
-  if (!p.pendingChanges || !p.pendingChanges.length) return;
-  const ts = nowStr();
-  p.pendingChanges.forEach(c => {
-    if (c.old !== c.new) p.history.push({ ts, user: 'J. Doe', field: c.field, old: c.old, new: c.new });
-  });
-  p.pendingChanges = [];
-}
 
-function onDateMaskInput(el) {
-  let v = el.value.replace(/\D/g, '');
-  if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
-  if (v.length > 5) v = v.slice(0, 5) + '/' + v.slice(5);
-  el.value = v.slice(0, 10);
-}
 
 // ============================================================
 // ONGLET VISUELS
 // ============================================================
-function renderTabVisuels(p) {
-  const visualAttrs = [
-    { code: 'visuel_face',        name: 'Vue de face',         required: false },
-    { code: 'visuel_tq',          name: 'Vue 3/4',             required: false },
-    { code: 'visuel_profil',      name: 'Vue de profil',       required: false },
-    { code: 'visuel_ambiance',    name: 'Visuel ambiance',     required: false },
-  ];
-  let slots = '';
-  visualAttrs.forEach(va => {
-    const hasImg = !!p.fields[va.code];
-    slots += `<div class="image-attr-slot" data-visuel-code="${va.code}">
-      ${hasImg
-        ? `<img src="${p.fields[va.code]}" class="image-attr-preview"
-             onclick="triggerVisualUpload(${p.id},'${va.code}')" title="Cliquer pour modifier">`
-        : `<div class="image-attr-placeholder" onclick="triggerVisualUpload(${p.id},'${va.code}')">
-             <span style="font-size:32px">&#128247;</span>
-             <span style="font-size:12px">Cliquer pour ajouter</span>
-           </div>`}
-      <div class="image-attr-label">${va.name}</div>
-      ${va.required ? '<div class="image-attr-badges"><span class="visual-badge-required">Obligatoire</span></div>' : ''}
-    </div>`;
-  });
-  return `<div style="background:#fff3e0;border-radius:8px;padding:12px 16px;margin-bottom:20px;
-    font-size:13px;color:#e65100;border-left:4px solid #ffa726">
-    3 visuels obligatoires (Face, 3/4, Profil). Formats : JPG, PNG — 2000x2000px minimum.
-  </div>
-  <div class="image-attrs-grid">${slots}</div>`;
-}
 
 // ============================================================
 // ONGLET MARQUE / FOURNISSEUR
@@ -1700,181 +1456,21 @@ function renderTabVisuels(p) {
 // ============================================================
 // ONGLET GROUPE D'ATTRIBUTS GENERIQUE
 // ============================================================
-function renderTabAttrGroup(p, g) {
-  const attrs = g.attrIds.map(id => getAttrById(id)).filter(Boolean);
-  if (!attrs.length)
-    return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut pour ce groupe.</div>';
-  computeCalcFields(p);
-  let html = '<div class="fields-grid"><div class="field-group">';
-  if (g.code === 'infos_generales') html += `<div class="field-group-title">${g.name}</div>`;
-  attrs.forEach(a => {
-    const val = getAttrFieldValue(p, a);
-    let input = '';
-
-    if (a.code === 'cat') {
-      input = categorieSelectHtml(p);
-    } else if (a.code === 'completion') {
-      input = `<input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${calcCompletion(p)}%" readonly>`;
-    } else if (a.type === 'Image') {
-      const hasImg = !!val;
-      input = `<div class="image-attr-slot" data-visuel-code="${a.code}" style="max-width:200px">
-        ${hasImg
-          ? `<img src="${val}" class="image-attr-preview"
-               onclick="triggerVisualUpload(${p.id},'${a.code}')" title="Cliquer pour modifier">`
-          : `<div class="image-attr-placeholder" onclick="triggerVisualUpload(${p.id},'${a.code}')">
-               <span style="font-size:28px">&#128247;</span>
-               <span style="font-size:11px">Cliquer pour ajouter</span>
-             </div>`}
-        ${a.required ? '<div class="image-attr-badges"><span class="visual-badge-required">Obligatoire</span></div>' : ''}
-      </div>`;
-    } else if (a.calc) {
-      input = calcFieldInput(p, a, val);
-    } else if (a.readonly) {
-      input = `<input class="field-input" style="background:#f0f4f8;color:#a0b0c0" value="${val}" readonly>`;
-    } else if (a.type === 'Simple select') {
-      const opts = (a.options || []).map(o => `<option${o === val ? ' selected' : ''}>${o}</option>`).join('');
-      input = `<select class="field-input form-select"
-        onchange="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">
-        <option value="">-- Choisir --</option>${opts}
-      </select>`;
-    } else if (a.type === 'Multi select') {
-      const opts = (a.options || []).map(o => `<option${(val || '').includes(o) ? ' selected' : ''}>${o}</option>`).join('');
-      input = `<select class="field-input form-select" multiple
-        onchange="onMultiSelectChange(${p.id},this,'${a.code}')">${opts}</select>`;
-    } else if (a.type === 'Oui / Non') {
-      input = `<select class="field-input form-select"
-        onchange="onFieldChange(${p.id},this,'${a.code}')">
-        <option value="">-- Choisir --</option>
-        <option${val === 'Oui' ? ' selected' : ''}>Oui</option>
-        <option${val === 'Non' ? ' selected' : ''}>Non</option>
-      </select>`;
-    } else if (a.type === 'Texte long') {
-      input = longTextInput(p, a, val);
-    } else if (a.type === 'Nombre' || a.type === 'Nombre decimal') {
-      input = numberInput(p, a, val);
-    } else if (a.type === 'Date') {
-      input = `<input class="field-input" style="font-family:monospace" value="${val}"
-        placeholder="jj/mm/aaaa" maxlength="10"
-        oninput="onDateMaskInput(this);onFieldChange(${p.id},this,'${a.code}')">`;
-    } else {
-      // Texte avec masque éventuel
-      const maskAttr = a.mask ? `id="fi-${a.code}-${p.id}"` : '';
-      input = `<input class="field-input" ${maskAttr} value="${val}"
-        oninput="onFieldChange(${p.id},this,'${a.code}');refreshCalcFields(${p.id})">`;
-    }
-
-    html += `<div class="field-row">
-      <div class="field-label">${attrLabelHtml(a)}</div>
-      ${input}
-    </div>`;
-  });
-
-  html += '</div></div>';
-
-  // Applique les masques après rendu (via setTimeout pour laisser le DOM se mettre à jour)
-  setTimeout(() => {
-    attrs.forEach(a => {
-      if (a.mask && !a.calc && !a.readonly) {
-        const el = document.getElementById('fi-' + a.code + '-' + p.id);
-        if (el) applyInputMask(el, a.mask);
-      }
-    });
-  }, 0);
-
-  return html;
-}
 
 // ============================================================
 // CHAMPS CALCULES — REFRESH
 // ============================================================
-function refreshCalcFields(productId) {
-  const p = products.find(x => x.id === productId);
-  if (!p) return;
-  computeCalcFields(p);
-  document.querySelectorAll('[data-calc]').forEach(el => {
-    if (el === document.activeElement) return;
-    const code = el.getAttribute('data-calc');
-    const attr = attributes.find(a => a.code === code);
-    if (p.fields[code] !== undefined) el.value = formatCalcFieldDisplay(attr, p.fields[code]);
-  });
-  updateDetailCompletion(p);
-}
 
 // ============================================================
 // EVENEMENTS CHAMPS
 // ============================================================
-function onFieldChange(productId, el, fieldKey) {
-  const p = products.find(x => x.id === productId);
-  if (!p) return;
-  const oldVal = p.fields[fieldKey] !== undefined ? p.fields[fieldKey] : '';
-  const attr = attributes.find(a => a.code === fieldKey);
-  let newVal = el.value;
-  if (attr && isPercentAttr(attr)) newVal = percentFromDisplay(el.value);
-  p.fields[fieldKey] = newVal;
-  addPendingChange(p, attr ? attr.name : fieldKey, oldVal, newVal);
-  productDirty = true;
-  if (fieldKey === 'nom') {
-    const t = document.querySelector('.product-title');
-    if (t) t.textContent = newVal;
-  }
-  computeCalcFields(p);
-  updateDetailCompletion(p);
-  renderProductHeader(p, getCatByName(p.cat));
-}
 
-function onMultiSelectChange(productId, el, fieldKey) {
-  const p = products.find(x => x.id === productId);
-  if (!p) return;
-  const oldVal = p.fields[fieldKey] || '';
-  const newVal = Array.from(el.selectedOptions).map(o => o.value).join(', ');
-  p.fields[fieldKey] = newVal;
-  const attr = attributes.find(a => a.code === fieldKey);
-  addPendingChange(p, attr ? attr.name : fieldKey, oldVal, newVal);
-  productDirty = true;
-  updateDetailCompletion(p);
-}
 
-function onCatChange(productId, el) {
-  const p = products.find(x => x.id === productId);
-  if (!p) return;
-  const oldCat = p.cat;
-  p.cat = el.value;
-  addPendingChange(p, 'Catégorie', oldCat, el.value);
-  productDirty = true;
-  renderProductTabs(p, getCatByName(p.cat));
-  renderProductHeader(p, getCatByName(p.cat));
-  updateDetailCompletion(p);
-}
 
 // ============================================================
 // COMPLETUDE
 // ============================================================
-function updateDetailCompletion(p) {
-  const comp  = calcCompletion(p);
-  const color = getCompletionColor(comp);
-  const pctEl = document.getElementById('detail-completion-pct');
-  const barEl = document.getElementById('detail-completion-bar');
-  const subEl = document.getElementById('detail-completion-sub');
-  if (pctEl) { pctEl.textContent = comp + '%'; pctEl.style.color = color; }
-  if (barEl) { barEl.style.width = comp + '%'; barEl.style.background = color; }
-  const attrs  = getCompletionAttrs(p);
-  const total  = attrs.length;
-  const filled = attrs.filter(a => isCompletionFilled(p, a)).length;
-  if (subEl) subEl.textContent = `${filled} / ${total} champs renseignes`;
-}
 
 // ============================================================
 // SAUVEGARDE
 // ============================================================
-function saveProduct() {
-  const p = products.find(x => x.id === currentProductId);
-  if (!p) return;
-  p.maj = nowStr();
-  flushPendingChanges(p);
-  productDirty = false;
-  const histTab = document.getElementById('tab-group-hist');
-  if (histTab) histTab.innerHTML = renderTabHistory(p);
-  renderProductsTable();
-  renderDashboard();
-  showNotif('Produit enregistré — ' + p.maj);
-}

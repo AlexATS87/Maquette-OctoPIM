@@ -63,7 +63,7 @@ function summaryChip(p, item) {
 function summaryVisual(p) {
   const visual = getSynthVisualItem();
   if (!visual) return '';
-  const src = p.fields[visual.code];
+  const src = imageSrc(p, visual.code);
   return `
     <div onclick="triggerVisualUpload(${p.id},'${visual.code}')"
       style="width:90px;height:90px;border-radius:10px;border:2px dashed #c0d0e0;
@@ -207,14 +207,13 @@ function triggerVisualUpload(productId,attrCode){
     const reader=new FileReader();
     reader.onload=function(ev){
       const p=products.find(x=>x.id===productId);if(!p)return;
-      const old=p.fields[attrCode]?'(visuel existant)':'(vide)';
-      p.fields[attrCode]=ev.target.result;
-      if(attrCode==='visuel_face'){p.visualSrc=ev.target.result;}
+      const old=p.fields[attrCode]||'';
+      // la fiche garde le nom du fichier, l'image est stockée à côté
+      p.images=p.images||{};p.images[attrCode]=ev.target.result;
+      p.fields[attrCode]=file.name;
       makeThumb(ev.target.result,t=>{p.thumbs=p.thumbs||{};p.thumbs[attrCode]=t;});
-      const visualCodes=['visuel_face','visuel_tq','visuel_profil','visuel_ambiance'];
-      p.visuals=visualCodes.filter(c=>p.fields[c]).length;
       const attr=attributes.find(a=>a.code===attrCode);
-      addPendingChange(p,attr?attr.name:attrCode,old,'(visuel uploade)');
+      addPendingChange(p,attr?attr.name:attrCode,old,file.name);
       renderProductHeader(p,getCatByName(p.cat));
       refreshVisuelSlot(p,attrCode);
       updateDetailCompletion(p);
@@ -228,17 +227,24 @@ function triggerVisualUpload(productId,attrCode){
 }
 function refreshVisuelSlot(p,attrCode){
   const slot=document.querySelector(`[data-visuel-code="${attrCode}"]`);if(!slot)return;
-  const img=slot.querySelector('.image-attr-preview');
-  const placeholder=slot.querySelector('.image-attr-placeholder');
-  if(p.fields[attrCode]){
-    if(img){img.src=p.fields[attrCode];}
-    else if(placeholder){
-      const newImg=document.createElement('img');
-      newImg.src=p.fields[attrCode];newImg.className='image-attr-preview';
-      newImg.onclick=()=>triggerVisualUpload(p.id,attrCode);
-      placeholder.replaceWith(newImg);
-    }
-  }
+  const a=attributes.find(x=>x.code===attrCode);
+  slot.outerHTML=imageSlotHtml(p,a);
+}
+// Vignette d'un attribut Image : clic pour envoyer ou remplacer le fichier ;
+// le nom du fichier s'affiche dessous
+function imageSlotHtml(p,a){
+  const src=imageSrc(p,a.code), name=p.fields[a.code]||'';
+  const can=canEditProduct(p);
+  const click=can?`onclick="triggerVisualUpload(${p.id},'${a.code}')"`:'';
+  return `<div class="image-attr-slot" data-visuel-code="${a.code}">
+    ${src
+      ? `<img src="${src}" class="image-attr-preview" ${click} title="${can?'Cliquer pour remplacer':''}">`
+      : `<div class="image-attr-placeholder" ${click}>
+           <span style="font-size:28px">&#128247;</span>
+           <span style="font-size:11px">${name?'Image non chargée':(can?'Cliquer pour ajouter':'Aucun visuel')}</span>
+         </div>`}
+    ${name?`<div class="image-attr-file" title="${escapeHtml(name)}">${escapeHtml(name)}</div>`:''}
+  </div>`;
 }
 
 // ============================================================
@@ -267,7 +273,6 @@ function renderProductTabs(p,cat){
     content.className='tab-content'+(i===0?' active':'');
     content.id='tab-group-'+g.id;
     if(g._isHist)content.innerHTML=renderTabHistory(p);
-    else if(g.code==='visuels')content.innerHTML=renderTabVisuels(p);
     else content.innerHTML=renderTabAttrGroup(p,g);
     contentsEl.appendChild(content);
   });
@@ -348,48 +353,6 @@ function onDateMaskInput(el){
 // ============================================================
 // ONGLET VISUELS
 // ============================================================
-function renderTabVisuels(p) {
-  // Recupere les attributs de type Image du groupe visuels
-  const cat         = getCatByName(p.cat);
-  const visuelsGroup = cat
-    ? cat.groupIds.map(id => getGroupById(id)).filter(Boolean).find(g => g.code === 'visuels')
-    : null;
-
-  const groupAttrs = visuelsGroup
-    ? visuelsGroup.attrIds.map(id => getAttrById(id)).filter(Boolean)
-    : attributes.filter(a => a.type === 'Image');
-  const visualAttrs = groupAttrs.filter(a => a.type === 'Image');
-  const otherAttrs = groupAttrs.filter(a => a.type !== 'Image');
-  const otherHtml = otherAttrs.length && visuelsGroup
-    ? renderTabAttrGroup(p, { id: 'vis-fields', code: 'synth', name: '', attrIds: otherAttrs.map(a => a.id) })
-    : '';
-
-  if (!visualAttrs.length)
-    return '<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucun attribut visuel configure.</div>';
-
-  const obligatoires = visualAttrs.filter(a => a.required);
-
-  let slots = '';
-  visualAttrs.forEach(va => {
-    const hasImg = !!p.fields[va.code];
-    slots += `<div class="image-attr-slot${synthHiddenClass(va.code)}" data-visuel-code="${va.code}">
-      ${hasImg
-        ? `<img src="${p.fields[va.code]}" class="image-attr-preview"
-             onclick="triggerVisualUpload(${p.id},'${va.code}')"
-             title="Cliquer pour modifier">`
-        : `<div class="image-attr-placeholder"
-             onclick="triggerVisualUpload(${p.id},'${va.code}')">
-             <span style="font-size:32px">&#128247;</span>
-             <span style="font-size:12px">Cliquer pour ajouter</span>
-           </div>`}
-      <div class="image-attr-label">${attrLabelHtml(va)}</div>
-      ${va.required ? '<div class="image-attr-badges"><span class="visual-badge-required">Obligatoire</span></div>' : ''}
-    </div>`;
-  });
-
-  return `${otherHtml}
-  <div class="image-attrs-grid">${slots}</div>`;
-}
 
 function renderAttrFieldHtml(p,a,labelOverride){
   const val=displayFieldVal(p.fields[a.code]);
@@ -470,20 +433,7 @@ function renderTabAttrGroup(p, g, opts) {
       input = `<input class="field-input"
         style="background:#f0f4f8;color:#a0b0c0" value="${calcCompletion(p)}%" readonly>`;
     } else if (a.type === 'Image') {
-      const hasImg = !!val;
-      input = `<div class="image-attr-slot" data-visuel-code="${a.code}"
-        style="max-width:200px">
-        ${hasImg
-          ? `<img src="${val}" class="image-attr-preview"
-               onclick="triggerVisualUpload(${p.id},'${a.code}')"
-               title="Cliquer pour modifier">`
-          : `<div class="image-attr-placeholder"
-               onclick="triggerVisualUpload(${p.id},'${a.code}')">
-               <span style="font-size:28px">&#128247;</span>
-               <span style="font-size:11px">Cliquer pour ajouter</span>
-             </div>`}
-        ${a.required ? '<div class="image-attr-badges"><span class="visual-badge-required">Obligatoire</span></div>' : ''}
-      </div>`;
+      input = imageSlotHtml(p, a);
     } else if (a.readonly && a.type === 'Simple select') {
       input = `<input class="field-input"
         style="background:#f0f4f8;color:#607080" value="${escapeHtml(val || '')}" readonly>`;
@@ -766,7 +716,7 @@ function validateRequiredFields(p){
   document.querySelectorAll('#page-product-detail [data-field-code]')
     .forEach(el=>el.classList.remove('field-error'));
   const missing=[];
-  attributes.filter(a=>a.required && !isConditionRowAttr(a)).forEach(a=>{
+  attributes.filter(a=>a.required).forEach(a=>{
     const v=getAttrFieldValue(p,a);
     if(v!==undefined&&v!==null&&String(v).trim()!=='')return;
     missing.push(a.name);

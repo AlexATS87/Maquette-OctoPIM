@@ -1368,23 +1368,31 @@ const VISUEL_DEMO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   + '<rect x="22" y="44" width="48" height="34" rx="12"/><rect x="90" y="44" width="48" height="34" rx="12"/>'
   + '<path d="M70 56 q10 -8 20 0"/><path d="M22 52 l-12 -6"/><path d="M138 52 l12 -6"/></g></svg>');
 [
-  [1,  { commande_implantation:'Oui', origine_visuels:'Fournisseur', visuel_face:VISUEL_DEMO, contribution_akeneo:'Oui' }],
-  [4,  { commande_implantation:'Oui', origine_visuels:'Shooting', visuel_face:VISUEL_DEMO, contribution_akeneo:'Oui' }],
-  [5,  { commande_implantation:'Oui', origine_visuels:'Fournisseur', visuel_face:VISUEL_DEMO }],
+  [1,  { commande_implantation:'Oui', origine_visuels:'Fournisseur', contribution_akeneo:'Oui' }],
+  [4,  { commande_implantation:'Oui', origine_visuels:'Shooting', contribution_akeneo:'Oui' }],
+  [5,  { commande_implantation:'Oui', origine_visuels:'Fournisseur' }],
   [6,  { commande_implantation:'Oui' }],
   [12, { commande_implantation:'Oui' }],
-  [13, { commande_implantation:'Oui', origine_visuels:'Shooting', visuel_face:VISUEL_DEMO }],
+  [13, { commande_implantation:'Oui', origine_visuels:'Shooting' }],
   [24, { commande_implantation:'Oui' }],
 ].forEach(([id, values]) => {
   const p = products.find(x => x.id === id);
   if (p) Object.assign(p.fields, values);
 });
+// Visuel de démonstration : la fiche garde le nom du fichier, l'image est
+// stockée à côté (dans l'application, elle sera dans le stockage des médias)
+function setDemoVisual(p, code) {
+  p.images = p.images || {};
+  p.images[code] = VISUEL_DEMO;
+  p.fields[code] = (p.fields.sap || ('produit-' + p.id)) + '_' + code.replace(/^visuel_/, '') + '.jpg';
+}
+[1, 4, 5, 13].forEach(id => { const p = products.find(x => x.id === id); if (p) setDemoVisual(p, 'visuel_face'); });
 // Montures ajoutees (id 30+) : avancement varie selon les canaux
 products.filter(p => p.id >= 30).forEach(p => {
   const f = p.fields, k = (p.id * 37) % 10;
   if (f.active_o === 'Actif' || f.active_l === 'Actif' || f.active_o === 'Écoulement de stock') {
     Object.assign(f, { commande_implantation:'Oui', origine_visuels: k < 6 ? 'Fournisseur' : 'Shooting' });
-    if (k < 8) f.visuel_face = VISUEL_DEMO;
+    if (k < 8) setDemoVisual(p, 'visuel_face');
     if (k < 6) f.contribution_akeneo = 'Oui';
   } else if (f.active_o === 'En cours' && k < 6) {
     f.commande_implantation = 'Oui';
@@ -1734,7 +1742,7 @@ let trames = [
     { bloc:'Commercial', header:'Couleur NRF (US uniquement)' },
     { bloc:'Commercial', header:'Spécifications additionnelles' },
     { bloc:'Commercial', header:'Petite image' },
-    { bloc:'Commercial', header:'Image de face' },
+    { bloc:'Commercial', header:'Image de face', code:'visuel_face' },
     { bloc:'Commercial', header:'Image droite' },
     { bloc:'Commercial', header:'Image gauche' },
     { bloc:'Commercial', header:'Image de dessus' },

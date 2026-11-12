@@ -2297,7 +2297,7 @@ function renderAlertsPage() {
 // Fenêtre de création / modification d'une alerte
 let _alertDraft = null;
 function alertAttrChoices() {
-  return attributes.filter(a => a.type !== 'Image')
+  return attributes
     .sort((x, y) => x.name.localeCompare(y.name, 'fr'));
 }
 function alertValueChoices(a) {
@@ -2437,7 +2437,7 @@ function renderExportFormatsPage() {
   const canW = canMod('mod_trames', 'w'), canD = canMod('mod_trames', 'd');
   const f = trameById(_fmtSel);
   const ro = canW && f && !f.system ? '' : ' disabled';
-  const attrOpts = [...attributes].filter(a => a.type !== 'Image').sort((x, y) => x.name.localeCompare(y.name, 'fr'));
+  const attrOpts = [...attributes].sort((x, y) => x.name.localeCompare(y.name, 'fr'));
   const srcSel = (c, i) => {
     const v = c.fixed != null ? '__fixed' : (c.code || '');
     return `<select class="form-select" onchange="setFmtColSource(${i},this.value)"${ro}>
@@ -2480,12 +2480,14 @@ function renderExportFormatsPage() {
           <input class="field-input" value="${escapeHtml(f.name)}" onchange="setFmtProp('name',this.value)"${ro}></div>
         ${f.system ? '' : `<div class="form-field" style="margin:0"><div class="form-label">Nom de la feuille</div>
           <input class="field-input" value="${escapeHtml(f.sheet || '')}" onchange="setFmtProp('sheet',this.value)"${ro}></div>`}
-        <div class="form-field" style="margin:0"><div class="form-label">Usage</div>
+      </div>
+      <div class="trame-settings">
+        <div class="trame-box"><div class="form-label">Usage</div>
           <div class="trame-checks">
             <label><input type="checkbox"${f.import ? ' checked' : ''} onchange="setFmtProp('import',this.checked)"${ro}> Import</label>
             <label><input type="checkbox"${f.export ? ' checked' : ''} onchange="setFmtProp('export',this.checked)"${ro}> Export</label>
           </div></div>
-        <div class="form-field" style="margin:0"><div class="form-label">Catégories (aucune = toutes)</div>
+        <div class="trame-box"><div class="form-label">Catégories (aucune = toutes)</div>
           <div class="trame-checks">${categories.map(c => `<label><input type="checkbox"${(f.cats || []).includes(c.name) ? ' checked' : ''} onchange="toggleFmtCat('${escapeHtml(c.name)}',this.checked)"${ro}> ${escapeHtml(c.name)}</label>`).join('')}</div></div>
         <div style="flex:1"></div>
         ${f.system ? '' : `<div class="calc-meta" style="align-self:flex-end;padding-bottom:8px">${f.columns.length} colonnes, ${filled} remplies</div>`}

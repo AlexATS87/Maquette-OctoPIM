@@ -234,7 +234,7 @@ function getImportTargetAttrs() {
 }
 
 function importableAttr(a) {
-  return a && !a.readonly && !['completion', 'created_at', 'updated_at', 'etape_workflow'].includes(a.code) && a.type !== 'Image';
+  return a && !a.readonly && !['completion', 'created_at', 'updated_at', 'etape_workflow'].includes(a.code);
 }
 function isCalcAttr(a) { return !!(a && (a.calc || a.formula)); }
 

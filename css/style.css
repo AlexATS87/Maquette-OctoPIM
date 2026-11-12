@@ -2222,3 +2222,14 @@ td.td-check { width: 52px; padding-left: 12px !important; padding-right: 4px !im
 .ref-pct { display: inline-flex; align-items: center; gap: 4px; }
 .ref-pct .field-input { width: 80px; text-align: right; }
 .ref-group-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #1a2332; }
+
+/* Trame : usage et catégories, chacun dans son cadre */
+.trame-settings { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; margin: 4px 0 14px; }
+.trame-box { background: #fff; border: 1px solid #dfe6ee; border-radius: 8px; padding: 8px 14px; }
+.trame-box .form-label { margin-bottom: 2px; }
+.trame-settings > div[style*="flex:1"] { flex: 1; }
+
+/* Attribut Image : vignette et nom du fichier */
+.field-row .image-attr-slot { max-width: 220px; }
+.image-attr-file { font-size: 11px; color: #607080; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+td.td-thumb { padding-top: 4px !important; padding-bottom: 4px !important; }

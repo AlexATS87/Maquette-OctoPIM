@@ -355,7 +355,7 @@ function deleteCalcTable(id) {
 }
 
 function calcTargetAttrs() {
-  return attributes.filter(a => !a.system && !a.readonly && a.type !== 'Image' && a.type !== 'Texte long'
+  return attributes.filter(a => !a.system && !a.readonly && a.type !== 'Texte long'
     && !a.calc && !a.formula && a.code !== 'cat');
 }
 

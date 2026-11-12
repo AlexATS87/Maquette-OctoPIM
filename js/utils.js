@@ -21,7 +21,7 @@ function leaveVal(v) {
 
 function snapshotProduct(p) {
   p._orig = { cat: p.cat, fields: JSON.parse(JSON.stringify(p.fields || {})),
-    forced: JSON.parse(JSON.stringify(p.forcedFields || {})), visualSrc: p.visualSrc, visuals: p.visuals,
+    forced: JSON.parse(JSON.stringify(p.forcedFields || {})), images: p.images ? Object.assign({}, p.images) : undefined,
     thumbs: p.thumbs ? JSON.parse(JSON.stringify(p.thumbs)) : undefined };
 }
 
@@ -30,7 +30,7 @@ function restoreProductSnapshot(p) {
   p.cat = o.cat;
   p.fields = JSON.parse(JSON.stringify(o.fields));
   p.forcedFields = JSON.parse(JSON.stringify(o.forced));
-  p.visualSrc = o.visualSrc; p.visuals = o.visuals; p.thumbs = o.thumbs;
+  p.images = o.images; p.thumbs = o.thumbs;
   p.pendingChanges = [];
   computeCalcFields(p);
 }
@@ -43,14 +43,12 @@ function productChangeList(p) {
   if (o.cat !== p.cat) out.push({ label: 'Catégorie', old: o.cat, now: p.cat });
   const has = (obj, k) => Object.prototype.hasOwnProperty.call(obj || {}, k);
   attributes.forEach(a => {
-    if (a.code === 'cat' || a.code === 'completion') return;
+    if (a.code === 'cat' || a.system) return;   // calculés par l'application (étape, dates, complétion)
     const fNow = has(p.forcedFields, a.code), fBefore = has(o.forced, a.code);
     if ((a.calc || a.formula) && !fNow && !fBefore) return;
     const ov = leaveVal(o.fields[a.code]), nv = leaveVal(p.fields[a.code]);
     if (ov !== nv) {
-      out.push(a.type === 'Image'
-        ? { label: a.name, old: ov ? 'visuel' : '', now: nv ? 'nouveau visuel' : '' }
-        : { label: a.name, old: ov, now: nv });
+      out.push({ label: a.name, old: ov, now: nv });
     } else if (fNow !== fBefore) {
       out.push({ label: a.name, old: fBefore ? 'valeur forcée' : 'calculée', now: fNow ? 'valeur forcée' : 'calculée' });
     }
@@ -682,7 +680,7 @@ function attrSectionTitle(id) { return String(id).slice(1); }
 
 // Largeur d'un attribut sur la fiche (grille de 12 colonnes)
 function fieldWidthClass(a) {
-  const w = a.width || ((a.type === 'Texte long' || a.type === 'Image') ? 'full' : 'normal');
+  const w = a.width || (a.type === 'Texte long' ? 'full' : 'normal');
   return 'fw-' + w;
 }
 
@@ -1049,6 +1047,7 @@ function categorieFieldHtml(p) {
 }
 
 function formatAttrListValue(p, attr) {
+  if (attr.type === 'Image') return p.fields[attr.code] ? visualThumb(p, 32, attr.code) : '—';
   if (attr.code === 'fournisseur_code') {
     const v = p.fields[attr.code];
     if (isEmptyFieldVal(v)) return '—';
@@ -1752,10 +1751,19 @@ function onLongTextInput(productId, el, code, max) {
 
 // Miniature de liste : on affiche la vignette réduite (96 px) produite à
 // l'envoi du visuel, jamais l'image d'origine ; taille fixe, chargement différé.
+// Image d'un attribut de type Image : l'image chargée, ou la valeur si c'est
+// une adresse (http…, data:) ; sinon seulement le nom du fichier
+function imageSrc(p, code) {
+  if (!p) return '';
+  if (p.images && p.images[code]) return p.images[code];
+  const v = String((p.fields && p.fields[code]) || '');
+  return /^(https?:|data:image)/i.test(v) ? v : '';
+}
+
 function visualThumb(product, size, code) {
   size = size || 40;
-  const field = code || 'visuel_face';
-  const src = (product.thumbs && product.thumbs[field]) || (product.fields && product.fields[field]);
+  const field = code || (getSynthVisualItem() || {}).code || '';
+  const src = (product.thumbs && product.thumbs[field]) || imageSrc(product, field);
   if (src) {
     return `<img src="${src}" width="${size}" height="${size}" loading="lazy" decoding="async"
       class="list-thumb" style="width:${size}px;height:${size}px"

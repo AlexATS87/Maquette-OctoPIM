@@ -112,7 +112,7 @@ function getDetailExportCols(catName) {
   const cols = [];
   cat.groupIds.forEach(gid => {
     const g = getGroupById(gid);
-    if (!g || g.code === 'visuels') return;
+    if (!g) return;
     g.attrIds.forEach(aid => {
       const a = getAttrById(aid);
       if (!a) return;
