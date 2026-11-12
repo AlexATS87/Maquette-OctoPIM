@@ -569,6 +569,10 @@ function editAttribute(id, draft) {
   if (maskEl) maskEl.readOnly = !!a.system;
   const helpEl = document.getElementById('ea-helptext');
   if (helpEl) helpEl.value = a.helpText || '';
+  const sufEl = document.getElementById('ea-file-suffix');
+  if (sufEl) sufEl.value = a.fileSuffix || '';
+  const imgWrap = document.getElementById('ea-img-wrap');
+  if (imgWrap) imgWrap.style.display = a.type === 'Image' ? '' : 'none';
   document.getElementById('ea-mask').value     = a.mask || '';
   document.getElementById('ea-maxlength').value = a.maxLength || '';
   document.getElementById('ea-step-enabled').value = a.stepEnabled ? '1' : '0';
@@ -663,6 +667,8 @@ function onEditAttrTypeChange() {
   if (optWrap) optWrap.style.display = (type === 'Simple select' || type === 'Multi select') ? '' : 'none';
   const lenWrap = document.getElementById('ea-maxlength-wrap');
   if (lenWrap) lenWrap.style.display = type === 'Texte long' ? '' : 'none';
+  const imgWrapT = document.getElementById('ea-img-wrap');
+  if (imgWrapT) imgWrapT.style.display = type === 'Image' ? '' : 'none';
   const numWrap = document.getElementById('ea-number-wrap');
   if (numWrap) numWrap.style.display = type === 'Nombre' ? '' : 'none';
   renderFormulaHelp('ea-formula-help', type);
@@ -740,6 +746,8 @@ function onEditAttrTypeChange() {
   if (optWrap) optWrap.style.display = (type === 'Simple select' || type === 'Multi select') ? '' : 'none';
   const lenWrap = document.getElementById('ea-maxlength-wrap');
   if (lenWrap) lenWrap.style.display = type === 'Texte long' ? '' : 'none';
+  const imgWrapT = document.getElementById('ea-img-wrap');
+  if (imgWrapT) imgWrapT.style.display = type === 'Image' ? '' : 'none';
   const numWrap = document.getElementById('ea-number-wrap');
   if (numWrap) numWrap.style.display = type === 'Nombre' ? '' : 'none';
   renderFormulaHelp('ea-formula-help', type);
@@ -901,6 +909,13 @@ function saveAttributeEdit() {
   }
   const helpSaveEl = document.getElementById('ea-helptext');
   a.helpText = helpSaveEl ? helpSaveEl.value.trim() : (a.helpText || '');
+  const sufSave = document.getElementById('ea-file-suffix');
+  if (sufSave) {
+    const suf = sufSave.value.trim();
+    const dup = suf && attributes.find(x => x !== a && x.type === 'Image' && importNorm(x.fileSuffix || '') === importNorm(suf));
+    if (dup) { showNotif('Suffixe « ' + suf + ' » déjà utilisé par ' + dup.name, 'error'); return; }
+    a.fileSuffix = newType === 'Image' && suf ? suf : undefined;
+  }
   a.maxLength = parseInt(document.getElementById('ea-maxlength').value) || null;
   if (!a.system) {
     if (newType === 'Simple select' || newType === 'Multi select') {
@@ -1740,6 +1755,20 @@ function renderPrefsPage() {
         </div>
       </div>
 
+      <div class="field-row" style="margin-bottom:24px">
+        <div class="field-label" style="margin-bottom:6px">Import de visuels : nom des fichiers</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select class="form-select" id="pref-visual-key" style="width:160px">
+            <option value="sap"${appPrefs.visualKey === 'sap' ? ' selected' : ''}>Code SAP</option>
+            <option value="ean"${appPrefs.visualKey === 'ean' ? ' selected' : ''}>Code EAN/GTIN</option>
+          </select>
+          <span style="font-size:13px">+</span>
+          <input class="field-input" id="pref-visual-sep" value="${escapeHtml(appPrefs.visualSep || '_')}" maxlength="3" style="width:60px;text-align:center" title="Séparateur">
+          <span style="font-size:13px">+ suffixe du visuel</span>
+          <span class="calc-meta">ex. ${escapeHtml(appPrefs.visualKey === 'ean' ? '200000636122' : 'M90538400001')}${escapeHtml(appPrefs.visualSep || '_')}face.jpg</span>
+        </div>
+      </div>
+
       <div style="display:flex;justify-content:flex-end;gap:10px">
         <button class="btn btn-secondary" onclick="showPage('admin',null)">Annuler</button>
         <button class="btn btn-primary" onclick="savePrefs()">Enregistrer</button>
@@ -1753,6 +1782,10 @@ function savePrefs() {
   const sc = parseInt(document.getElementById('pref-seuil').value);
   if (ps === 25 || ps === 50 || ps === 100) { appPrefs.pageSize = ps; currentPage = 1; }
   if (!isNaN(sc) && sc >= 0 && sc <= 100) seuilCompletion = sc;
+  const vk = (document.getElementById('pref-visual-key') || {}).value;
+  const vs = ((document.getElementById('pref-visual-sep') || {}).value || '').trim();
+  if (vk === 'sap' || vk === 'ean') appPrefs.visualKey = vk;
+  if (vs) appPrefs.visualSep = vs;
   showPage('admin', null);
   renderAll();
   showNotif('Préférences enregistrées');

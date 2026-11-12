@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <title>OctoPIM</title>
-  <link rel="stylesheet" href="css/style.css?v=61">
+  <link rel="stylesheet" href="css/style.css?v=62">
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
 </head>
@@ -511,6 +511,10 @@
               <input class="field-input" id="ea-helptext"
                 placeholder="? à côté du libellé">
             </div>
+            <div class="field-row" id="ea-img-wrap" style="display:none">
+              <div class="field-label">Suffixe du fichier</div>
+              <input class="field-input" id="ea-file-suffix" placeholder="face">
+            </div>
             <div class="field-row" id="ea-maxlength-wrap" style="display:none">
               <div class="field-label">Longueur maximale</div>
               <input class="field-input" id="ea-maxlength" type="number" min="0"
@@ -941,15 +945,15 @@
 </div>
 
 <!-- SCRIPTS -->
-<script src="js/data.js?v=72"></script>
+<script src="js/data.js?v=73"></script>
 <script src="js/utils.js?v=60"></script>
 <script src="js/dashboard.js?v=30"></script>
 <script src="js/products.js?v=40"></script>
-<script src="js/admin.js?v=62"></script>
+<script src="js/admin.js?v=63"></script>
 <script src="js/baremes-workflow.js?v=12"></script>
 <script src="js/detail.js?v=55"></script>
 <script src="js/export.js?v=31"></script>
-<script src="js/import.js?v=32"></script>
+<script src="js/import.js?v=34"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {

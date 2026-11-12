@@ -7,6 +7,10 @@
 // ============================================================
 let appPrefs = {
   pageSize: 50, // 25, 50 ou 100. Pas d'affichage de tout le catalogue.
+  // Import de visuels en masse : nom du fichier = clé du produit + séparateur
+  // + suffixe de l'attribut Image (ex. M90538400001_face.jpg)
+  visualKey: 'sap',
+  visualSep: '_',
 };
 
 let userPrefs = {
@@ -189,10 +193,10 @@ let attributes = [
   { id:76, name:'Type de PEL',                code:'type_pel',      type:'Simple select',   groupId:12, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Gouttes de confort','Flight Pack','Produits d’entretien','Pack entretien','Comprimés'] },
   { id:51, name:'Type d\'accessoire',     code:'type_produit_acc', type:'Simple select', groupId:11, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false,
     options:['Cadeau fid','Chainette','Chamoisine','Charlie Chill','Clips','Coffret','Complément alimentaire','Cordon','Etui','Lunettes','Produits d\'entretien','Textile','Autre'] },
-  { id:54, name:'Vue de face',         code:'visuel_face',   type:'Image',           groupId:2,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:55, name:'Vue 3/4',             code:'visuel_tq',     type:'Image',           groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:56, name:'Vue de profil',       code:'visuel_profil', type:'Image',           groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
-  { id:57, name:'Visuel ambiance',     code:'visuel_ambiance', type:'Image',         groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:54, name:'Vue de face',         code:'visuel_face',   type:'Image', fileSuffix:'face',           groupId:2,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:55, name:'Vue 3/4',             code:'visuel_tq',     type:'Image', fileSuffix:'tq',           groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:56, name:'Vue de profil',       code:'visuel_profil', type:'Image', fileSuffix:'profil',           groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:57, name:'Visuel ambiance',     code:'visuel_ambiance', type:'Image', fileSuffix:'ambiance',         groupId:2,  required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:134, name:'Origine des visuels', code:'origine_visuels', type:'Simple select', groupId:2, required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Fournisseur','Shooting'] },
   { id:82, width:'narrow', name:'Hauteur des verres',  code:'hauteur_verres', type:'Nombre', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:83, width:'narrow', name:'Taille du nez',       code:'taille_nez',     type:'Nombre', groupId:4, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false },

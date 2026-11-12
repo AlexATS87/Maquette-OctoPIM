@@ -2233,3 +2233,11 @@ td.td-check { width: 52px; padding-left: 12px !important; padding-right: 4px !im
 .field-row .image-attr-slot { max-width: 220px; }
 .image-attr-file { font-size: 11px; color: #607080; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 td.td-thumb { padding-top: 4px !important; padding-bottom: 4px !important; }
+
+/* Import de visuels en masse */
+.import-dropzone-small { padding: 14px; }
+.vi-sum { font-size: 13px; color: #405060; margin-bottom: 10px; }
+.vi-err { color: #c62828; font-size: 12px; }
+.vi-rep { color: #e65100; font-size: 12px; }
+.vi-new { color: #2e7d32; font-size: 12px; }
+tr.vi-ko td { background: #fff8f8; }

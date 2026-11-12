@@ -158,10 +158,10 @@ function renderImportStep1() {
               onclick="document.getElementById('import-file-input').click()">
               Parcourir...
             </button>
-            <input type="file" id="import-file-input" accept=".xlsx,.csv"
+            <input type="file" id="import-file-input" accept=".xlsx,.csv,.zip"
               style="display:none" onchange="onImportFileSelect(this)">
             <div style="font-size:11px;color:#a0b0c0;margin-top:10px">
-              Formats acceptés : .xlsx, .csv — 10 Mo max
+              Formats acceptés : .xlsx, .csv, ou .zip (tableur + images) — 10 Mo max, 200 Mo pour un .zip
             </div>
           </div>
           <div id="import-file-info" style="display:none;margin-top:10px">
@@ -180,6 +180,21 @@ function renderImportStep1() {
             </div>
           </div>
         </div>
+
+        <!-- Visuels en masse -->
+        <div class="field-group">
+          <div class="field-group-title">Visuels en masse</div>
+          <div class="import-dropzone import-dropzone-small"
+            ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')"
+            ondrop="event.preventDefault();this.classList.remove('drag-over');onVisualFiles([...event.dataTransfer.files])">
+            <div style="font-size:13px;font-weight:600;color:#1a2332;margin-bottom:6px">Glisser-déposer des images ou un .zip</div>
+            <button class="btn btn-secondary" style="font-size:12px" onclick="document.getElementById('visual-files-input').click()">Parcourir...</button>
+            <input type="file" id="visual-files-input" multiple accept="image/*,.zip" style="display:none" onchange="onVisualFiles([...this.files]);this.value=''">
+            <div class="calc-meta" style="margin-top:8px">${escapeHtml(appPrefs.visualKey === 'ean' ? 'EAN' : 'Code SAP')}${escapeHtml(appPrefs.visualSep || '_')}${escapeHtml(attributes.filter(a => a.type === 'Image' && a.fileSuffix).map(a => a.fileSuffix).join(' | '))}.jpg</div>
+          </div>
+        </div>
+
 
       </div>
     </div>
@@ -308,16 +323,18 @@ function onImportFileSelect(input) {
 }
 
 function handleImportFile(file) {
-  const allowed = ['xlsx', 'csv'];
+  const allowed = ['xlsx', 'csv', 'zip'];
   const ext     = file.name.split('.').pop().toLowerCase();
   if (!allowed.includes(ext)) {
-    showNotif('Format non supporte. Utilisez .xlsx ou .csv', 'error');
+    showNotif('Format non supporté. Utilisez .xlsx, .csv ou .zip', 'error');
     return;
   }
-  if (file.size > 10 * 1024 * 1024) {
-    showNotif('Fichier trop volumineux (max 10 Mo)', 'error');
+  if (file.size > (ext === 'zip' ? 200 : 10) * 1024 * 1024) {
+    showNotif('Fichier trop volumineux (max ' + (ext === 'zip' ? 200 : 10) + ' Mo)', 'error');
     return;
   }
+  importZipImages = {};
+  if (ext === 'zip') { handleImportZip(file); return; }
 
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -656,6 +673,132 @@ function importApplyCalc(p, calcVals, report) {
   });
 }
 
+// ============================================================
+// VISUELS : .zip tableur + images, et import de visuels en masse
+// ============================================================
+let importZipImages = {};   // images du .zip importé avec son tableur : nom du fichier → image
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|svg|bmp|tiff?)$/i;
+function visualFileKey(name) { return importNorm(String(name || '').split(/[\\/]/).pop()); }
+function imageMime(name) {
+  const e = String(name).split('.').pop().toLowerCase();
+  return e === 'svg' ? 'image/svg+xml' : e === 'jpg' ? 'image/jpeg' : 'image/' + e;
+}
+// Lit des images et des .zip d'images : [{ name, dataUrl }]
+async function readImageFiles(files) {
+  const out = [];
+  for (const f of files) {
+    if (/\.zip$/i.test(f.name)) {
+      const zip = await JSZip.loadAsync(f);
+      for (const entry of Object.values(zip.files)) {
+        if (entry.dir || !IMAGE_EXT.test(entry.name) || /(^|\/)__MACOSX\//.test(entry.name)) continue;
+        const b64 = await entry.async('base64');
+        out.push({ name: entry.name.split('/').pop(), dataUrl: 'data:' + imageMime(entry.name) + ';base64,' + b64 });
+      }
+    } else if (IMAGE_EXT.test(f.name) || /^image\//.test(f.type)) {
+      out.push({ name: f.name, dataUrl: await new Promise(res => { const rd = new FileReader(); rd.onload = e => res(e.target.result); rd.readAsDataURL(f); }) });
+    }
+  }
+  return out;
+}
+
+// .zip contenant un tableur et ses images : le tableur s'importe comme
+// d'habitude, une valeur de visuel égale au nom d'une image du .zip la joint
+async function handleImportZip(file) {
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const entries = Object.values(zip.files).filter(e => !e.dir && !/(^|\/)__MACOSX\//.test(e.name));
+    const sheet = entries.find(e => /\.(xlsx|csv)$/i.test(e.name));
+    if (!sheet) { showNotif('Le .zip ne contient pas de tableur (.xlsx ou .csv) : utilisez « Visuels en masse »', 'warn'); return; }
+    if (/\.csv$/i.test(sheet.name)) importParsedRows = parseCSV(await sheet.async('string'));
+    else {
+      const wb = XLSX.read(await sheet.async('arraybuffer'), { type: 'array', cellDates: true });
+      importParsedRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+    }
+    importZipImages = {};
+    for (const e of entries.filter(e => IMAGE_EXT.test(e.name))) {
+      importZipImages[visualFileKey(e.name)] = 'data:' + imageMime(e.name) + ';base64,' + await e.async('base64');
+    }
+    showImportFileInfo(file, importParsedRows.length);
+    const meta = document.getElementById('import-file-meta');
+    if (meta) meta.textContent += ' — ' + Object.keys(importZipImages).length + ' image(s)';
+  } catch (err) { showNotif('Erreur de lecture du .zip : ' + err.message, 'error'); }
+}
+function importAttachImages(p, report) {
+  if (!Object.keys(importZipImages).length) return;
+  attributes.filter(a => a.type === 'Image').forEach(a => {
+    const img = importZipImages[visualFileKey(p.fields[a.code])];
+    if (!img) return;
+    p.images = p.images || {}; p.images[a.code] = img;
+    makeThumb(img, t => { p.thumbs = p.thumbs || {}; p.thumbs[a.code] = t; });
+    report.images = (report.images || 0) + 1;
+  });
+}
+
+// Visuels en masse : le nom du fichier donne le produit et le visuel
+function parseVisualFileName(name) {
+  const base = String(name).split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+  const sep = appPrefs.visualSep || '_';
+  const i = base.lastIndexOf(sep);
+  if (i <= 0) return { error: 'pas de séparateur « ' + sep + ' »' };
+  const key = base.slice(0, i), suffix = base.slice(i + sep.length);
+  const attr = attributes.find(a => a.type === 'Image' && a.fileSuffix && importNorm(a.fileSuffix) === importNorm(suffix));
+  if (!attr) return { key, error: 'suffixe « ' + suffix + ' » inconnu' };
+  const kCode = appPrefs.visualKey === 'ean' ? 'ean' : 'sap';
+  const p = products.find(x => String(x.fields[kCode] || '').trim() && importNorm(x.fields[kCode]) === importNorm(key));
+  if (!p) return { key, attr, error: (kCode === 'ean' ? 'EAN' : 'code SAP') + ' « ' + key + ' » introuvable' };
+  if (!canEditProduct(p)) return { key, attr, p, error: 'produit non modifiable' };
+  return { key, attr, p, replace: !!p.fields[attr.code] };
+}
+let _visualImport = null;
+async function onVisualFiles(files) {
+  if (!files || !files.length) return;
+  let list;
+  try { list = await readImageFiles(files); } catch (err) { showNotif('Lecture impossible : ' + err.message, 'error'); return; }
+  if (!list.length) { showNotif('Aucune image trouvée', 'warn'); return; }
+  _visualImport = list.map(f => Object.assign({ file: f }, parseVisualFileName(f.name)));
+  renderVisualImportModal();
+}
+function renderVisualImportModal() {
+  const old = document.getElementById('visual-import-modal'); if (old) old.remove();
+  const ok = _visualImport.filter(x => !x.error), ko = _visualImport.filter(x => x.error);
+  const rep = ok.filter(x => x.replace).length;
+  const rows = _visualImport.map(x => `<tr class="${x.error ? 'vi-ko' : ''}">
+      <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(x.file.name)}">${escapeHtml(x.file.name)}</td>
+      <td>${x.p ? escapeHtml(x.p.fields.nom || '') : '—'}</td>
+      <td>${x.attr ? escapeHtml(x.attr.name) : '—'}</td>
+      <td>${x.error ? `<span class="vi-err">${escapeHtml(x.error)}</span>` : (x.replace ? '<span class="vi-rep">remplace le visuel</span>' : '<span class="vi-new">nouveau</span>')}</td>
+    </tr>`).join('');
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay'; overlay.id = 'visual-import-modal'; overlay.style.display = 'flex';
+  overlay.innerHTML = `<div class="modal-box" style="max-width:860px;width:100%">
+    <div class="modal-title">Visuels en masse</div>
+    <div class="vi-sum"><b>${ok.length}</b> reconnu${ok.length > 1 ? 's' : ''}${rep ? ` (dont ${rep} remplacement${rep > 1 ? 's' : ''})` : ''} · <b>${ko.length}</b> non repris</div>
+    <div class="table-container" style="max-height:50vh;overflow:auto"><table class="ref-table">
+      <thead><tr><th>Fichier</th><th>Produit</th><th>Visuel</th><th>État</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+      <button class="btn btn-primary"${ok.length ? '' : ' disabled'} onclick="applyVisualImport()">Importer ${ok.length} visuel${ok.length > 1 ? 's' : ''}</button>
+    </div></div>`;
+  document.body.appendChild(overlay);
+}
+function applyVisualImport() {
+  const ok = (_visualImport || []).filter(x => !x.error);
+  const ts = nowStr();
+  ok.forEach(x => {
+    const p = x.p, code = x.attr.code, old = p.fields[code] || '';
+    p.images = p.images || {}; p.images[code] = x.file.dataUrl;
+    p.fields[code] = x.file.name;
+    makeThumb(x.file.dataUrl, t => { p.thumbs = p.thumbs || {}; p.thumbs[code] = t; });
+    if (old !== x.file.name) (p.history = p.history || []).push({ ts, user: 'Import de visuels', field: x.attr.name, old, new: x.file.name });
+    p.maj = ts;
+  });
+  const m = document.getElementById('visual-import-modal'); if (m) m.remove();
+  _visualImport = null;
+  renderAll();
+  showNotif(ok.length + ' visuel' + (ok.length > 1 ? 's' : '') + ' importé' + (ok.length > 1 ? 's' : ''));
+}
+
 function runImport() {
   if (importAction === 'delete' && !categories.some(c => canCat(c.id, 'd'))) {
     showNotif('Suppression par import non autorisée', 'warn');
@@ -775,6 +918,7 @@ function runImport() {
         fields: storeFields,
       });
       importApplyCalc(products[products.length - 1], calcVals, report);
+      importAttachImages(products[products.length - 1], report);
       added++;
     } else if (importAction === 'update') {
       if (!existing) {
@@ -811,6 +955,7 @@ function runImport() {
         }
       });
       importApplyCalc(existing, calcVals, report);
+      importAttachImages(existing, report);
       existing.maj = nowStr();
       updated++;
     }
@@ -868,6 +1013,7 @@ function renderImportStep3(added, updated, deleted, errors, report) {
       ).join('')}
     </div>
 
+    ${report.images ? `<div class="field-group" style="margin-bottom:20px"><div class="field-group-title" style="color:#2e7d32">${report.images} visuel${report.images > 1 ? 's' : ''} joint${report.images > 1 ? 's' : ''} depuis le .zip</div></div>` : ''}
     ${warnKeys.length ? `
       <div class="field-group" style="margin-bottom:20px">
         <div class="field-group-title" style="color:#e65100">Valeurs non reprises (${warnKeys.length})</div>
