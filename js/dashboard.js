@@ -85,9 +85,11 @@ function renderDashboardAlerts() {
 // ============================================================
 // TOPBAR TITLE
 // ============================================================
-function updateTopbarTitle(title) {
+function updateTopbarTitle(title, helpKey) {
   const el = document.getElementById('topbar-title');
-  if (el) el.textContent = title;
+  if (!el) return;
+  if (helpKey && typeof helpButtonHtml === 'function') el.innerHTML = escapeHtml(title) + helpButtonHtml(helpKey);
+  else el.textContent = title;
 }
 
 // ============================================================
@@ -339,7 +341,7 @@ function renderDashboardSuppliers() {
 
   if (!supNames.length) {
     container.innerHTML =
-      '<div style="font-size:13px;color:#a0b0c0;padding:16px">Aucune donnee fournisseur.</div>';
+      '<div style="font-size:13px;color:#a0b0c0;padding:16px">Aucune donnée fournisseur.</div>';
     return;
   }
 
@@ -428,9 +430,11 @@ function renderDashboardSuppliers() {
 }
 
 function filterBySupplier(codeOrName) {
+  // Filtre de la colonne Fournisseur (valeur affichée = nom), vide pour « Inconnu »
+  const sup = supplierList().find(s => s.code === codeOrName);
+  const shown = codeOrName === 'Inconnu' ? '' : (sup ? sup.name : codeOrName);
   openProductsList(null, () => {
-    const search = document.getElementById('products-search');
-    if (search) search.value = codeOrName;
+    colFilters = { fournisseur_code: new Set([shown]) };
   });
   showNotif('Filtre fournisseur : ' + codeOrName);
 }

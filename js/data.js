@@ -14,6 +14,7 @@ let appPrefs = {
 };
 
 let userPrefs = {
+  showHelp: true, // boutons d'aide (?) affichés
   theme: 'light', // 'light' | 'dark' — affichage utilisateur, pas encore applique
 };
 
@@ -785,7 +786,7 @@ const ADMIN_MODULES = [
   { key: 'mod_synthese',   label: 'Vue Synthèse'            },
   { key: 'mod_conditions', label: 'Référentiels' },
   { key: 'mod_roles',      label: 'Utilisateurs & groupes'  },
-  { key: 'mod_prefs',      label: 'Preferences'             },
+  { key: 'mod_prefs',      label: 'Préférences'             },
   { key: 'mod_alerts',     label: 'Alertes'                 },
   { key: 'mod_trames',     label: 'Trames d’import / export' },
   { key: 'mod_calc',       label: 'Champs calculés'         },
@@ -1678,7 +1679,7 @@ let exportIgnoreSelection = false;
 // ============================================================
 let trames = [
   { id: 'catalogue', name: 'Catalogue', system: true, dynamic: 'catalogue', export: true, import: true, cats: [], columns: [] },
-  { id: 'fmt_iwi', name: 'IWI', export: true, import: false, cats: ['Montures'], sheet: 'Montures', columns: [
+  { id: 'fmt_iwi', name: 'IWI', export: true, import: false, cats: [], sheet: 'Montures', columns: [
     { bloc:'Général', header:'Code fabricant', code:'code_fabricant', required:true },
     { bloc:'Général', header:'Nom du fabricant', code:'iwi_nom_fabricant', required:true },
     { bloc:'Général', header:'Code du distributeur', fixed:'ATS', required:true },
@@ -1829,7 +1830,7 @@ function exportPickerHtml() {
     ? iwiMissingCounts(exportScopeProducts()) : {};
   const blocks = iwi ? exportIwiPickerBlocks(missing) : exportCataloguePickerBlocks();
   return `
-    <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:20px">
+    <div id="export-trame" style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:20px">
       <div style="font-size:13px;font-weight:600;color:#1a2332;margin-bottom:12px">Trame</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
         <select class="form-select" style="max-width:240px" onchange="selectExportTemplate(this.value)">${tplOpts}</select>

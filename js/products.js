@@ -1016,7 +1016,7 @@ function renderCompareBar() {
               display:flex;align-items:center;gap:8px"
             onmouseover="this.style.background='#f0f4f8'"
             onmouseout="this.style.background=''">
-            &#128229; Exporter la selection
+            &#128229; Exporter la sélection
           </div>
           <div style="border-top:1px solid #f0f4f8;margin:4px 0"></div>
           ${selectedProductIds.some(id => {
@@ -1027,7 +1027,7 @@ function renderCompareBar() {
               display:flex;align-items:center;gap:8px"
             onmouseover="this.style.background='#fff5f5'"
             onmouseout="this.style.background=''">
-            &#128465; Supprimer la selection
+            &#128465; Supprimer la sélection
           </div>` : ''}
           <div style="border-top:1px solid #f0f4f8;margin:4px 0"></div>
           <div onclick="clearSelection();closeBulkActionsMenu()"
@@ -1127,7 +1127,7 @@ function openBulkEditModal() {
         Modifier un attribut — ${selectedProductIds.length} produit(s)
       </div>
       <div class="field-row">
-        <div class="field-label">Attribut a modifier</div>
+        <div class="field-label">Attribut à modifier</div>
         <select class="form-select" id="bulk-attr-select"
           onchange="onBulkAttrChange(this)">
           <option value="">-- Choisir --</option>

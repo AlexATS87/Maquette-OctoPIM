@@ -25,7 +25,7 @@ function renderExportPageNow() {
       </div>
 
       <!-- Contexte filtres -->
-      <div style="background:#fff;border-radius:12px;padding:20px;
+      <div id="export-scope" style="background:#fff;border-radius:12px;padding:20px;
         box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:20px">
         <div style="font-size:13px;font-weight:600;color:#1a2332;margin-bottom:12px">
           Perimetre de l'export
@@ -37,7 +37,7 @@ function renderExportPageNow() {
           </div>
           ${catFilter
             ? `<div class="export-context-chip">
-                 <span style="color:#607080">Categorie</span>
+                 <span style="color:#607080">Catégorie</span>
                  <span class="badge" style="${getCatBadgeStyle(catFilter)};margin-left:6px">${catFilter}</span>
                </div>`
             : ''}
@@ -54,7 +54,7 @@ function renderExportPageNow() {
             : ''}
           ${selectedProductIds.length > 0 && !exportIgnoreSelection
             ? `<div class="export-context-chip" style="background:#e3f2fd;border-color:#90caf9">
-                 <span style="color:#1565c0">Selection : ${selectedProductIds.length} produit(s)</span>
+                 <span style="color:#1565c0">Sélection : ${selectedProductIds.length} produit(s)</span>
                  <button type="button" class="btn btn-secondary" style="margin-left:8px;padding:2px 8px" onclick="useFullExportScope()">Tout exporter</button>
                </div>`
             : ''}
@@ -64,7 +64,7 @@ function renderExportPageNow() {
       ${exportPickerHtml()}
 
       <!-- Bouton export -->
-      <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px">
+      <div id="export-actions" style="display:flex;justify-content:flex-end;align-items:center;gap:12px">
         <button class="btn btn-secondary"
           onclick="showPage('products', document.querySelector('.nav-item[onclick*=\\'products\\']'))">
           Retour a la liste
@@ -253,7 +253,7 @@ function saveExportTemplate() {
   }
   if (!columns.length) { showNotif('Aucune colonne cochée', 'warn'); return; }
   const src = currentExportFormat();
-  const t = { id: 'trm_' + (nextTrameId++), name, export: true, import: true,
+  const t = { id: 'trm_' + (nextTrameId++), name, export: true, import: false,
     cats: exportPick.cat ? [exportPick.cat] : [], sheet: (src && src.sheet) || 'Export', columns };
   trames.push(t);
   activeExportTemplate = t.id;
@@ -370,7 +370,7 @@ function runExport() {
   const format = exportPick.format || 'xlsx';
   if (format === 'csv') {
     downloadBlob(new Blob(['\uFEFF' + sheetToCsv(aoa)], { type: 'text/csv;charset=utf-8' }), base + dateStr + '.csv');
-    showNotif('Export termine : ' + base + dateStr + '.csv');
+    showNotif('Export terminé : ' + base + dateStr + '.csv');
     return;
   }
   const wb = XLSX.utils.book_new();
@@ -384,12 +384,12 @@ function runExport() {
     zip.file(xlsxName, XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
     zip.generateAsync({ type: 'blob' }).then(blob => {
       downloadBlob(blob, base + dateStr + '.zip');
-      showNotif('Export termine : ' + base + dateStr + '.zip');
+      showNotif('Export terminé : ' + base + dateStr + '.zip');
     });
     return;
   }
   XLSX.writeFile(wb, xlsxName);
-  showNotif('Export termine : ' + xlsxName);
+  showNotif('Export terminé : ' + xlsxName);
 }
 
 // ============================================================

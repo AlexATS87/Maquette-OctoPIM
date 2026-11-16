@@ -103,7 +103,7 @@ function renderSyntheseAdmin() {
           </select>
         </div>
 
-        <div class="field-group">
+        <div class="field-group" id="synth-system">
           <div class="field-group-title">Attributs système</div>
           ${attributes.filter(a => a.system).map(s => {
             const already = isInSynthese(s.code);

@@ -237,18 +237,18 @@ function showPage(id, navEl) {
   document.body.classList.toggle('on-detail', id === 'product-detail');
   if (navEl)  navEl.classList.add('active');
   const pageTitles = {
-    dashboard: 'Dashboard',
+    dashboard: 'Tableau de bord',
     products: 'Produits',
     exports: 'Exports',
     imports: 'Imports',
-    'user-prefs': 'Preferences',
+    'user-prefs': 'Préférences',
     admin: 'Administration',
-    'admin-categories': 'Categories',
+    'admin-categories': 'Catégories',
     'admin-attributes': 'Attributs',
     'admin-groups': 'Groupes d\'attributs',
-    'admin-synthese': 'Vue synthese',
+    'admin-synthese': 'Vue synthèse',
     'admin-suppliers': 'Référentiels',
-    'admin-prefs': 'Preferences',
+    'admin-prefs': 'Préférences',
     'admin-roles': 'Utilisateurs & groupes',
     'admin-alerts': 'Alertes',
     'admin-export-formats': 'Trames d’import / export',
@@ -256,7 +256,13 @@ function showPage(id, navEl) {
     'admin-workflow': 'Workflow',
     'product-detail': 'Produit',
   };
-  if (pageTitles[id]) updateTopbarTitle(pageTitles[id]);
+  if (pageTitles[id]) updateTopbarTitle(pageTitles[id], ({
+    dashboard: 'dashboard', products: 'products', imports: 'import', exports: 'exports',
+    admin: 'admin', 'admin-categories': 'admin-categories', 'admin-attributes': 'admin-attributes',
+    'admin-groups': 'admin-groups', 'admin-synthese': 'admin-synthese', 'admin-suppliers': 'admin-referentials',
+    'admin-roles': 'admin-roles', 'admin-alerts': 'admin-alerts', 'admin-export-formats': 'admin-trames',
+    'admin-calc': 'admin-calc', 'admin-workflow': 'admin-workflow', 'admin-prefs': 'admin-prefs'
+  })[id] || '');
 
   // Rendu conditionnel selon la page
   switch (id) {
@@ -395,7 +401,7 @@ function renderAdminHome() {
   if (elGroups) elGroups.textContent = attrGroups.length;
   if (elAttrs)  elAttrs.textContent  = attributes.length;
   if (elRoles)  elRoles.textContent  = users.length;
-  if (elSup)    elSup.textContent    = 1 + allReferentials().length;
+  if (elSup)    elSup.textContent    = allReferentials().length;
   if (elAlerts) elAlerts.textContent = (alerts || []).length;
   const elFmt = document.getElementById('admin-count-export-formats');
   if (elFmt) elFmt.textContent = (trames || []).length;
@@ -403,6 +409,12 @@ function renderAdminHome() {
   const elWf  = document.getElementById('admin-count-workflow');
   if (elBar) elBar.textContent = (calcTables || []).length;
   if (elWf)  elWf.textContent  = isWorkflowOn() ? (workflowSteps || []).length : 'Off';
+  // Ampoule d'aide de chaque tuile (masquée par la préférence « boutons d'aide »)
+  document.querySelectorAll('.admin-card[data-help]').forEach(card => {
+    let slot = card.querySelector('.admin-card-help');
+    if (!slot) { slot = document.createElement('span'); slot.className = 'admin-card-help'; card.appendChild(slot); }
+    slot.innerHTML = typeof helpButtonHtml === 'function' ? helpButtonHtml(card.dataset.help) : '';
+  });
 }
 
 // ============================================================
@@ -618,11 +630,30 @@ function isCompletionFilled(product, attr) {
   return isCompletionValueFilled(getAttrFieldValue(product, attr));
 }
 
+// Complétion d'un onglet : ses champs qui comptent et qui sont affichés pour ce
+// produit. Un champ repris dans le bandeau reste compté dans son onglet.
+// null si l'onglet n'a aucun champ qui compte.
+function tabCompletionStats(product, g) {
+  const seen = new Set();
+  const list = ((g && g.attrIds) || []).map(id => getAttrById(id)).filter(a => {
+    if (!a || a.code === 'completion' || seen.has(a.id)) return false;
+    seen.add(a.id);
+    return countsInCompletion(a) && isAttrShown(product, a);
+  });
+  if (!list.length) return null;
+  const filled = list.filter(a => isCompletionFilled(product, a)).length;
+  return { pct: Math.round(filled / list.length * 100), filled, total: list.length };
+}
+
+// Complétion du produit : moyenne des onglets qui comptent pour le rôle
+// (« Complétion pour »), pondérée par leur nombre de champs.
 function calcCompletion(product, roleArg) {
-  const attrs = getCompletionAttrs(product, roleArg);
-  const total = attrs.length;
+  let filled = 0, total = 0;
+  getCompletionGroups(product, roleArg).forEach(g => {
+    const st = tabCompletionStats(product, g);
+    if (st) { filled += st.filled; total += st.total; }
+  });
   if (!total) return 100;
-  const filled = attrs.filter(a => isCompletionFilled(product, a)).length;
   return Math.round((filled / total) * 100);
 }
 
@@ -942,7 +973,7 @@ function attrHelpTip(a) {
 }
 
 function completionMarkHtml() {
-  return `<span class="completion-mark" title="Compte dans le taux de completion" aria-label="Compte dans le taux de completion"></span>`;
+  return `<span class="completion-mark" title="Compte dans le taux de complétion" aria-label="Compte dans le taux de complétion"></span>`;
 }
 
 function attrLabelHtml(a) {
@@ -1434,15 +1465,20 @@ function renderUserPrefsPage() {
   page.innerHTML = `
     <div style="max-width:520px">
       <div style="font-size:18px;font-weight:700;color:#1a2332;margin-bottom:8px">
-        Preferences d'affichage
+        Préférences d'affichage
       </div>
-      <div style="font-size:13px;color:#607080;margin-bottom:20px">
-        Options personnelles du compte. Les parametres d'application
-        (pagination, seuils) se configurent dans Administration.
+      <div style="background:#fff;border-radius:12px;padding:28px;margin:12px 0 16px;
+        box-shadow:0 1px 6px rgba(0,0,0,0.07)">
+        <div class="field-label" style="margin-bottom:10px">Aide</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#1a2332;cursor:pointer">
+          <input type="checkbox" ${userPrefs.showHelp !== false ? 'checked' : ''}
+            onchange="setUserShowHelp(this.checked)">
+          Afficher les boutons d'aide <span class="help-btn" style="margin-left:0;display:inline-block;text-align:center">?</span>
+        </label>
       </div>
       <div style="background:#fff;border-radius:12px;padding:28px;
         box-shadow:0 1px 6px rgba(0,0,0,0.07)">
-        <div class="field-label" style="margin-bottom:10px">Theme</div>
+        <div class="field-label" style="margin-bottom:10px">Thème</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label class="import-action-radio ${theme === 'light' ? 'selected' : ''}"
             onclick="setUserTheme('light')">
@@ -1460,12 +1496,20 @@ function renderUserPrefsPage() {
             <span style="font-size:16px">&#9790;</span>
             <div>
               <div style="font-size:13px;font-weight:700;color:#1a2332">Sombre</div>
-              <div style="font-size:11px;color:#a0b0c0">Bientot disponible</div>
+              <div style="font-size:11px;color:#a0b0c0">Bientôt disponible</div>
             </div>
           </label>
         </div>
       </div>
     </div>`;
+}
+
+function setUserShowHelp(on) {
+  userPrefs.showHelp = !!on;
+  if (!on && typeof closeHelp === 'function') closeHelp();
+  renderAdminHome();
+  renderUserPrefsPage();
+  showNotif(on ? 'Boutons d\'aide affichés' : 'Boutons d\'aide masqués');
 }
 
 function setUserTheme(theme) {
@@ -1691,7 +1735,7 @@ function forceCalcField(productId, code) {
   if (!p.forcedFields) p.forcedFields = {};
   p.forcedFields[code] = p.fields[code] || '';
   const attr = attributes.find(a => a.code === code);
-  addPendingChange(p, (attr ? attr.name : code) + ' (mode)', 'Calcule', 'Force');
+  addPendingChange(p, (attr ? attr.name : code) + ' (mode)', 'Calculé', 'Forcé');
   productDirty = true;
   refreshCalcFieldCell(p, code);
   showNotif('Valeur forcee sur ' + (attr ? attr.name : code) + ' : la formule est ignoree', 'warn');
@@ -1702,7 +1746,7 @@ function unforceCalcField(productId, code) {
   if (!p || !requirePerm(canEditProduct(p))) return;
   if (p.forcedFields) delete p.forcedFields[code];
   const attr = attributes.find(a => a.code === code);
-  addPendingChange(p, (attr ? attr.name : code) + ' (mode)', 'Force', 'Calcule');
+  addPendingChange(p, (attr ? attr.name : code) + ' (mode)', 'Forcé', 'Calculé');
   productDirty = true;
   computeCalcFields(p);
   refreshCalcFieldCell(p, code);

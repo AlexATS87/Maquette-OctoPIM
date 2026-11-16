@@ -17,7 +17,7 @@ let importTrameId     = '';      // trame d'import choisie (correspondance d'off
 // RENDU PAGE IMPORT
 // ============================================================
 function renderImportPage() {
-  updateTopbarTitle('Imports');
+  updateTopbarTitle('Imports', 'import');
   importStep = 1;
   const page = document.getElementById('page-imports');
   if (!page) return;
@@ -27,12 +27,8 @@ function renderImportPage() {
 
       <!-- En-tete -->
       <div style="margin-bottom:24px">
-        <div style="font-size:18px;font-weight:700;color:#1a2332;margin-bottom:6px">
+        <div style="font-size:18px;font-weight:700;color:#1a2332">
           Import produits
-        </div>
-        <div style="font-size:13px;color:#607080">
-          Importez un fichier <strong>Excel (.xlsx)</strong> ou <strong>CSV (.csv)</strong>
-          pour ajouter, modifier ou supprimer des produits en masse.
         </div>
       </div>
 
@@ -81,7 +77,7 @@ function renderImportStep1() {
 
   const actions = [
     { val: 'add',    label: 'Ajout',        sub: 'Créer les produits du fichier',           icon: '&#10133;', show: writable.length > 0 },
-    { val: 'update', label: 'Modification',  sub: 'Mettre à jour les produits existants',    icon: '&#9999;&#65039;', show: writable.length > 0 },
+    { val: 'update', label: 'Modification',  sub: 'Cellule vide = inchangé · #VIDE pour vider', icon: '&#9999;&#65039;', show: writable.length > 0 },
     { val: 'delete', label: 'Suppression',   sub: 'Supprimer les produits identifiés',       icon: '&#128465;&#65039;', show: deletable.length > 0 },
   ].filter(a => a.show);
 
@@ -837,8 +833,9 @@ function runImport() {
     return;
   }
 
+  const IMPORT_EMPTY_TOKEN = '#VIDE';
   let added = 0, updated = 0, deleted = 0, errors = [];
-  const report = { warns: {}, forced: {}, same: {} };
+  const report = { warns: {}, forced: {}, same: {}, ignored: [] };
 
   importParsedRows.forEach((row, idx) => {
     const fields = {}, calcVals = {};
@@ -846,6 +843,13 @@ function runImport() {
       const attrCode = importColMapping[col];
       if (!attrCode) return;
       const attr = attributes.find(a => a.code === attrCode);
+      const rawText = row[col] == null ? '' : String(row[col]).trim();
+      // En modification, une cellule vide ne change rien ; #VIDE vide le champ
+      if (importAction === 'update' && rawText === '') return;
+      if (rawText.toUpperCase() === IMPORT_EMPTY_TOKEN) {
+        if (!isCalcAttr(attr)) fields[attrCode] = '';
+        return;
+      }
       const res = importCoerce(attr, row[col]);
       if (res.warn) {
         const key = (attr ? attr.name : attrCode) + ' — « ' + String(row[col]).trim() + ' » (' + res.warn + ')';
@@ -861,7 +865,7 @@ function runImport() {
     });
 
     if (importAction !== 'delete') {
-      const checked = importAction === 'update' ? requiredAttrs.filter(a => mappedCodes.includes(a.code)) : requiredAttrs;
+      const checked = importAction === 'update' ? requiredAttrs.filter(a => a.code in fields) : requiredAttrs;
       const emptyReq = checked.filter(a => !(fields[a.code] || '').toString().trim());
       if (emptyReq.length) {
         errors.push(`Ligne ${idx + 2} : champs obligatoires manquants (${emptyReq.map(a => a.code).join(', ')})`);
@@ -875,7 +879,7 @@ function runImport() {
     if (importAction === 'delete') {
       if (existing) {
         if (!canDeleteProduct(existing)) {
-          errors.push(`Ligne ${idx + 2} : suppression non autorisee (${keyHint})`);
+          errors.push(`Ligne ${idx + 2} : suppression non autorisée (${keyHint})`);
           return;
         }
         products = products.filter(p => p.id !== existing.id);
@@ -888,7 +892,7 @@ function runImport() {
 
     if (importAction === 'add') {
       if (existing) {
-        errors.push(`Ligne ${idx + 2} : produit déjà existant (${keyHint}), ignoré`);
+        report.ignored.push(`Ligne ${idx + 2} : ${keyHint}`);
         return;
       }
       const catName = fields.cat || importCategory;
@@ -926,7 +930,7 @@ function runImport() {
         return;
       }
       if (!canEditProduct(existing)) {
-        errors.push(`Ligne ${idx + 2} : modification non autorisee (${keyHint})`);
+        errors.push(`Ligne ${idx + 2} : modification non autorisée (${keyHint})`);
         return;
       }
       Object.keys(fields).forEach(code => {
@@ -975,6 +979,7 @@ function runImport() {
 // ============================================================
 function renderImportStep3(added, updated, deleted, errors, report) {
   report = report || { warns: {}, forced: {}, same: {} };
+  const ignored = report.ignored || [];
   const warnKeys = Object.keys(report.warns).sort((a, b) => report.warns[b].n - report.warns[a].n);
   const forcedCodes = Object.keys(report.forced);
   const attrName = c => (attributes.find(a => a.code === c) || {}).name || c;
@@ -1002,8 +1007,9 @@ function renderImportStep3(added, updated, deleted, errors, report) {
         { label: 'Ajoutés',    val: added,   color: '#2e7d32', bg: '#e8f5e9' },
         { label: 'Modifiés',   val: updated, color: '#1565c0', bg: '#e3f2fd' },
         { label: 'Supprimés',  val: deleted, color: '#c62828', bg: '#fce4ec' },
+        { label: 'Ignorés',    val: ignored.length, color: '#8a5a00', bg: '#fff8e1' },
         { label: 'Erreurs',    val: errors.length, color: '#e65100', bg: '#fff3e0' },
-      ].map(r => `
+      ].filter(r => r.label !== 'Ignorés' || r.val).map(r => `
         <div style="background:${r.bg};border-radius:12px;padding:16px 24px;
           text-align:center;min-width:100px">
           <div style="font-size:28px;font-weight:800;color:${r.color}">${r.val}</div>
@@ -1013,6 +1019,13 @@ function renderImportStep3(added, updated, deleted, errors, report) {
       ).join('')}
     </div>
 
+    ${ignored.length ? `
+      <div class="field-group" style="margin-bottom:20px;border-left:4px solid #f9a825">
+        <div class="field-group-title" style="color:#8a5a00">Produits déjà existants, ignorés (${ignored.length})</div>
+        <div style="max-height:180px;overflow-y:auto">
+          ${ignored.map(l => `<div class="import-report-line"><span>${escapeHtml(l)}</span></div>`).join('')}
+        </div>
+      </div>` : ''}
     ${report.images ? `<div class="field-group" style="margin-bottom:20px"><div class="field-group-title" style="color:#2e7d32">${report.images} visuel${report.images > 1 ? 's' : ''} joint${report.images > 1 ? 's' : ''} depuis le .zip</div></div>` : ''}
     ${warnKeys.length ? `
       <div class="field-group" style="margin-bottom:20px">
@@ -1068,7 +1081,7 @@ function saveImportTrame() {
   const columns = Object.keys(importParsedRows[0] || {}).filter(h => importColMapping[h])
     .map(h => ({ header: h, code: importColMapping[h] }));
   if (!columns.length) { showNotif('Aucune colonne reliée', 'warn'); return; }
-  const t = { id: 'trm_' + (nextTrameId++), name, import: true, export: true,
+  const t = { id: 'trm_' + (nextTrameId++), name, import: true, export: false,
     cats: importCategory ? [importCategory] : [], sheet: 'Import', columns };
   trames.push(t);
   importTrameId = t.id;
@@ -1121,7 +1134,7 @@ function downloadTrame() {
       fill: { fgColor: { rgb: '1A2332' } },
     };
   });
-  XLSX.utils.book_append_sheet(wb, wsData, 'Donnees');
+  XLSX.utils.book_append_sheet(wb, wsData, 'Données');
 
   // Onglet Notice
   const noticeRows = [

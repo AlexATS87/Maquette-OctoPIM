@@ -151,7 +151,7 @@ function renderProductHeader(p, cat) {
       <div class="ph-main">
         <div class="ph-top">
           <div class="product-title synth-${synthEditMode(p, titleAttr)}${missing(titleAttr) ? ' synth-missing' : ''}" title="${escapeHtml(title)}"
-            data-synth-code="${titleAttr ? titleAttr.code : 'nom'}" ${titleAttr ? clickFor('nom', titleAttr) : ''}>${escapeHtml(title)}</div>${alertPictoHtml(p)}
+            data-synth-code="${titleAttr ? titleAttr.code : 'nom'}" ${titleAttr ? clickFor('nom', titleAttr) : ''}>${escapeHtml(title)}</div>${helpButtonHtml('product')}${alertPictoHtml(p)}
           <div class="product-status">
         <div class="ps-item">
           <span class="ps-label">Complétion</span>
@@ -384,16 +384,7 @@ function renderAttrFieldHtml(p,a,labelOverride){
 // ONGLET GROUPE D'ATTRIBUTS GENERIQUE
 // ============================================================
 function groupCompletionStats(p, g) {
-  const seen = new Set();
-  const inHeader = synthHeaderCodes();
-  const list = (g.attrIds || []).map(id => getAttrById(id)).filter(a => {
-    if (!a || a.code === 'completion' || seen.has(a.id) || inHeader.has(a.code)) return false;
-    seen.add(a.id);
-    return countsInCompletion(a) && isAttrShown(p, a);
-  });
-  if (!list.length) return null;
-  const filled = list.filter(a => isCompletionFilled(p, a)).length;
-  return { pct: Math.round(filled / list.length * 100), filled, total: list.length };
+  return tabCompletionStats(p, g);
 }
 
 function groupCompletionHtml(p, g) {

@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <title>OctoPIM</title>
-  <link rel="stylesheet" href="css/style.css?v=62">
+  <link rel="stylesheet" href="css/style.css?v=65">
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
 </head>
@@ -70,13 +70,13 @@
           </button>
           <div class="account-dropdown" id="account-dropdown" hidden>
             <button type="button" class="account-dropdown-item" onclick="openPreferencesFromMenu()">
-              Preferences d'affichage
+              Préférences d'affichage
             </button>
             <div class="account-dropdown-label">Changer d'utilisateur</div>
             <div id="account-switch-list"></div>
             <div class="account-dropdown-sep"></div>
             <button type="button" class="account-dropdown-item is-danger" onclick="logoutUser()">
-              Deconnexion
+              Déconnexion
             </button>
           </div>
         </div>
@@ -125,7 +125,7 @@
           <div class="dash-kpi-card">
             <div style="font-size:12px;font-weight:700;color:#607080;
               text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
-              Evolution recente
+              Évolution récente
             </div>
             <div style="font-size:11px;color:#a0b0c0;margin-bottom:8px">
               6 derniers mois
@@ -135,7 +135,7 @@
 
         </div>
 
-        <div class="dashboard-section-label">Qualite des produits</div>
+        <div class="dashboard-section-label">Qualité des produits</div>
         <div style="display:grid;grid-template-columns:1fr 2fr;
           gap:16px;margin-bottom:20px">
 
@@ -166,7 +166,7 @@
                 <div style="font-size:13px;font-weight:700;color:#1a2332;
                   display:flex;align-items:center;gap:6px">
                   <span style="font-size:14px">&#9989;</span>
-                  Taux de completion global
+                  Taux de complétion global
                 </div>
                 <div style="font-size:11px;color:#a0b0c0;margin-top:2px">
                   Objectif : <span id="objectif-label">—</span>
@@ -270,57 +270,57 @@
         <div style="font-size:18px;font-weight:700;color:#1a2332;margin-bottom:20px">
           Administration
         </div>
-        <div class="admin-grid">
-          <div class="admin-card" data-mod="mod_categories" onclick="showPage('admin-categories',null)">
+        <div class="admin-grid" id="admin-grid">
+          <div class="admin-card" data-mod="mod_categories" data-help="admin-categories" onclick="showPage('admin-categories',null)">
             <div class="admin-card-icon">&#127991;</div>
             <div class="admin-card-title">Categories</div>
             <div class="admin-card-count" id="admin-count-cats">—</div>
           </div>
-          <div class="admin-card" data-mod="mod_groups" onclick="showPage('admin-groups',null)">
+          <div class="admin-card" data-mod="mod_groups" data-help="admin-groups" onclick="showPage('admin-groups',null)">
             <div class="admin-card-icon">&#128193;</div>
             <div class="admin-card-title">Groupes d'attributs</div>
             <div class="admin-card-count" id="admin-count-groups">—</div>
           </div>
-          <div class="admin-card" data-mod="mod_attributes" onclick="showPage('admin-attributes',null)">
+          <div class="admin-card" data-mod="mod_attributes" data-help="admin-attributes" onclick="showPage('admin-attributes',null)">
             <div class="admin-card-icon">&#9741;</div>
             <div class="admin-card-title">Attributs</div>
             <div class="admin-card-count" id="admin-count-attrs">—</div>
           </div>
-          <div class="admin-card" data-mod="mod_synthese" onclick="showPage('admin-synthese',null)">
+          <div class="admin-card" data-mod="mod_synthese" data-help="admin-synthese" onclick="showPage('admin-synthese',null)">
             <div class="admin-card-icon">&#9783;</div>
             <div class="admin-card-title">Groupe Synthèse</div>
           </div>
-          <div class="admin-card" data-mod="mod_conditions" onclick="showPage('admin-suppliers',null)">
+          <div class="admin-card" data-mod="mod_conditions" data-help="admin-referentials" onclick="showPage('admin-suppliers',null)">
             <div class="admin-card-icon">&#127970;</div>
             <div class="admin-card-title">Référentiels</div>
             <div class="admin-card-count" id="admin-count-suppliers">—</div>
           </div>
-          <div class="admin-card" data-mod="mod_roles" onclick="showPage('admin-roles',null)">
+          <div class="admin-card" data-mod="mod_roles" data-help="admin-roles" onclick="showPage('admin-roles',null)">
             <div class="admin-card-icon">&#128100;</div>
             <div class="admin-card-title">Utilisateurs & groupes</div>
             <div class="admin-card-count" id="admin-count-roles">—</div>
           </div>
-          <div class="admin-card" data-mod="mod_alerts" onclick="showPage('admin-alerts',null)">
+          <div class="admin-card" data-mod="mod_alerts" data-help="admin-alerts" onclick="showPage('admin-alerts',null)">
             <div class="admin-card-icon">&#9888;</div>
             <div class="admin-card-title">Alertes</div>
             <div class="admin-card-count" id="admin-count-alerts">—</div>
           </div>
-          <div class="admin-card" data-mod="mod_trames" onclick="showPage('admin-export-formats',null)">
+          <div class="admin-card" data-mod="mod_trames" data-help="admin-trames" onclick="showPage('admin-export-formats',null)">
             <div class="admin-card-icon">&#128228;</div>
             <div class="admin-card-title">Trames d’import / export</div>
             <div class="admin-card-count" id="admin-count-export-formats">—</div>
           </div>
-          <div class="admin-card" data-mod="mod_calc" onclick="showPage('admin-calc',null)">
+          <div class="admin-card" data-mod="mod_calc" data-help="admin-calc" onclick="showPage('admin-calc',null)">
             <div class="admin-card-icon">&#9638;</div>
             <div class="admin-card-title">Champs calculés</div>
             <div class="admin-card-count" id="admin-count-calc">—</div>
           </div>
-          <div class="admin-card" data-mod="mod_workflow" onclick="showPage('admin-workflow',null)">
+          <div class="admin-card" data-mod="mod_workflow" data-help="admin-workflow" onclick="showPage('admin-workflow',null)">
             <div class="admin-card-icon">&#10140;</div>
             <div class="admin-card-title">Workflow</div>
             <div class="admin-card-count" id="admin-count-workflow">—</div>
           </div>
-          <div class="admin-card" data-mod="mod_prefs" onclick="showPage('admin-prefs',null)">
+          <div class="admin-card" data-mod="mod_prefs" data-help="admin-prefs" onclick="showPage('admin-prefs',null)">
             <div class="admin-card-icon">&#9881;</div>
             <div class="admin-card-title">Préférences application</div>
           </div>
@@ -731,7 +731,7 @@
       <button class="btn btn-secondary"
         onclick="closeModal('modal-create-category')">Annuler</button>
       <button class="btn btn-primary"
-        onclick="createCategory()">Creer</button>
+        onclick="createCategory()">Créer</button>
     </div>
   </div>
 </div>
@@ -857,7 +857,7 @@
       <button class="btn btn-secondary"
         onclick="closeModal('modal-create-attr')">Annuler</button>
       <button class="btn btn-primary"
-        onclick="createNewAttribute()">Creer</button>
+        onclick="createNewAttribute()">Créer</button>
     </div>
   </div>
 </div>
@@ -885,7 +885,7 @@
       <button class="btn btn-secondary"
         onclick="closeModal('modal-create-group')">Annuler</button>
       <button class="btn btn-primary"
-        onclick="createAttrGroup()">Creer</button>
+        onclick="createAttrGroup()">Créer</button>
     </div>
   </div>
 </div>
@@ -945,15 +945,16 @@
 </div>
 
 <!-- SCRIPTS -->
-<script src="js/data.js?v=73"></script>
-<script src="js/utils.js?v=60"></script>
-<script src="js/dashboard.js?v=30"></script>
-<script src="js/products.js?v=40"></script>
-<script src="js/admin.js?v=63"></script>
+<script src="js/data.js?v=75"></script>
+<script src="js/utils.js?v=65"></script>
+<script src="js/dashboard.js?v=32"></script>
+<script src="js/products.js?v=41"></script>
+<script src="js/admin.js?v=64"></script>
 <script src="js/baremes-workflow.js?v=12"></script>
-<script src="js/detail.js?v=55"></script>
-<script src="js/export.js?v=31"></script>
-<script src="js/import.js?v=34"></script>
+<script src="js/detail.js?v=57"></script>
+<script src="js/export.js?v=34"></script>
+<script src="js/import.js?v=37"></script>
+<script src="js/help.js?v=5"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {

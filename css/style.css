@@ -1250,6 +1250,9 @@ tr.row-selected td.cell-diff, td.cell-diff { background: #fff9c4 !important; }
   transition: box-shadow 0.15s, transform 0.15s;
   border: 2px solid transparent;
 }
+.admin-card { position: relative; }
+.admin-card-help { position: absolute; top: 10px; right: 10px; line-height: 0; }
+.admin-card-help .help-btn { margin-left: 0; }
 .admin-card:hover {
   box-shadow: 0 4px 16px rgba(0,0,0,0.1);
   transform: translateY(-2px);
@@ -2241,3 +2244,29 @@ td.td-thumb { padding-top: 4px !important; padding-bottom: 4px !important; }
 .vi-rep { color: #e65100; font-size: 12px; }
 .vi-new { color: #2e7d32; font-size: 12px; }
 tr.vi-ko td { background: #fff8f8; }
+
+/* Aide en ligne : bouton « ? » et panneau latéral */
+.help-btn { width:20px; height:20px; border-radius:50%; border:1px solid #c5d0dc; background:#fff; color:#607080; font-size:12px; font-weight:700; line-height:18px; padding:0; margin-left:8px; vertical-align:middle; cursor:pointer; }
+.help-btn:hover { border-color:#1565c0; color:#1565c0; }
+.help-panel { position:fixed; top:0; right:0; bottom:0; width:380px; max-width:100%; background:#fff; box-shadow:-4px 0 16px rgba(0,0,0,0.12); transform:translateX(100%); transition:transform .2s; z-index:1500; display:flex; flex-direction:column; }
+.help-panel.open { transform:none; }
+.help-panel-head { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #e8edf2; font-weight:700; color:#1a2332; }
+.help-close { border:none; background:none; font-size:16px; color:#607080; cursor:pointer; }
+.help-panel-body { padding:8px 20px 24px; overflow-y:auto; font-size:13px; color:#33475b; line-height:1.5; }
+.help-panel-body h4 { margin:16px 0 6px; font-size:13px; color:#1a2332; }
+.help-panel-body ul { margin:0; padding-left:18px; }
+.help-panel-body li { margin-bottom:4px; }
+.help-panel-body code { background:#f0f4f8; padding:0 4px; border-radius:3px; }
+.help-btn { display:inline-flex; align-items:center; justify-content:center; color:#b8860b; border-color:#e8d9a8; background:#fffbea; }
+.help-btn:hover { color:#8a6400; border-color:#d6b656; }
+.help-panel-head { gap:8px; }
+.help-panel-head > span { flex:1; }
+.help-tour-btn { padding:4px 10px; font-size:12px; }
+.tour-block { position:fixed; inset:0; z-index:1600; display:none; }
+.tour-spot { position:fixed; z-index:1601; display:none; border-radius:10px; box-shadow:0 0 0 9999px rgba(15,23,42,0.62); pointer-events:none; transition:all .2s; }
+.tour-bubble { position:fixed; z-index:1602; display:none; width:320px; background:#fff; border-radius:10px; padding:14px 16px; box-shadow:0 8px 24px rgba(0,0,0,0.25); font-size:13px; color:#33475b; }
+.tour-count { font-size:11px; color:#a0b0c0; margin-bottom:2px; }
+.tour-title { font-weight:700; color:#1a2332; margin-bottom:4px; }
+.tour-text { line-height:1.5; margin-bottom:12px; }
+.tour-actions { display:flex; gap:6px; align-items:center; }
+.tour-actions .btn { padding:5px 10px; font-size:12px; }
