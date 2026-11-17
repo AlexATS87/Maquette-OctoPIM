@@ -95,7 +95,7 @@ let attributes = [
     mask:'', showInSynth:false, clickToOpen:false },
   { id:77, name:'Date de mise en ligne prévue', code:'miseEnLigne', type:'Date', groupId:1, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:true, clickToOpen:false },
   { id:114, name:'Réassort automatique SAP', code:'reassort_sap', type:'Simple select', groupId:1, required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, options:['Activé','Désactivé'] },
-  { id:115, name:'Commande d\'implantation envoyée', code:'commande_implantation', type:'Oui / Non', groupId:1, required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
+  { id:115, name:'Commande d\'implantation envoyée le', code:'commande_implantation', type:'Date', groupId:1, required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:116, name:'Date de disponibilité produit', code:'date_dispo', type:'Date', groupId:1, required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:131, name:'Contribution Akeneo faite', code:'contribution_akeneo', type:'Oui / Non', groupId:1, required:false, calc:false, inCompletion:false, formula:'', mask:'', showInSynth:false, clickToOpen:false },
   { id:69, name:'Fournisseur',         code:'fournisseur_code',    type:'Simple select', groupId:3,  required:false, calc:false, inCompletion:true, formula:'', mask:'', showInSynth:false, clickToOpen:false, listRef:{ ref:'Fournisseurs', label:'Nom' } },
@@ -1373,13 +1373,13 @@ const VISUEL_DEMO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   + '<rect x="22" y="44" width="48" height="34" rx="12"/><rect x="90" y="44" width="48" height="34" rx="12"/>'
   + '<path d="M70 56 q10 -8 20 0"/><path d="M22 52 l-12 -6"/><path d="M138 52 l12 -6"/></g></svg>');
 [
-  [1,  { commande_implantation:'Oui', origine_visuels:'Fournisseur', contribution_akeneo:'Oui' }],
-  [4,  { commande_implantation:'Oui', origine_visuels:'Shooting', contribution_akeneo:'Oui' }],
-  [5,  { commande_implantation:'Oui', origine_visuels:'Fournisseur' }],
-  [6,  { commande_implantation:'Oui' }],
-  [12, { commande_implantation:'Oui' }],
-  [13, { commande_implantation:'Oui', origine_visuels:'Shooting' }],
-  [24, { commande_implantation:'Oui' }],
+  [1,  { commande_implantation:'12/03/2025', origine_visuels:'Fournisseur', contribution_akeneo:'Oui' }],
+  [4,  { commande_implantation:'20/03/2025', origine_visuels:'Shooting', contribution_akeneo:'Oui' }],
+  [5,  { commande_implantation:'27/03/2025', origine_visuels:'Fournisseur' }],
+  [6,  { commande_implantation:'02/04/2025' }],
+  [12, { commande_implantation:'15/04/2025' }],
+  [13, { commande_implantation:'22/04/2025', origine_visuels:'Shooting' }],
+  [24, { commande_implantation:'06/05/2025' }],
 ].forEach(([id, values]) => {
   const p = products.find(x => x.id === id);
   if (p) Object.assign(p.fields, values);
@@ -1392,15 +1392,20 @@ function setDemoVisual(p, code) {
   p.fields[code] = (p.fields.sap || ('produit-' + p.id)) + '_' + code.replace(/^visuel_/, '') + '.jpg';
 }
 [1, 4, 5, 13].forEach(id => { const p = products.find(x => x.id === id); if (p) setDemoVisual(p, 'visuel_face'); });
+// Date fictive d'envoi de la commande d'implantation (jj/mm/aaaa)
+function demoOrderDate(id) {
+  const day = 1 + (id * 7) % 28, month = 1 + (id * 5) % 10;
+  return String(day).padStart(2, '0') + '/' + String(month).padStart(2, '0') + '/2026';
+}
 // Montures ajoutees (id 30+) : avancement varie selon les canaux
 products.filter(p => p.id >= 30).forEach(p => {
   const f = p.fields, k = (p.id * 37) % 10;
   if (f.active_o === 'Actif' || f.active_l === 'Actif' || f.active_o === 'Écoulement de stock') {
-    Object.assign(f, { commande_implantation:'Oui', origine_visuels: k < 6 ? 'Fournisseur' : 'Shooting' });
+    Object.assign(f, { commande_implantation: demoOrderDate(p.id), origine_visuels: k < 6 ? 'Fournisseur' : 'Shooting' });
     if (k < 8) setDemoVisual(p, 'visuel_face');
     if (k < 6) f.contribution_akeneo = 'Oui';
   } else if (f.active_o === 'En cours' && k < 6) {
-    f.commande_implantation = 'Oui';
+    f.commande_implantation = demoOrderDate(p.id);
     if (k < 3) f.origine_visuels = k < 2 ? 'Fournisseur' : 'Shooting';
   }
 });
@@ -1623,7 +1628,7 @@ let workflowEnabled = true;
 let workflowSteps = [
   { id:1, name:'Produit renseigné',      rule:{ kind:'groups', groupIds:[4,7,11,12], threshold:100 } },
   { id:2, name:'Code SAP renseigné',     rule:{ kind:'filled', attrCode:'sap' } },
-  { id:3, name:'Commande effectuée',     rule:{ kind:'equals', attrCode:'commande_implantation', value:'Oui' } },
+  { id:3, name:'Commande effectuée',     rule:{ kind:'filled', attrCode:'commande_implantation' } },
   { id:4, name:'Visuels OK',             rule:{ kind:'filled', attrCode:'visuel_face' } },
   { id:5, name:'Contribution Akeneo OK', rule:{ kind:'equals', attrCode:'contribution_akeneo', value:'Oui' } },
   { id:6, name:'Publié',                 rule:{ kind:'equals', attrCode:'statut_publication', value:'Oui' } },
