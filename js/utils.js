@@ -814,10 +814,12 @@ function workflowCompactHtml(p) {
     </div>`;
 }
 
+// Complétion : vert à partir du seuil (réglable), rouge sous 20 %, orange entre les deux
+const COMPLETION_ROUGE_SOUS = 20;
 function getCompletionColor(pct) {
   if (pct >= seuilCompletion) return '#4caf50';
-  if (pct >= seuilCompletion * 0.6) return '#ffa726';
-  return '#ef5350';
+  if (pct < COMPLETION_ROUGE_SOUS) return '#ef5350';
+  return '#ffa726';
 }
 
 // Taux de remplissage d'un attribut, limite aux produits des categories

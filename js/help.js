@@ -353,7 +353,7 @@ const HELP_SECTIONS = {
       </ul>
       <h4>2. Gestes</h4>
       <ul>
-        <li>Dans <b>Colonnes actives</b>, glisser pour réordonner, la croix retire une colonne. Le compteur indique le nombre d’attributs, avec le maximum permis.</li>
+        <li>Dans <b>Colonnes actives</b>, glisser pour réordonner, la croix retire une colonne. Le compteur indique le nombre d’attributs : 10 au maximum (les actions ne comptent pas). Au-delà, l’ajout est refusé.</li>
         <li><b>Ajouter un attribut</b> : choisir dans la liste, puis [+ Ajouter].</li>
         <li><b>Ajouter une action</b> : choisir l’action (par exemple Supprimer), puis [+ Ajouter].</li>
         <li><b>Visuel de la synthèse</b> : l’attribut Image affiché en vignette.</li>
