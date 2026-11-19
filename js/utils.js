@@ -153,6 +153,8 @@ function leaveGuard(id, navEl) {
     }
     _calcReturnAttrId = null;
   }
+
+  if (typeof adminDraftGuard === 'function' && adminDraftGuard(id, navEl) === false) return false;
   return true;
 }
 
@@ -223,10 +225,18 @@ function showPage(id, navEl) {
   if (!canOpenPage(id)) {
     showNotif('Accès non autorisé', 'warn');
     const home = getDefaultNavPage();
-    if (home && id !== home.page) {
+    if (!canMenu('menu_dashboard')) showPage('welcome', null);
+    else if (home && id !== home.page) {
       showPage(home.page, document.querySelector('.nav-item[data-nav="' + home.nav + '"]'));
     }
     return;
+  }
+
+  // L'aide se ferme quand on change d'écran
+  const cur = document.querySelector('.page.active');
+  if (!cur || cur.id !== 'page-' + id) {
+    if (typeof closeHelp === 'function') closeHelp();
+    if (typeof _tour !== 'undefined' && _tour && typeof endTour === 'function') endTour();
   }
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -242,6 +252,7 @@ function showPage(id, navEl) {
     exports: 'Exports',
     imports: 'Imports',
     'user-prefs': 'Préférences',
+    welcome: 'Bienvenue',
     admin: 'Administration',
     'admin-categories': 'Catégories',
     'admin-attributes': 'Attributs',
@@ -254,6 +265,7 @@ function showPage(id, navEl) {
     'admin-export-formats': 'Trames d’import / export',
     'admin-calc': 'Champs calculés',
     'admin-workflow': 'Workflow',
+    'admin-journal': 'Journal des modifications',
     'product-detail': 'Produit',
   };
   if (pageTitles[id]) updateTopbarTitle(pageTitles[id], ({
@@ -261,7 +273,7 @@ function showPage(id, navEl) {
     admin: 'admin', 'admin-categories': 'admin-categories', 'admin-attributes': 'admin-attributes',
     'admin-groups': 'admin-groups', 'admin-synthese': 'admin-synthese', 'admin-suppliers': 'admin-referentials',
     'admin-roles': 'admin-roles', 'admin-alerts': 'admin-alerts', 'admin-export-formats': 'admin-trames',
-    'admin-calc': 'admin-calc', 'admin-workflow': 'admin-workflow', 'admin-prefs': 'admin-prefs'
+    'admin-calc': 'admin-calc', 'admin-workflow': 'admin-workflow', 'admin-prefs': 'admin-prefs', 'admin-journal': 'admin-journal'
   })[id] || '');
 
   // Rendu conditionnel selon la page
@@ -283,6 +295,9 @@ function showPage(id, navEl) {
       break;
     case 'imports':
       renderImportPage();
+      break;
+    case 'welcome':
+      renderWelcomePage();
       break;
     case 'user-prefs':
       renderUserPrefsPage();
@@ -329,12 +344,16 @@ function showPage(id, navEl) {
     case 'admin-workflow':
       renderWorkflowPage();
       break;
+    case 'admin-journal':
+      renderJournalPage();
+      break;
     case 'admin-attribute-edit':
       // Rendu géré par editAttribute()
       break;
     default:
       break;
   }
+  if (typeof adminDraftArrive === 'function') adminDraftArrive(id);
 }
 
 // Alertes : une ou plusieurs conditions, toutes vraies (mêmes opérateurs
@@ -409,6 +428,8 @@ function renderAdminHome() {
   const elWf  = document.getElementById('admin-count-workflow');
   if (elBar) elBar.textContent = (calcTables || []).length;
   if (elWf)  elWf.textContent  = isWorkflowOn() ? (workflowSteps || []).length : 'Off';
+  const elJ = document.getElementById('admin-count-journal');
+  if (elJ) elJ.textContent = (typeof journal !== 'undefined' ? journal.length : 0);
   // Ampoule d'aide de chaque tuile (masquée par la préférence « boutons d'aide »)
   document.querySelectorAll('.admin-card[data-help]').forEach(card => {
     let slot = card.querySelector('.admin-card-help');
@@ -695,6 +716,7 @@ function isWorkflowOn() {
 
 // Colonnes / infos du résumé : sans l'étape quand le workflow est désactivé
 // Le libellé d'un élément de synthèse est toujours le nom de son attribut
+function isDeleteItem(i) { return !!i && i.kind === 'action' && i.code === 'delete'; }
 function activeSynthItems() {
   syntheseItems.forEach(i => {
     if (i.kind !== 'attr') return;
@@ -702,7 +724,9 @@ function activeSynthItems() {
     const a = attributes.find(x => codes.includes(x.code));
     if (a) i.label = a.name;
   });
-  return isWorkflowOn() ? syntheseItems : syntheseItems.filter(i => i.code !== 'etape_workflow');
+  const list = isWorkflowOn() ? syntheseItems : syntheseItems.filter(i => i.code !== 'etape_workflow');
+  // La colonne Supprimer est toujours la dernière
+  return list.some(isDeleteItem) ? list.filter(i => !isDeleteItem(i)).concat(list.filter(isDeleteItem)) : list;
 }
 
 // Intertitre dans la liste d'un groupe d'attributs : chaîne « §Titre »
@@ -1202,6 +1226,7 @@ const PAGE_MOD_MAP = {
   'admin-export-formats':'mod_trames',
   'admin-calc':          'mod_calc',
   'admin-workflow':      'mod_workflow',
+  'admin-journal':       'mod_journal',
 };
 
 function getCurrentUser() {
@@ -1300,9 +1325,26 @@ function getDefaultNavPage() {
 }
 
 function goToDefaultPage() {
+  // Sans menu Tableau de bord : page d'accueil qui propose les menus ouverts au groupe
+  if (!canMenu('menu_dashboard')) { showPage('welcome', null); return; }
   const home = getDefaultNavPage();
   if (!home) return;
   showPage(home.page, document.querySelector('.nav-item[data-nav="' + home.nav + '"]'));
+}
+
+function renderWelcomePage() {
+  const box = document.getElementById('page-welcome');
+  if (!box) return;
+  const open = NAV_MENUS.filter(m => canMenu(m.key));
+  const icons = { dashboard: '&#127968;', products: '&#128230;', imports: '&#128229;', exports: '&#128228;', admin: '&#9881;' };
+  const body = open.length
+    ? '<div class="admin-grid">' + open.map(m => `
+        <div class="admin-card" onclick="${m.nav === 'products' ? 'openProductsList(null)' : `showPage('${m.page}', document.querySelector('.nav-item[data-nav=&quot;${m.nav}&quot;]'))`}">
+          <div class="admin-card-icon">${icons[m.nav] || ''}</div>
+          <div class="admin-card-title">${escapeHtml(m.label)}</div>
+        </div>`).join('') + '</div>'
+    : '<p style="color:#607080">Aucun écran n’est ouvert à votre groupe. Contactez l’administrateur de la solution.</p>';
+  box.innerHTML = '<h2 style="margin:0 0 16px">Bienvenue sur OctoPIM</h2>' + body;
 }
 
 function canOpenPage(id) {
@@ -1312,7 +1354,7 @@ function canOpenPage(id) {
     const p = products.find(x => x.id === currentProductId);
     return !!(p && canCat(p.cat, 'r'));
   }
-  if (id === 'user-prefs') return true;
+  if (id === 'user-prefs' || id === 'welcome') return true;
   if (id === 'dashboard') return canMenu('menu_dashboard');
   if (id === 'products')  return canMenu('menu_products');
   if (id === 'imports')   return canMenu('menu_imports');
@@ -1456,21 +1498,18 @@ function closeAccountMenu() {
 
 function openPreferencesFromMenu() {
   closeAccountMenu();
-  showPage('user-prefs', null);
+  renderUserPrefsPage();
+  openModal('modal-user-prefs');
 }
 
 function renderUserPrefsPage() {
   updateTopbarTitle('Préférences d\'affichage');
-  const page = document.getElementById('page-user-prefs');
+  const page = document.getElementById('user-prefs-body');
   if (!page) return;
   const theme = userPrefs.theme === 'dark' ? 'dark' : 'light';
   page.innerHTML = `
-    <div style="max-width:520px">
-      <div style="font-size:18px;font-weight:700;color:#1a2332;margin-bottom:8px">
-        Préférences d'affichage
-      </div>
-      <div style="background:#fff;border-radius:12px;padding:28px;margin:12px 0 16px;
-        box-shadow:0 1px 6px rgba(0,0,0,0.07)">
+    <div>
+      <div style="background:#f8fafc;border-radius:12px;padding:20px;margin:4px 0 12px">
         <div class="field-label" style="margin-bottom:10px">Aide</div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#1a2332;cursor:pointer">
           <input type="checkbox" ${userPrefs.showHelp !== false ? 'checked' : ''}
@@ -1478,8 +1517,7 @@ function renderUserPrefsPage() {
           Afficher les boutons d'aide <span class="help-btn" style="margin-left:0;display:inline-block;text-align:center">?</span>
         </label>
       </div>
-      <div style="background:#fff;border-radius:12px;padding:28px;
-        box-shadow:0 1px 6px rgba(0,0,0,0.07)">
+      <div style="background:#f8fafc;border-radius:12px;padding:20px">
         <div class="field-label" style="margin-bottom:10px">Thème</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label class="import-action-radio ${theme === 'light' ? 'selected' : ''}"
@@ -1526,6 +1564,9 @@ function switchUser(userId) {
   sessionLoggedIn = true;
   currentUserId = userId;
   productDirty = false;
+  activeGroupFilters = null;
+  _draft = null;
+  if (typeof adminDraftBar === "function") adminDraftBar();
   currentProductId = null;
   closeAccountMenu();
   hideLoginOverlay();
@@ -1562,9 +1603,27 @@ document.addEventListener('click', function(e) {
 });
 
 function initGroupFilters() {
-  if (!activeGroupFilters) {
-    activeGroupFilters = new Set(attrGroups.map(g => g.id));
-  }
+  if (!activeGroupFilters) activeGroupFilters = groupFiltersFor((document.getElementById('filter-cat') || {}).value || '');
+}
+
+// Groupes masqués en vue détaillée : mémorisés par utilisateur et par catégorie
+function hiddenGroupsKey(catName) { return 'octopim_hiddengroups_' + currentUserId + '_' + (catName || '*'); }
+function loadHiddenGroups(catName) {
+  try { return JSON.parse(localStorage.getItem(hiddenGroupsKey(catName)) || '[]'); } catch (e) { return []; }
+}
+function saveHiddenGroups(catName, ids) {
+  try {
+    if (ids.length) localStorage.setItem(hiddenGroupsKey(catName), JSON.stringify(ids));
+    else localStorage.removeItem(hiddenGroupsKey(catName));
+  } catch (e) { /* mémorisation indisponible : sans effet */ }
+}
+function groupIdsForCat(catName) {
+  const cat = catName ? getCatByName(catName) : null;
+  return cat ? cat.groupIds.slice() : attrGroups.map(g => g.id);
+}
+function groupFiltersFor(catName) {
+  const hidden = new Set(loadHiddenGroups(catName));
+  return new Set(groupIdsForCat(catName).filter(id => !hidden.has(id)));
 }
 
 // ============================================================
@@ -1838,8 +1897,7 @@ function makeThumb(dataUrl, cb) {
 // RECHERCHE PRODUITS (barre de recherche globale)
 // ============================================================
 function onSearchInput() {
-  _filterIncomplets = false;
-  _filterAlertId = null;
+  // une recherche se cumule avec tous les filtres, sans en effacer
   currentPage = 1;
   renderProductsTable();
 }

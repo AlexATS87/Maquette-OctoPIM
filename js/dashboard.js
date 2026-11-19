@@ -33,10 +33,21 @@ function renderDashboardNow() {
   renderDashboardWorkflow();
   renderDashboardAlerts();
   renderDashboardSuppliers();
+  lockDashboardWithoutProducts();
+}
+
+// Sans le menu Produits, les indicateurs restent affichés mais ne mènent nulle part
+function lockDashboardWithoutProducts() {
+  if (canMenu('menu_products')) return;
+  document.querySelectorAll('#page-dashboard [onclick]').forEach(e => {
+    e.removeAttribute('onclick');
+    e.style.cursor = 'default';
+    if (/^Voir les produits/.test(e.getAttribute('title') || '')) e.removeAttribute('title');
+  });
 }
 
 function showAlertProducts(alertId) {
-  openProductsList(null, () => { _filterAlertId = alertId; });
+  openProductsList(null, () => { _filterAlertIds = new Set([alertId]); });
 }
 
 // Nombre de produits visibles a chaque etape du workflow. Un clic ouvre la

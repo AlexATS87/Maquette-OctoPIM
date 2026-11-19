@@ -22,7 +22,6 @@ function openProductDetail(id){
     currentProductId=null;
     return;
   }
-  if(!p.history)p.history=[];
   if(!p.pendingChanges)p.pendingChanges=[];
   computeCalcFields(p);
   snapshotProduct(p);
@@ -300,19 +299,20 @@ function updateTabCompletions(p) {
 // HISTORIQUE — BUFFER PENDING
 // ============================================================
 function renderTabHistory(p){
-  const history=p.history||[];
+  const history=journalForProduct(p.id);
   if(!history.length)return'<div style="color:#a0b0c0;font-size:13px;padding:20px">Aucune modification enregistrée.</div>';
   let rows='';
-  [...history].reverse().forEach(h=>{
+  history.forEach(h=>{
     rows+=`<tr>
-      <td style="white-space:nowrap;color:#607080">${h.ts}</td>
-      <td><span style="font-weight:600;color:#1a2332">${h.user}</span></td>
-      <td><span class="history-field-badge">${h.field}</span></td>
-      <td><span class="history-val-old">${h.old||'(vide)'}</span><span class="history-arrow">→</span><span class="history-val-new">${h.new||'(vide)'}</span></td>
+      <td style="white-space:nowrap;color:#607080">${escapeHtml(h.ts)}</td>
+      <td><span style="font-weight:600;color:#1a2332">${escapeHtml(h.user)}</span></td>
+      <td style="color:#607080">${escapeHtml(h.origin)}</td>
+      <td><span class="history-field-badge">${escapeHtml(h.field)}</span></td>
+      <td><span class="history-val-old">${escapeHtml(h.old||'(vide)')}</span><span class="history-arrow">→</span><span class="history-val-new">${escapeHtml(h.new||'(vide)')}</span></td>
     </tr>`;
   });
   return`<div style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.07)">
-    <table class="history-table"><thead><tr><th>Date</th><th>Utilisateur</th><th>Champ</th><th>Modification</th></tr></thead>
+    <table class="history-table"><thead><tr><th>Date</th><th>Utilisateur</th><th>Origine</th><th>Champ</th><th>Modification</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
 
@@ -328,7 +328,7 @@ function flushPendingChanges(p){
   if(!p.pendingChanges||!p.pendingChanges.length)return;
   const ts=nowStr();
   p.pendingChanges.forEach(c=>{
-    if(c.old!==c.new)p.history.push({ts,user:currentUserName(),field:c.field,old:c.old,new:c.new});
+    if(c.old!==c.new)journalProduct(p,'Fiche',c.field,c.old,c.new,{ts});
   });
   p.pendingChanges=[];
 }

@@ -81,7 +81,7 @@ function calcTouch(code) {
   const a = attributes.find(x => x.code === code); if (!a) return;
   const t = calcTables.find(x => x.attrCode === code);
   _calcSnap[code] = { calc: a.calc, formula: a.formula, formulaLabel: a.formulaLabel,
-    alt: a._altFormula, altLabel: a._altLabel, table: t ? JSON.parse(JSON.stringify(t)) : null };
+    alt: a._altFormula, altLabel: a._altLabel, inCompletion: a.inCompletion, table: t ? JSON.parse(JSON.stringify(t)) : null };
 }
 
 function calcHasPending(code) {
@@ -92,7 +92,7 @@ function calcRestore(code) {
   const snap = _calcSnap[code]; if (!snap) return;
   const a = attributes.find(x => x.code === code);
   if (a) Object.assign(a, { calc: snap.calc, formula: snap.formula, formulaLabel: snap.formulaLabel,
-    _altFormula: snap.alt, _altLabel: snap.altLabel });
+    _altFormula: snap.alt, _altLabel: snap.altLabel, inCompletion: snap.inCompletion });
   calcTables = calcTables.filter(x => x.attrCode !== code);
   if (snap.table) calcTables.push(snap.table);
   delete _calcSnap[code];
@@ -119,7 +119,7 @@ function calcSaveField(code) {
 }
 
 function calcFields() {
-  return attributes.filter(a => a.calc || a.formula || a.id === _calcReturnAttrId);
+  return attributes.filter(a => a.calc || a.formula || a.id === _calcReturnAttrId || _calcSnap[a.code]);
 }
 
 // Les produits sont recalculés une fois par affichage (renderCalcTablesPage)
@@ -208,7 +208,7 @@ function renderCalcFieldCard(a, canW, canD) {
   const head = `<div class="calc-card-head" onclick="toggleCalcField('${a.code}')">
       <span class="calc-chevron">${open ? '&#9662;' : '&#9656;'}</span>
       <span style="font-weight:700;color:#1a2332">${escapeHtml(a.name)}</span>
-      ${dup ? `<span class="calc-meta">· ${escapeHtml((getGroupById(a.groupId) || {}).name || '')}</span>` : ''}
+      ${dup ? `<span class="calc-meta">· ${escapeHtml((getGroupsForAttr(a)[0] || {}).name || '')}</span>` : ''}
       ${calcModeChip(mode)}
       ${calcHasPending(a.code) ? '<span class="calc-mode calc-mode-todo">Non enregistré</span>' : ''}
       <span class="calc-meta calc-meta-ell">${meta}</span>
@@ -342,10 +342,10 @@ function uncalcField(code) {
   openConfirmModal({ title: 'Ne plus calculer ce champ', okLabel: 'Continuer',
     lead: '« ' + a.name + ' » ne sera plus calculé et redeviendra un champ saisi.',
     onOk: () => {
+      calcTouch(code);   // reste à enregistrer : [Enregistrer] / [Annuler] sur la carte du champ
       calcTables = calcTables.filter(x => x.attrCode !== code);
       a.calc = false; a.formula = ''; a.formulaLabel = '';
-      if (_openCalcCode === code) _openCalcCode = null;
-      afterCalcChange('« ' + a.name + ' » redevient un champ saisi');
+      afterCalcChange('« ' + a.name + ' » redevient un champ saisi (à enregistrer)');
     } });
 }
 
@@ -395,6 +395,7 @@ function createCalcTable(btn) {
   const mode = document.getElementById('calc-new-mode').value;
   const a = attributes.find(x => x.code === code);
   if (!a) return;
+  calcTouch(code);   // reste à enregistrer
   a.calc = true;
   a.inCompletion = false;
   _openCalcCode = code;

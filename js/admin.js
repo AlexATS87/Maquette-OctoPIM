@@ -17,6 +17,7 @@ function renderSyntheseAdmin() {
   const actionOptions = `<option value="action_delete">Supprimer</option>`;
 
   const visualItem = getSynthVisualItem();
+  const canW = canMod('mod_synthese', 'w');
 
   page.innerHTML = `
     <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
@@ -34,16 +35,16 @@ function renderSyntheseAdmin() {
           Colonnes actives
           <span class="tab-count${syntheseItems.filter(x => x.kind === 'attr').length >= SYNTH_MAX_FIELDS ? ' synth-full' : ''}">${syntheseItems.filter(x => x.kind === 'attr').length} / ${SYNTH_MAX_FIELDS}</span>
           <span style="font-size:12px;font-weight:400;color:#a0b0c0">
-            (glisser pour réordonner)
+            ${canW ? '(glisser pour réordonner)' : ''}
           </span>
         </div>
         <div id="synthese-items-list">
           ${syntheseItems.map((item, i) => `
-            <div class="cat-group-order-item" draggable="true"
+            <div class="cat-group-order-item" ${canW && !isDeleteItem(item) ? 'draggable="true"' : ''}
               ondragstart="synthDragStart(${i})"
               ondragover="synthDragOver(event,${i})"
               ondrop="synthDrop(event,${i})">
-              <span class="drag-handle">&#8942;&#8942;</span>
+              ${canW && !isDeleteItem(item) ? '<span class="drag-handle">&#8942;&#8942;</span>' : (isDeleteItem(item) ? systemLockIcon() : '')}
               <span style="flex:1;font-size:13px;font-weight:600;color:#1a2332">
                 ${item.label}
               </span>
@@ -60,15 +61,17 @@ function renderSyntheseAdmin() {
               <span class="badge badge-grey" style="font-size:11px">
                 ${item.kind === 'action' ? 'Action' : item.code}
               </span>
-              <button class="action-btn-danger"
+              ${canW ? `<button class="action-btn-danger"
                 style="padding:2px 8px;font-size:11px"
-                onclick="removeSyntheseItem(${i})">&#10005;</button>
+                onclick="removeSyntheseItem(${i})">&#10005;</button>` : ''}
             </div>`
           ).join('')}
         </div>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:14px">
+        ${canW ? '' : '<div class="field-group"><div class="field-group-title">Visuel de la synthèse</div><div style="font-size:13px">' + escapeHtml(visualItem ? visualItem.label : 'Aucun') + '</div></div>'}
+        <div style="display:${canW ? 'contents' : 'none'}">
 
         <div class="field-group">
           <div class="field-group-title">Ajouter un attribut</div>
@@ -113,8 +116,8 @@ function renderSyntheseAdmin() {
               <span style="font-size:12px;color:#607080;display:inline-flex;align-items:center;gap:6px">
                 ${escapeHtml(s.name)}${attrLockBadge(s)}
               </span>
-              ${already
-                ? `<span style="font-size:11px;color:#a0b0c0">Déjà ajouté</span>`
+              ${already || !canW
+                ? `<span style="font-size:11px;color:#a0b0c0">${already ? 'Déjà ajouté' : ''}</span>`
                 : `<button class="btn btn-secondary"
                     style="font-size:11px;padding:3px 10px"
                     onclick="addSyntheseSystem('${s.code}','${escapeHtml(s.name)}')">
@@ -124,21 +127,32 @@ function renderSyntheseAdmin() {
           }).join('')}
         </div>
 
+        </div>
       </div>
     </div>`;
 }
 
+// La colonne Supprimer reste toujours la dernière de la liste
+function pinSynthDelete() {
+  const d = syntheseItems.filter(isDeleteItem);
+  if (!d.length) return;
+  syntheseItems = syntheseItems.filter(i => !isDeleteItem(i)).concat(d);
+}
+
 let synthDragIdx = null;
 
-function synthDragStart(i) { synthDragIdx = i; }
+function synthDragStart(i) { synthDragIdx = canMod('mod_synthese', 'w') ? i : null; }
 
 function synthDragOver(e, i) { e.preventDefault(); }
 
 function synthDrop(e, i) {
   e.preventDefault();
+  if (!canMod('mod_synthese', 'w')) return;
   if (synthDragIdx === null || synthDragIdx === i) return;
+  if (isDeleteItem(syntheseItems[synthDragIdx])) return;   // la colonne Supprimer ne se déplace pas
   const moved = syntheseItems.splice(synthDragIdx, 1)[0];
   syntheseItems.splice(i, 0, moved);
+  pinSynthDelete();
   synthDragIdx = null;
   renderSyntheseAdmin();
 }
@@ -152,6 +166,7 @@ function removeSyntheseItem(i) {
 
 // Un seul visuel dans la synthese : le select remplace celui en place
 function setSyntheseVisual() {
+  if (!requirePerm(canMod('mod_synthese', 'w'))) return;
   const code = (document.getElementById('synth-visual') || {}).value || '';
   const idx  = syntheseItems.findIndex(i => i.kind === 'attr' && isVisualCode(i.code));
 
@@ -184,6 +199,7 @@ function isInSynthese(code) {
 }
 
 function addSyntheseSystem(code, label) {
+  if (!requirePerm(canMod('mod_synthese', 'w'))) return;
   if (syntheseItems.filter(x => x.kind === 'attr').length >= SYNTH_MAX_FIELDS) {
     showNotif('La vue synthèse est limitée à ' + SYNTH_MAX_FIELDS + ' champs : retirez-en un avant d’en ajouter un autre', 'warn'); return;
   }
@@ -191,6 +207,7 @@ function addSyntheseSystem(code, label) {
     showNotif(label + ' est déjà dans la vue synthèse', 'warn'); return;
   }
   syntheseItems.push({ code, label, kind: 'attr' });
+  pinSynthDelete();
   renderSyntheseAdmin();
   showNotif(label + ' ajouté');
 }
@@ -208,6 +225,7 @@ function addSyntheseAttr() {
     showNotif('La vue synthèse est limitée à ' + SYNTH_MAX_FIELDS + ' champs : retirez-en un avant d’en ajouter un autre', 'warn'); return;
   }
   syntheseItems.push({ code: attr.code, label: attr.name, kind: 'attr' });
+  pinSynthDelete();
   renderSyntheseAdmin();
   showNotif(attr.name + ' ajouté à la vue synthèse');
 }
@@ -261,7 +279,17 @@ function editCategory(id) {
   document.getElementById('edit-cat-color').value = cat.color;
   renderCatGroupOrder(cat);
   renderCatGroupAvailable(cat);
+  lockEditPage('page-admin-category-edit', !canMod('mod_categories', 'w'));
   showPage('admin-category-edit', null);
+}
+
+// Lecture seule d'un écran de modification : champs désactivés, boutons
+// d'enregistrement masqués (les listes se verrouillent à leur affichage).
+function lockEditPage(pageId, locked) {
+  const page = document.getElementById(pageId);
+  if (!page) return;
+  page.querySelectorAll('input:not(.search-input), select, textarea').forEach(el => { el.disabled = !!locked; });
+  page.querySelectorAll('.btn-primary').forEach(el => { el.style.display = locked ? 'none' : ''; });
 }
 
 function renderCatGroupOrder(cat) {
@@ -274,8 +302,10 @@ function renderCatGroupOrder(cat) {
     const item = document.createElement('div');
     item.className      = 'cat-group-order-item';
     item.dataset.groupId = gid;
-    item.draggable      = true;
+    const canWc = canMod('mod_categories', 'w');
+    item.draggable      = canWc;
     item.addEventListener('dragstart', e => {
+      if (!canWc) { e.preventDefault(); return; }
       e.dataTransfer.setData('text/plain', String(gid));
       item.classList.add('dragging');
     });
@@ -287,7 +317,7 @@ function renderCatGroupOrder(cat) {
       item.classList.remove('drag-over');
       const fromId = parseInt(e.dataTransfer.getData('text/plain'));
       const toId   = parseInt(item.dataset.groupId);
-      if (fromId === toId) return;
+      if (!canWc || fromId === toId) return;
       const fi = cat.groupIds.indexOf(fromId);
       const ti = cat.groupIds.indexOf(toId);
       cat.groupIds.splice(fi, 1);
@@ -298,14 +328,15 @@ function renderCatGroupOrder(cat) {
       <span class="drag-handle">&#9776;</span>
       <span style="font-size:13px">${g.name}</span>
       ${g.system ? systemLockBadge('group') : ''}
-      <button class="action-btn-danger"
+      ${canWc ? `<button class="action-btn-danger"
         style="margin-left:auto;font-size:11px;padding:3px 8px"
-        onclick="removeCatGroup(${cat.id},${gid})">Retirer</button>`;
+        onclick="removeCatGroup(${cat.id},${gid})">Retirer</button>` : ''}`;
     list.appendChild(item);
   });
 }
 
 function removeCatGroup(catId, groupId) {
+  if (!requirePerm(canMod('mod_categories', 'w'))) return;
   const cat = categories.find(c => c.id === catId);
   if (!cat) return;
   cat.groupIds = cat.groupIds.filter(id => id !== groupId);
@@ -331,7 +362,7 @@ function renderCatGroupAvailable(cat) {
         <div class="attr-toggle-name">${g.name}</div>
         <div class="attr-toggle-meta">${g.attrIds.filter(id => !isAttrSection(id)).length} attributs</div>
       </div>
-      <button class="action-btn" onclick="addCatGroup(${cat.id},${g.id})">Ajouter</button>`;
+      ${canMod('mod_categories', 'w') ? `<button class="action-btn" onclick="addCatGroup(${cat.id},${g.id})">Ajouter</button>` : ''}`;
     list.appendChild(row);
   });
 }
@@ -590,24 +621,7 @@ function editAttribute(id, draft) {
   const typeEl = document.getElementById('ea-type');
   if (typeEl) typeEl.disabled = !!a.system;
 
-  const gSel = document.getElementById('ea-group');
-  if (gSel) {
-    gSel.innerHTML = '<option value="">-- Choisir --</option>';
-    attrGroups.forEach(g => {
-      gSel.innerHTML += `<option value="${g.id}"${g.id === a.groupId ? ' selected' : ''}>${g.name}</option>`;
-    });
-    gSel.disabled = !!a.system;
-  }
-  const otherWrap = document.getElementById('ea-other-groups');
-  if (otherWrap) {
-    const extras = getGroupsForAttr(a).filter(g => g.id !== a.groupId);
-    otherWrap.innerHTML = extras.length
-      ? '<div style="font-size:11px;color:#607080;margin-bottom:4px">Aussi dans :</div>' +
-        extras.map(g => `<span class="attr-chip"
-          style="background:${getGroupColor(g).bg};color:${getGroupColor(g).text};margin:1px 4px 1px 0">
-          ${escapeHtml(g.name)}</span>`).join('')
-      : '';
-  }
+  renderAttrGroupsField(a);
   const optWrap = document.getElementById('ea-options-wrap');
   if (optWrap) {
     optWrap.style.display = (!a.system && (a.type === 'Simple select' || a.type === 'Multi select')) ? '' : 'none';
@@ -641,6 +655,27 @@ function editAttribute(id, draft) {
   setTimeout(snapshotAttrForm, 0);
 }
 
+// Champ « Groupes » : un attribut peut être dans plusieurs groupes ou dans aucun.
+// Un attribut verrouillé garde un groupe imposé, affiché avec un cadenas et non retirable.
+function attrImposedGroupId(a) {
+  if (!a || !isProtectedAttr(a)) return null;
+  if (a.groupId && getGroupById(a.groupId)) return a.groupId;
+  const g = getGroupsForAttr(a)[0];
+  return g ? g.id : null;
+}
+function renderAttrGroupsField(a) {
+  const box = document.getElementById('ea-groups');
+  if (!box) return;
+  const imposed = attrImposedGroupId(a);
+  const inGroups = new Set(attrGroups.filter(g => (g.attrIds || []).includes(a.id)).map(g => g.id));
+  box.innerHTML = attrGroups.map(g => {
+    const lock = g.id === imposed;
+    return `<label class="ea-grp${lock ? ' ea-grp-lock' : ''}"${lock ? ' title="Groupe imposé : cet attribut ne peut pas en sortir"' : ''}>
+      <input type="checkbox" id="ea-grp-${g.id}"${inGroups.has(g.id) || lock ? ' checked' : ''}${lock ? ' disabled data-locked="1"' : ''}>
+      <span>${escapeHtml(g.name)}</span>${lock ? systemLockIcon() : ''}</label>`;
+  }).join('');
+}
+
 function canEditAttr(a) {
   return !a.system && canMod('mod_attributes', 'w');
 }
@@ -656,23 +691,9 @@ function lockAttrEditor(locked, message) {
   const page = document.getElementById('page-admin-attribute-edit');
   if (!page) return;
   page.querySelectorAll('input, select, textarea').forEach(el => {
-    if (el.id === 'ea-code') return;
+    if (el.id === 'ea-code' || el.dataset.locked) return;
     el.disabled = !!locked;
   });
-}
-
-function onEditAttrTypeChange() {
-  const type    = document.getElementById('ea-type').value;
-  const optWrap = document.getElementById('ea-options-wrap');
-  if (optWrap) optWrap.style.display = (type === 'Simple select' || type === 'Multi select') ? '' : 'none';
-  const lenWrap = document.getElementById('ea-maxlength-wrap');
-  if (lenWrap) lenWrap.style.display = type === 'Texte long' ? '' : 'none';
-  const imgWrapT = document.getElementById('ea-img-wrap');
-  if (imgWrapT) imgWrapT.style.display = type === 'Image' ? '' : 'none';
-  const numWrap = document.getElementById('ea-number-wrap');
-  if (numWrap) numWrap.style.display = type === 'Nombre' ? '' : 'none';
-  renderFormulaHelp('ea-formula-help', type);
-  renderMaskHelp('ea-mask-help', type);
 }
 
 function refreshConditionalRows(p) {
@@ -872,8 +893,6 @@ function saveAttributeEdit() {
   const sheetSave = document.getElementById('ea-onsheet');
   if (sheetSave) a.hideOnSheet = sheetSave.value === '0' || undefined;
   const oldCode     = a.code;
-  const oldGroupId  = a.groupId;
-  const newGroupId  = a.system ? a.groupId : (parseInt(document.getElementById('ea-group').value) || null);
   const newType     = a.system ? a.type : document.getElementById('ea-type').value;
   if (!isNew && oldCode !== newCode) renameAttrCodeEverywhere(oldCode, newCode);
   a.name     = newName;
@@ -922,10 +941,16 @@ function saveAttributeEdit() {
       a.options = document.getElementById('ea-options').value.split('\n').map(s => s.trim()).filter(Boolean);
     } else { a.options = []; }
   }
-  if (oldGroupId !== newGroupId) {
-    if (oldGroupId) { const og = getGroupById(oldGroupId); if (og) og.attrIds = og.attrIds.filter(id => id !== a.id); }
-    if (newGroupId) { const ng = getGroupById(newGroupId); if (ng && !ng.attrIds.includes(a.id)) ng.attrIds.push(a.id); }
-    a.groupId = newGroupId;
+  if (!a.system) {
+    const imposed = attrImposedGroupId(a);
+    const sel = new Set(attrGroups.filter(g => { const el = document.getElementById('ea-grp-' + g.id); return el && el.checked; }).map(g => g.id));
+    if (imposed) sel.add(imposed);
+    attrGroups.forEach(g => {
+      const has = (g.attrIds || []).includes(a.id);
+      if (sel.has(g.id) && !has) g.attrIds.push(a.id);
+      else if (!sel.has(g.id) && has) g.attrIds = g.attrIds.filter(id => id !== a.id);
+    });
+    a.groupId = imposed;
   }
   renderAll();
   attrFormDirty = false;
@@ -1158,8 +1183,10 @@ function renderAttrGroupsList() {
     const card  = document.createElement('div');
     card.className      = 'attr-group-card';
     card.dataset.groupId = g.id;
-    card.draggable      = true;
+    const canWg = canMod('mod_groups', 'w');
+    card.draggable      = canWg;
     card.addEventListener('dragstart', e => {
+      if (!canWg) { e.preventDefault(); return; }
       e.dataTransfer.setData('text/plain', String(g.id));
       card.classList.add('dragging');
     });
@@ -1171,7 +1198,7 @@ function renderAttrGroupsList() {
       card.classList.remove('drag-over-card');
       const fromId = parseInt(e.dataTransfer.getData('text/plain'));
       const toId   = g.id;
-      if (fromId === toId) return;
+      if (!canWg || fromId === toId) return;
       const fi = attrGroups.findIndex(x => x.id === fromId);
       const ti = attrGroups.findIndex(x => x.id === toId);
       const [moved] = attrGroups.splice(fi, 1);
@@ -1182,7 +1209,7 @@ function renderAttrGroupsList() {
     card.innerHTML = `
       <div class="attr-group-card-header">
         <div style="display:flex;align-items:center;gap:10px">
-          <span class="drag-handle" style="cursor:grab;font-size:18px;color:#c0d0e0">&#9776;</span>
+          ${canWg ? '<span class="drag-handle" style="cursor:grab;font-size:18px;color:#c0d0e0">&#9776;</span>' : ''}
           <div class="attr-group-card-title">${g.name}</div>
           ${audienceLabel(g)}
           ${g.system ? systemLockBadge('group') : ''}
@@ -1216,6 +1243,7 @@ function editAttrGroup(id) {
   document.getElementById('edit-group-code').value = g.code;
   renderAudienceChecks('edit-group-audience', g.audienceGroupIds || []);
   renderGroupAttrToggles(g);
+  lockEditPage('page-admin-group-edit', !canMod('mod_groups', 'w'));
   showPage('admin-group-edit', null);
 }
 
@@ -1232,29 +1260,30 @@ function renderGroupAttrToggles(g, flashIdx) {
   const nAttrs = entries.filter(e => e.a).length;
   const nSec = entries.length - nAttrs;
 
+  const canGW = canMod('mod_groups', 'w');
   const rows = entries.map(({ id, i, a }) => {
-    const drag = `draggable="true" ondragstart="groupAttrDragStart(${i})" ondragover="groupAttrDragOver(event)" ondrop="groupAttrDrop(event,${i})" onclick="selectGroupRow(event,${i})"`;
+    const drag = `${canGW ? 'draggable="true"' : ''} ondragstart="groupAttrDragStart(${i})" ondragover="groupAttrDragOver(event)" ondrop="groupAttrDrop(event,${i})" onclick="selectGroupRow(event,${i})"`;
     const flash = (i === flashIdx ? ' field-flash' : '') + (i === _grpSel ? ' grp-selected' : '');
     if (!a) return `
       <div class="grp-item grp-section${flash}" ${drag}>
-        <span class="drag-handle">&#8942;&#8942;</span>
-        <input class="field-input group-section-input" value="${escapeHtml(attrSectionTitle(id))}"
+        ${canGW ? '<span class="drag-handle">&#8942;&#8942;</span>' : ''}
+        <input class="field-input group-section-input" value="${escapeHtml(attrSectionTitle(id))}"${canGW ? '' : ' disabled'}
           onchange="renameGroupSection(${i},this.value)">
-        <button class="action-btn-danger btn-trash" title="Supprimer l'intertitre" onclick="removeGroupSection(${i})">${TRASH_ICON}</button>
+        ${canGW ? `<button class="action-btn-danger btn-trash" title="Supprimer l'intertitre" onclick="removeGroupSection(${i})">${TRASH_ICON}</button>` : ''}
       </div>`;
     const locked = isProtectedAttr(a) && a.groupId === g.id;
     return `
       <div class="grp-item${flash}" ${drag}>
-        <span class="drag-handle">&#8942;&#8942;</span>
+        ${canGW ? '<span class="drag-handle">&#8942;&#8942;</span>' : ''}
         <span class="grp-name">${escapeHtml(a.name)}${attrLockBadge(a)}</span>
         <span class="grp-type">${escapeHtml(a.type)}${a.width ? ' · ' + ({ narrow: 'étroite', normal: 'normale', wide: 'large', full: 'pleine ligne' }[a.width] || '') : ''}</span>
-        ${locked ? '<span class="grp-x-spacer"></span>'
+        ${locked || !canGW ? '<span class="grp-x-spacer"></span>'
           : `<button class="grp-x" title="Retirer du groupe" onclick="toggleGroupAttr(${a.id})">&#10005;</button>`}
       </div>`;
   }).join('');
 
   list.innerHTML = `
-    <div class="grp-add">
+    ${canGW ? `<div class="grp-add">
       <select class="form-select" id="grp-add-attr" onchange="addAttrToGroup(this.value)">
         <option value="">Ajouter un attribut…</option>
         ${others.map(a => {
@@ -1263,10 +1292,10 @@ function renderGroupAttrToggles(g, flashIdx) {
         }).join('')}
       </select>
       <button class="btn btn-secondary" onclick="addGroupSection()">+ Intertitre</button>
-    </div>
+    </div>` : ''}
     <div class="grp-head">
       <span>${nAttrs} attribut${nAttrs > 1 ? 's' : ''}${nSec ? ' · ' + nSec + ' intertitre' + (nSec > 1 ? 's' : '') : ''}</span>
-      <span class="grp-hint">glisser pour réordonner</span>
+      ${canGW ? '<span class="grp-hint">glisser pour réordonner</span>' : ''}
     </div>
     <div id="group-attr-order-list">${rows || '<div class="grp-empty">Aucun attribut.</div>'}</div>`;
 
@@ -1292,6 +1321,7 @@ function insertInGroup(g, item) {
 }
 
 function addAttrToGroup(val) {
+  if (!requirePerm(canMod('mod_groups', 'w'))) return;
   const g = attrGroups.find(x => x.id === editingGroupId);
   const id = parseInt(val, 10);
   if (!g || !id || g.attrIds.includes(id)) return;
@@ -1303,12 +1333,13 @@ function addAttrToGroup(val) {
 
 let groupAttrDragIdx = null;
 
-function groupAttrDragStart(i) { groupAttrDragIdx = i; }
+function groupAttrDragStart(i) { groupAttrDragIdx = canMod('mod_groups', 'w') ? i : null; }
 
 function groupAttrDragOver(e) { e.preventDefault(); }
 
 function groupAttrDrop(e, i) {
   e.preventDefault();
+  if (!canMod('mod_groups', 'w')) return;
   const g = attrGroups.find(x => x.id === editingGroupId);
   if (!g || groupAttrDragIdx === null || groupAttrDragIdx === i) return;
   const moved = g.attrIds.splice(groupAttrDragIdx, 1)[0];
@@ -1319,6 +1350,7 @@ function groupAttrDrop(e, i) {
 }
 
 function addGroupSection() {
+  if (!requirePerm(canMod('mod_groups', 'w'))) return;
   const g = attrGroups.find(x => x.id === editingGroupId);
   if (!g) return;
   const at = insertInGroup(g, '§Nouvel intertitre');
@@ -1328,6 +1360,7 @@ function addGroupSection() {
 }
 
 function renameGroupSection(i, val) {
+  if (!requirePerm(canMod('mod_groups', 'w'))) return;
   const g = attrGroups.find(x => x.id === editingGroupId);
   if (!g || !isAttrSection(g.attrIds[i])) return;
   const t = String(val || '').trim();
@@ -1336,6 +1369,7 @@ function renameGroupSection(i, val) {
 }
 
 function removeGroupSection(i) {
+  if (!requirePerm(canMod('mod_groups', 'w'))) return;
   const g = attrGroups.find(x => x.id === editingGroupId);
   if (!g || !isAttrSection(g.attrIds[i])) return;
   g.attrIds.splice(i, 1);
@@ -1344,6 +1378,7 @@ function removeGroupSection(i) {
 }
 
 function toggleGroupAttr(attrId) {
+  if (!requirePerm(canMod('mod_groups', 'w'))) return;
   const g = attrGroups.find(x => x.id === editingGroupId);
   if (!g) return;
   const attr = getAttrById(attrId);
@@ -1443,9 +1478,9 @@ function renderRoles() {
   page.style.display = 'block';
   const ungrouped = users.filter(u => !u.groupId && u.levelKey !== 'admin');
   const tabs = [
-    { key: 'users',  label: 'Utilisateurs', badge: ungrouped.length ? `<span class="acc-nogroup" style="margin-left:6px">${ungrouped.length} sans groupe</span>` : '' },
+    { key: 'users',  label: 'Utilisateurs', badge: `<span class="tab-count">${users.length}</span>` },
     { key: 'groups', label: 'Groupes d’affectation', badge: `<span class="tab-count">${affectGroups.length}</span>` },
-    { key: 'levels', label: 'Niveaux de droits', badge: '' },
+    { key: 'levels', label: 'Niveaux de droits', badge: `<span class="tab-count">${ACCESS_LEVELS.length}</span>` },
   ];
   const bar = `<div class="product-tabs-bar acc-tabs">${tabs.map(t =>
     `<div class="tab${_accTab === t.key ? ' active' : ''}" onclick="setAccTab('${t.key}')">${t.label}${t.badge}</div>`).join('')}</div>`;
@@ -1545,7 +1580,7 @@ function renderAccGroups() {
       <div class="acc-vis-title">Menus visibles</div>
       <div class="wf-group-chips">${NAV_MENUS.map(m => chk('menuKeys', m.key, m.label)).join('')}</div>
       <div class="acc-vis-title">Modules d’administration ouverts</div>
-      <div class="wf-group-chips">${ADMIN_MODULES.filter(m => m.key !== 'mod_roles').map(m => chk('modKeys', m.key, m.label)).join('')}</div>
+      <div class="wf-group-chips">${ADMIN_MODULES.filter(m => m.key !== 'mod_roles' && m.key !== 'mod_prefs').map(m => chk('modKeys', m.key, m.label)).join('')}</div>
     </div>`;
   }
 
@@ -1703,8 +1738,12 @@ function executeDelete() {
     attrGroups.forEach(g => { g.attrIds = g.attrIds.filter(id => id !== pendingDelete.id); });
     if (deletedCode) syntheseItems = syntheseItems.filter(i => !(i.kind === 'attr' && i.code === deletedCode));
   }
-  else if (pendingDelete.type === 'product')
+  else if (pendingDelete.type === 'product') {
+    const dp = products.find(p => p.id === pendingDelete.id);
+    if (dp) journalProduct(dp, 'Fiche', 'Produit', dp.fields.nom || '', '(supprimé)');
+    archiveDeletedProduct(dp);
     products = products.filter(p => p.id !== pendingDelete.id);
+  }
   else if (pendingDelete.type === 'group') {
     const gDel = attrGroups.find(g => g.id === pendingDelete.id);
     if (isProtectedGroup(gDel)) {
@@ -1735,16 +1774,6 @@ function renderPrefsPage() {
     <div style="background:#fff;border-radius:12px;padding:28px;box-shadow:0 1px 6px rgba(0,0,0,0.07);max-width:560px">
       <div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:20px">Préférences application</div>
 
-      <div class="field-row" style="margin-bottom:20px">
-        <div class="field-label" style="margin-bottom:6px">Nombre de produits par page</div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <select class="field-input form-select" id="pref-page-size" style="width:120px">
-            ${[25, 50, 100].map(n => `<option value="${n}" ${Number(appPrefs.pageSize) === n ? 'selected' : ''}>${n}</option>`).join('')}
-          </select>
-          <span style="font-size:12px;color:#a0b0c0">produits / page</span>
-        </div>
-      </div>
-
       <div class="field-row" style="margin-bottom:24px">
         <div class="field-label" style="margin-bottom:6px">Seuil de complétion</div>
         <div style="display:flex;gap:10px;align-items:center">
@@ -1770,17 +1799,15 @@ function renderPrefsPage() {
       </div>
 
       <div style="display:flex;justify-content:flex-end;gap:10px">
-        <button class="btn btn-secondary" onclick="showPage('admin',null)">Annuler</button>
-        <button class="btn btn-primary" onclick="savePrefs()">Enregistrer</button>
+        <button class="btn btn-secondary" onclick="adminDraftCancel('admin')">Annuler</button>
+        <button class="btn btn-primary" onclick="adminDraftSave()">Enregistrer</button>
       </div>
     </div>`;
 }
 
 function savePrefs() {
   if (!requirePerm(canMod('mod_prefs', 'w'))) return;
-  const ps = parseInt(document.getElementById('pref-page-size').value);
   const sc = parseInt(document.getElementById('pref-seuil').value);
-  if (ps === 25 || ps === 50 || ps === 100) { appPrefs.pageSize = ps; currentPage = 1; }
   if (!isNaN(sc) && sc >= 0 && sc <= 100) seuilCompletion = sc;
   const vk = (document.getElementById('pref-visual-key') || {}).value;
   const vs = ((document.getElementById('pref-visual-sep') || {}).value || '').trim();
@@ -2104,7 +2131,7 @@ function setRefCell(refId, i, ci, val) {
   }
   if (refHasKeys(R)) delete row._new;
   row[prop] = v;
-  refAfterChange(R.name + ' : ligne enregistrée');
+  refAfterChange(R.name + ' : ligne modifiée');
 }
 
 function addRefRow(refId) {
@@ -2401,7 +2428,7 @@ function renderAlertModal() {
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeAlertModal()">${d.readonly ? 'Fermer' : 'Annuler'}</button>
-        ${d.readonly ? '' : `<button class="btn btn-primary" onclick="saveAlertModal()">${d.id ? 'Enregistrer' : 'Créer'}</button>`}
+        ${d.readonly ? '' : `<button class="btn btn-primary" onclick="saveAlertModal()">${d.id ? 'Valider' : 'Créer'}</button>`}
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -2440,7 +2467,7 @@ function saveAlertModal() {
   renderAlertsPage();
   renderAdminHome();
   renderDashboard();
-  showNotif(d.id ? 'Alerte enregistrée' : 'Alerte créée');
+  showNotif(d.id ? 'Alerte modifiée' : 'Alerte ajoutée');
 }
 
 function deleteAlert(id) {
@@ -2450,7 +2477,7 @@ function deleteAlert(id) {
   openConfirmModal({ title: 'Supprimer l’alerte', lead: '« ' + alertRuleText(alert) + ' » sera supprimée.', okLabel: 'Supprimer',
     onOk: () => {
       alerts = alerts.filter(a => a.id !== id);
-      if (_filterAlertId === id) _filterAlertId = null;
+      if (_filterAlertIds) { _filterAlertIds.delete(id); if (!_filterAlertIds.size) _filterAlertIds = null; }
       renderAlertsPage();
       renderAdminHome();
       renderDashboard();
@@ -2578,7 +2605,7 @@ function setFmtProp(prop, val) {
     if (trames.some(x => x !== f && x.name.toLowerCase() === v.toLowerCase())) { showNotif('Ce nom existe déjà', 'error'); renderExportFormatsPage(); return; }
   }
   f[prop] = v;
-  fmtAfterChange('Trame enregistrée');
+  fmtAfterChange('Trame modifiée');
 }
 function setFmtCol(i, prop, val) {
   if (!requirePerm(canMod('mod_trames', 'w'))) return;

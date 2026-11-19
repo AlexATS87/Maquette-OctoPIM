@@ -211,11 +211,12 @@
             onchange="onCatFilterChange()">
             <option value="">Toutes catégories</option>
           </select>
+          <label id="deleted-filter-wrap" class="acc-check" style="display:none;font-size:13px;white-space:nowrap">
+            <input type="checkbox" id="filter-deleted" onchange="toggleShowDeleted(this.checked)"> Produits supprimés <span id="deleted-count" class="tab-count"></span></label>
           <button class="btn btn-secondary" id="btn-clear-filters"
             style="display:none" onclick="clearAllFilters()">
             &#10005; Effacer les filtres
           </button>
-          <span id="alert-filter-chip" style="display:none;font-size:12px;font-weight:600;color:#c62828"></span>
           <div style="flex:1"></div>
           <div class="view-toggle-pill">
             <button id="btn-view-synth" class="view-toggle-btn active"
@@ -223,6 +224,7 @@
             <button id="btn-view-detail" class="view-toggle-btn"
               onclick="switchView('detail')">Détaillée</button>
           </div>
+          <button class="btn btn-secondary" id="btn-compare" onclick="startCompare()">Comparer</button>
           <button class="btn btn-primary" id="btn-new-product"
             onclick="openModal('modal-create-product')">
             + Nouveau produit
@@ -261,6 +263,9 @@
 
       <!-- IMPORTS -->
       <div class="page" id="page-imports"></div>
+
+      <!-- ACCUEIL (personne sans menu Tableau de bord) -->
+      <div class="page" id="page-welcome"></div>
 
       <!-- PREFERENCES UTILISATEUR -->
       <div class="page" id="page-user-prefs"></div>
@@ -320,6 +325,11 @@
             <div class="admin-card-title">Workflow</div>
             <div class="admin-card-count" id="admin-count-workflow">—</div>
           </div>
+          <div class="admin-card" data-mod="mod_journal" data-help="admin-journal" onclick="showPage('admin-journal',null)">
+            <div class="admin-card-icon">&#128221;</div>
+            <div class="admin-card-title">Journal</div>
+            <div class="admin-card-count" id="admin-count-journal">—</div>
+          </div>
           <div class="admin-card" data-mod="mod_prefs" data-help="admin-prefs" onclick="showPage('admin-prefs',null)">
             <div class="admin-card-icon">&#9881;</div>
             <div class="admin-card-title">Préférences application</div>
@@ -374,9 +384,9 @@
             </div>
             <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
               <button class="btn btn-secondary"
-                onclick="showPage('admin-categories',null)">Annuler</button>
+                onclick="adminDraftCancel('admin-categories')">Annuler</button>
               <button class="btn btn-primary"
-                onclick="saveCategoryEdit()">Enregistrer</button>
+                onclick="adminDraftSave()">Enregistrer</button>
             </div>
           </div>
           <div class="field-group">
@@ -448,9 +458,8 @@
               </select>
             </div>
             <div class="field-row">
-              <div class="field-label">Groupe maison</div>
-              <select class="form-select" id="ea-group"></select>
-              <div id="ea-other-groups" style="margin-top:6px"></div>
+              <div class="field-label">Groupes</div>
+              <div id="ea-groups" class="ea-groups"></div>
             </div>
             <div class="field-row">
               <div class="field-label">Obligatoire</div>
@@ -617,9 +626,9 @@
             </div>
             <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
               <button class="btn btn-secondary"
-                onclick="showPage('admin-groups',null)">Annuler</button>
+                onclick="adminDraftCancel('admin-groups')">Annuler</button>
               <button class="btn btn-primary"
-                onclick="saveGroupEdit()">Enregistrer</button>
+                onclick="adminDraftSave()">Enregistrer</button>
             </div>
           </div>
           <div class="field-group">
@@ -648,6 +657,7 @@
       <!-- ADMIN PREFERENCES -->
       <div class="page" id="page-admin-prefs"></div>
       <div class="page" id="page-admin-alerts"></div>
+      <div class="page" id="page-admin-journal"></div>
       <div class="page" id="page-admin-export-formats"></div>
       <div class="page" id="page-admin-calc"></div>
       <div class="page" id="page-admin-workflow"></div>
@@ -915,6 +925,14 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-user-prefs">
+  <div class="modal-box" style="max-width:520px">
+    <button class="modal-close" id="user-prefs-close" title="Fermer (Échap)" aria-label="Fermer" onclick="closeModal('modal-user-prefs')">&times;</button>
+    <div class="modal-title">Préférences d'affichage</div>
+    <div id="user-prefs-body"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-seuil">
   <div class="modal-box">
     <div class="modal-title">Modifier le seuil de complétion</div>
@@ -945,16 +963,18 @@
 </div>
 
 <!-- SCRIPTS -->
-<script src="js/data.js?v=75"></script>
-<script src="js/utils.js?v=65"></script>
-<script src="js/dashboard.js?v=32"></script>
-<script src="js/products.js?v=41"></script>
-<script src="js/admin.js?v=64"></script>
-<script src="js/baremes-workflow.js?v=12"></script>
-<script src="js/detail.js?v=57"></script>
-<script src="js/export.js?v=34"></script>
-<script src="js/import.js?v=37"></script>
-<script src="js/help.js?v=5"></script>
+<script src="js/data.js?v=77"></script>
+<script src="js/utils.js?v=67"></script>
+<script src="js/dashboard.js?v=33"></script>
+<script src="js/products.js?v=43"></script>
+<script src="js/admin.js?v=65"></script>
+<script src="js/baremes-workflow.js?v=13"></script>
+<script src="js/detail.js?v=59"></script>
+<script src="js/export.js?v=35"></script>
+<script src="js/import.js?v=39"></script>
+<script src="js/journal.js?v=2"></script>
+<script src="js/draft.js?v=1"></script>
+<script src="js/help.js?v=7"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {

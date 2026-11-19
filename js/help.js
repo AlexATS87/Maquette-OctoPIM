@@ -10,13 +10,14 @@ const HELP_SECTIONS = {
       <ul>
         <li><b>Ajout</b> : crée les produits du fichier. Un produit déjà connu est ignoré et listé dans le rapport.</li>
         <li><b>Modification</b> : met à jour les produits existants.</li>
-        <li><b>Suppression</b> : retire les produits du fichier (EAN ou Code SAP suffit).</li>
+        <li><b>Suppression</b> : retire les produits du fichier (EAN ou Code SAP suffit). Une fenêtre demande confirmation (« Supprimer jusqu’à N produits ? ») avant d’appliquer.</li>
       </ul>
       <h4>2. Préparer le fichier</h4>
       <ul>
         <li>Formats : .xlsx, .csv, ou .zip (tableur + images). Une ligne = un produit.</li>
         <li>L'en-tête de chaque colonne est le <b>code technique</b> de l'attribut (<code>ean</code>, <code>sap</code>, <code>nom</code>…) ou son libellé exact. Les colonnes sont alors reliées toutes seules.</li>
         <li>Le plus simple : partir d'un export avec la trame <b>Catalogue</b>, dont les en-têtes sont les codes techniques.</li>
+        <li>Le fichier téléchargé par [Télécharger] a une feuille <b>Données</b> vide (en-têtes seuls) et une feuille <b>Notice</b> avec le tableau « FORMAT ATTENDU » : code, libellé, type, valeurs possibles et exemple de chaque colonne.</li>
         <li>Une <b>trame</b> enregistrée relie d'avance des en-têtes différents (fichier fournisseur, par exemple).</li>
       </ul>
       <h4>3. Relier les colonnes</h4>
@@ -25,13 +26,16 @@ const HELP_SECTIONS = {
       </ul>
       <h4>4. Reconnaissance des produits</h4>
       <ul>
-        <li>Un produit est reconnu par son <b>EAN</b>, sinon par son <b>Code SAP</b> (code article magasin).</li>
+        <li><b>Ajout</b> : par l’<b>EAN</b> (obligatoire). <b>Modification</b> et <b>suppression</b> : par l’EAN ou le <b>Code SAP</b> (code article magasin).</li>
       </ul>
       <h4>5. Contenu des cellules</h4>
       <ul>
         <li>En modification, une cellule <b>vide</b> ne change rien.</li>
         <li>Pour vider un champ, écrire <b>#VIDE</b> dans la cellule. Refusé sur un champ obligatoire.</li>
         <li>Champ calculé : une valeur différente du calcul est enregistrée comme valeur <b>forcée</b> ; une valeur identique laisse le calcul.</li>
+        <li>Liste à plusieurs valeurs : les valeurs sont séparées par <b>|</b> seulement (ex. <code>Astigmatisme | Presbytie</code>).</li>
+        <li>Seule une cellule vide (ou #VIDE) vaut « vide » : « - » ou « N/A » sont lus comme du texte, donc refusés pour une liste, un nombre ou une date.</li>
+        <li>Dates : <code>jj/mm/aaaa</code>, <code>aaaa-mm-jj</code> ou date Excel. L’année sur 2 chiffres est refusée.</li>
         <li>Une valeur hors liste ou mal formée n'est pas reprise : elle est listée dans le rapport.</li>
       </ul>
       <h4>6. Rapport de fin</h4>
@@ -48,7 +52,7 @@ const HELP_SECTIONS = {
       { el: () => helpBlock('#import-cat', '.field-row'), title: 'Catégorie cible',
         text: 'Catégorie des produits créés, quand le fichier n’a pas de colonne cat. Obligatoire en ajout.' },
       { el: () => helpBlock('#import-trame', '.field-row'), title: 'Trame',
-        text: 'Relie d’avance les en-têtes du fichier aux attributs. [Télécharger] donne un fichier vide aux bons en-têtes (sans trame : Catalogue de la catégorie).' },
+        text: 'Relie d’avance les en-têtes du fichier aux attributs. [Télécharger] donne un fichier vide aux bons en-têtes (sans trame : Catalogue de la catégorie, avec une notice qui détaille le format attendu de chaque colonne).' },
       { el: () => helpBlock('#import-required-list', '.field-row'), title: 'Champs obligatoires',
         text: 'Colonnes exigées en ajout. En modification, seules les colonnes présentes sont contrôlées, et #VIDE y est refusé.' },
       { el: () => helpBlock('#import-dropzone', '.field-group'), title: 'Fichier à importer',
@@ -64,6 +68,7 @@ const HELP_SECTIONS = {
       <h4>1. Lire les indicateurs</h4>
       <ul>
         <li><b>Total produits</b> : nombre de produits que vous avez le droit de voir. Un clic ouvre la liste.</li>
+        <li>Sans le menu Produits, les indicateurs restent affichés mais ne sont pas cliquables. Sans le menu Tableau de bord, vous arrivez sur une page d’accueil qui propose les menus ouverts à votre groupe.</li>
         <li><b>Répartition par catégorie</b> et <b>Évolution récente</b> (6 derniers mois) situent le catalogue.</li>
         <li><b>Produits incomplets</b> : produits dont la complétion est sous le seuil indiqué. Un clic ouvre la liste filtrée sur ces produits.</li>
         <li><b>Taux de complétion global</b> : moyenne du catalogue, comparée à l’objectif, avec le détail par catégorie.</li>
@@ -109,14 +114,17 @@ const HELP_SECTIONS = {
     html: `
       <h4>1. Trouver des produits</h4>
       <ul>
-        <li>La <b>recherche</b> porte sur le code, l’EAN, la désignation et la marque.</li>
+        <li>La <b>recherche</b> porte sur le code, l’EAN, la désignation et la marque. Elle se cumule avec tous les filtres, sans en effacer.</li>
         <li>Le filtre <b>catégorie</b> limite la liste à une catégorie.</li>
         <li>Dans l’en-tête de chaque colonne : cliquer sur le libellé trie, le petit triangle filtre. [Effacer les filtres] remet tout à zéro.</li>
+        <li>Les produits en alerte portent un picto : le triangle de l’en-tête de cette colonne (à côté de la case à cocher) filtre sur une ou plusieurs alertes.</li>
+        <li>Un clic sur un indicateur du tableau de bord ouvre la liste en remplaçant tous les filtres en cours.</li>
       </ul>
       <h4>2. Choisir la vue</h4>
       <ul>
         <li><b>Synthèse</b> : les colonnes principales, choisies par l’administrateur.</li>
-        <li><b>Détaillée</b> : tous les attributs de la catégorie choisie, avec des puces pour afficher ou masquer chaque groupe d’attributs.</li>
+        <li><b>Détaillée</b> : tous les attributs de la catégorie choisie, avec des puces pour afficher ou masquer chaque groupe d’attributs. Les groupes masqués sont mémorisés pour votre compte et pour chaque catégorie ; [Tout afficher] les rétablit.</li>
+        <li>La colonne <b>Supprimer</b>, quand elle est proposée, est toujours la dernière et reste figée à droite.</li>
       </ul>
       <h4>3. Ouvrir ou créer une fiche</h4>
       <ul>
@@ -125,12 +133,15 @@ const HELP_SECTIONS = {
       </ul>
       <h4>4. Agir sur plusieurs produits</h4>
       <ul>
-        <li>Cocher des lignes fait apparaître la barre bleue et son menu <b>Actions</b> : modifier un attribut, comparer (2 produits au moins), exporter la sélection, supprimer, désélectionner.</li>
+        <li>Cocher des lignes fait apparaître la barre bleue et son menu <b>Actions</b> : modifier un attribut, exporter la sélection, supprimer, désélectionner.</li>
+        <li><b>Comparer</b> : le bouton est toujours visible, grisé tant qu’il manque une condition (elle s’affiche au survol) : 2 à 10 produits cochés et une catégorie choisie. La comparaison surligne en jaune les valeurs qui diffèrent. Elle reste ouverte tant qu’il reste 2 produits ; [Quitter la comparaison] revient à la liste et à ses filtres.</li>
+        <li>L’Administrateur dispose d’un filtre <b>Produits supprimés</b> et d’un bouton [Restaurer] : le produit revient avec son EAN et son historique, et la restauration s’écrit au journal.</li>
         <li>Si une action n’est pas proposée, contactez l’administrateur de la solution.</li>
       </ul>
       <h4>5. Parcourir</h4>
       <ul>
         <li>La pagination, au-dessus et sous le tableau, indique le nombre de produits affichés.</li>
+        <li>Sous le tableau, <b>Produits par page</b> propose 25, 50 ou 100 produits. Votre choix est mémorisé pour votre compte.</li>
       </ul>`,
     tour: [
       { el: () => document.getElementById('products-search'), title: 'Recherche',
@@ -143,8 +154,12 @@ const HELP_SECTIONS = {
         text: 'Ouvre le formulaire de création d’un produit.' },
       { el: () => helpBlock('#pagination-info', 'div[style*="justify-content"]'), title: 'Pagination',
         text: 'Nombre de produits affichés et navigation entre les pages.' },
+      { el: () => document.getElementById('page-size-picker'), title: 'Produits par page',
+        text: '25, 50 ou 100 produits par page, mémorisé pour votre compte.' },
       { el: () => helpBlock('#products-thead input[type=checkbox]', 'th'), title: 'Sélection',
-        text: 'Cocher des produits ouvre le menu Actions : modifier un attribut, comparer, exporter, supprimer.' },
+        text: 'Cocher des produits ouvre le menu Actions : modifier un attribut, exporter, supprimer. Le triangle à côté de la case filtre par alerte.' },
+      { el: () => document.getElementById('btn-compare'), title: 'Comparer',
+        text: 'Grisé tant qu’il manque une condition : survolez-le pour la voir (2 à 10 produits, une catégorie choisie).' },
       { el: () => document.getElementById('products-scroll'), title: 'Tableau',
         text: 'Cliquer sur un libellé de colonne trie, sur le triangle filtre. Cliquer sur un produit ouvre sa fiche.' }
     ]
@@ -172,7 +187,7 @@ const HELP_SECTIONS = {
       </ul>
       <h4>4. Consulter l’historique</h4>
       <ul>
-        <li>Le dernier onglet, <b>Historique</b>, liste chaque modification enregistrée : date, utilisateur, champ, ancienne et nouvelle valeur.</li>
+        <li>Le dernier onglet, <b>Historique</b>, liste chaque modification enregistrée, quelle qu’en soit l’origine (fiche, import, modification en masse) : date, utilisateur, origine, champ, ancienne et nouvelle valeur. La création du produit y figure aussi.</li>
       </ul>`,
     tour: [
       { el: () => document.querySelector('.topbar-detail.btn'), title: 'Retour',
@@ -188,7 +203,7 @@ const HELP_SECTIONS = {
       { el: () => document.getElementById('btn-save-product'), title: 'Enregistrer',
         text: 'Valide les modifications (Ctrl+S). Refusé tant qu’un champ obligatoire est vide.' },
       { el: () => { const t = document.querySelectorAll('#product-tabs .tab'); return t.length ? t[t.length - 1] : null; }, title: 'Historique',
-        text: 'Dernier onglet : date, utilisateur, champ, ancienne et nouvelle valeur de chaque modification enregistrée.' }
+        text: 'Dernier onglet : date, utilisateur, origine, champ, ancienne et nouvelle valeur de chaque modification enregistrée.' }
     ]
   },
 
@@ -241,6 +256,8 @@ const HELP_SECTIONS = {
       <h4>Bon à savoir</h4>
       <ul>
         <li>Seules les tuiles des modules ouverts à votre groupe d’affectation s’affichent. S’il en manque une, contactez l’administrateur de la solution.</li>
+        <li>Dans chaque module, les modifications ne sont prises en compte qu’au clic sur [Enregistrer] ; [Annuler] revient à l’état d’ouverture. Quitter un écran avec des modifications ouvre « Modifications non enregistrées ».</li>
+        <li>Selon votre niveau, un module s’ouvre en <b>lecture seule</b> : vous le consultez (champs grisés, aucun bouton d’enregistrement, d’ajout ni de suppression) sans pouvoir le modifier.</li>
       </ul>`,
     tour: [
       { el: () => helpVis('#admin-grid'), title: 'Les modules',
@@ -316,13 +333,13 @@ const HELP_SECTIONS = {
     html: `
       <h4>1. À quoi ça sert</h4>
       <ul>
-        <li>Un attribut est un champ de la fiche produit : son type, ses règles de saisie et son groupe se règlent ici.</li>
+        <li>Un attribut est un champ de la fiche produit : son type, ses règles de saisie et ses groupes se règlent ici. Un attribut peut être dans plusieurs groupes, ou dans aucun (il n’apparaît alors sur aucune fiche). Un attribut verrouillé garde un groupe imposé, marqué d’un cadenas.</li>
       </ul>
       <h4>2. Gestes</h4>
       <ul>
         <li>La <b>recherche</b> porte sur le nom, le code technique et le type.</li>
         <li>Cliquer sur l’en-tête d’une colonne trie la liste.</li>
-        <li>Cliquer sur le nom d’un attribut ouvre sa fiche : identité (nom, code, type, groupe, obligatoire, compte dans la complétion, affichage conditionnel, largeur) et saisie (champ calculé, texte d’aide, longueur, masque, options selon le type).</li>
+        <li>Cliquer sur le nom d’un attribut ouvre sa fiche : identité (nom, code, type, groupes, obligatoire, compte dans la complétion, affichage conditionnel, largeur) et saisie (champ calculé, texte d’aide, longueur, masque, options selon le type).</li>
         <li>[+ Nouvel attribut] ouvre la création.</li>
         <li>La corbeille supprime l’attribut, sauf attribut système (cadenas) ou sans droit de suppression.</li>
       </ul>
@@ -416,7 +433,8 @@ const HELP_SECTIONS = {
       <h4>2. Utilisateurs</h4>
       <ul>
         <li>Liste filtrable par nom, par e-mail et par niveau. Le niveau vient d’Okta et ne se change pas ici.</li>
-        <li>On choisit le <b>groupe d’affectation</b> de chaque personne. Sans groupe, elle voit tout : le compteur « sans groupe » aide à les repérer.</li>
+        <li>On choisit le <b>groupe d’affectation</b> de chaque personne. Sans groupe, elle voit tout : la case « Sans groupe uniquement » les isole.</li>
+        <li>Les pastilles des onglets comptent les éléments : personnes enregistrées, groupes d’affectation, niveaux de droits.</li>
       </ul>
       <h4>3. Groupes d’affectation</h4>
       <ul>
@@ -424,7 +442,7 @@ const HELP_SECTIONS = {
       </ul>
       <h4>4. Niveaux de droits</h4>
       <ul>
-        <li>Une matrice coche, pour chaque niveau, ce qu’il a le droit de faire (consulter, créer et modifier, supprimer, importer, exporter, modules d’administration). L’Administrateur a toujours tous les droits et il est seul à gérer les utilisateurs, les groupes et les niveaux.</li>
+        <li>Une matrice coche, pour chaque niveau, ce qu’il a le droit de faire (consulter, créer et modifier, supprimer, importer, exporter, modifier les modules d’administration). Sans cette dernière case, les modules ouverts au groupe restent consultables en lecture seule. Les modules « Utilisateurs & groupes » et « Préférences » ne s’ouvrent à aucun groupe. L’Administrateur a toujours tous les droits et il est seul à gérer les utilisateurs, les groupes et les niveaux.</li>
       </ul>`,
     tour: [
       { el: () => helpVis('#roles-grid .acc-tabs'), title: 'Trois onglets',
@@ -554,6 +572,31 @@ const HELP_SECTIONS = {
     ]
   },
 
+  'admin-journal': {
+    title: 'Journal des modifications',
+    html: `
+      <h4>1. À quoi ça sert</h4>
+      <ul>
+        <li>Un seul journal pour toute l’application : chaque modification de produit (fiche, import, modification en masse) et d’administration, avec la date, l’auteur, l’origine, l’objet, le champ, l’ancienne et la nouvelle valeur.</li>
+        <li>L’historique d’une fiche produit est ce journal filtré sur le produit.</li>
+      </ul>
+      <h4>2. Gestes</h4>
+      <ul>
+        <li>Les lignes sont triées de la plus récente à la plus ancienne.</li>
+        <li>Les filtres sous les titres de colonnes se cumulent : période, auteur, origine, objet, champ. [Effacer les filtres] les retire.</li>
+        <li>[Exporter (.xlsx)] enregistre les lignes filtrées.</li>
+        <li>Le journal est en lecture seule. Pour ouvrir ce module à un groupe, contacter l’administrateur de la solution.</li>
+      </ul>`,
+    tour: [
+      { el: () => helpVis('#journal-table thead tr:nth-child(2)'), title: 'Filtres',
+        text: 'Période, auteur, origine, objet et champ. Les filtres se cumulent.' },
+      { el: () => helpVis('#journal-table'), title: 'Journal',
+        text: 'Une ligne par modification, de la plus récente à la plus ancienne.' },
+      { el: () => helpVis('#journal-export'), title: 'Exporter',
+        text: 'Enregistre en .xlsx les lignes filtrées.' }
+    ]
+  },
+
   'admin-prefs': {
     title: 'Préférences application',
     html: `
@@ -563,14 +606,11 @@ const HELP_SECTIONS = {
       </ul>
       <h4>2. Réglages</h4>
       <ul>
-        <li><b>Nombre de produits par page</b> : 25, 50 ou 100 dans la liste des produits.</li>
         <li><b>Seuil de complétion</b> : en dessous, un produit est compté incomplet (tableau de bord).</li>
         <li><b>Import de visuels</b> : le nom d’un fichier image se compose du code SAP ou EAN, d’un séparateur et du suffixe du visuel.</li>
         <li>[Enregistrer] applique les réglages, [Annuler] revient à l’administration.</li>
       </ul>`,
     tour: [
-      { el: () => helpVis('#pref-page-size'), title: 'Produits par page',
-        text: '25, 50 ou 100 produits dans la liste.' },
       { el: () => helpVis('#pref-seuil'), title: 'Seuil de complétion',
         text: 'Pourcentage sous lequel un produit est compté incomplet.' },
       { el: () => helpBlock('#pref-visual-key', '.field-row'), title: 'Nom des fichiers de visuels',
@@ -594,8 +634,14 @@ function helpBlock(sel, up) {
   return e ? (e.closest(up) || e) : null;
 }
 
+// V1 : l'aide en ligne couvre les cinq écrans principaux. Les textes des modules d'administration
+// et de l'accueil Administration restent ci-dessus ; passer ce drapeau à true pour réafficher leurs ampoules.
+const HELP_ADMIN_ENABLED = false;
+const HELP_MAIN_KEYS = ['dashboard', 'products', 'product', 'import', 'exports'];
+
 function helpButtonHtml(key) {
   if (!HELP_SECTIONS[key] || userPrefs.showHelp === false) return '';
+  if (!HELP_ADMIN_ENABLED && !HELP_MAIN_KEYS.includes(key)) return '';
   return `<button type="button" class="help-btn" title="Aide" aria-label="Aide" onclick="event.stopPropagation();openHelp('${key}')">${BULB_ICON}</button>`;
 }
 

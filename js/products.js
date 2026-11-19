@@ -441,9 +441,10 @@ function clearColFilter(code) {
 
 // Liste des produits « neuve » : aucun filtre, aucune sélection, vue synthèse
 function resetProductFilters() {
+  _showDeleted = false;
   colFilters = {};
   _filterIncomplets = false;
-  _filterAlertId = null;
+  _filterAlertIds = null;
   selectedProductIds = [];
   compareMode = false;
   currentPage = 1;
@@ -471,9 +472,10 @@ function openProductsList(navEl, preset) {
 }
 
 function clearAllFilters() {
+  _showDeleted = false;
   colFilters = {};
   _filterIncomplets = false;
-  _filterAlertId = null;
+  _filterAlertIds = null;
   const search = document.getElementById('products-search');
   if (search) search.value = '';
   const cat = document.getElementById('filter-cat');
@@ -492,7 +494,7 @@ function passesColFilters(product) {
 function hasActiveFilters() {
   const search = (document.getElementById('products-search') || {}).value || '';
   const cat    = (document.getElementById('filter-cat') || {}).value || '';
-  return search.trim().length >= 2 || cat !== '' || Object.keys(colFilters).length > 0 || _filterIncomplets || _filterAlertId != null;
+  return search.trim().length >= 2 || cat !== '' || Object.keys(colFilters).length > 0 || _filterIncomplets || (_filterAlertIds && _filterAlertIds.size > 0);
 }
 
 // ============================================================
@@ -532,7 +534,58 @@ function applyStickyTable() {
 }
 window.addEventListener('resize', () => requestAnimationFrame(applyStickyTable));
 
+// Produits supprimés (Administrateur) : liste dédiée avec [Restaurer]
+let _showDeleted = false;
+function toggleShowDeleted(on) {
+  _showDeleted = !!on;
+  currentPage = 1;
+  renderProductsTable();
+}
+function renderDeletedProductsTable() {
+  const thead = document.getElementById('products-thead');
+  const tbody = document.getElementById('products-tbody');
+  if (!thead || !tbody) return;
+  const q = ((document.getElementById('products-search') || {}).value || '').trim().toLowerCase();
+  const list = deletedProducts.filter(d => !q || [d.product.fields.nom, d.product.fields.ean, d.product.fields.sap].join(' ').toLowerCase().includes(q));
+  thead.innerHTML = '<tr><th>Nom</th><th>Code EAN/GTIN</th><th>Code SAP</th><th>Catégorie</th><th>Supprimé le</th><th>Par</th><th></th></tr>';
+  tbody.innerHTML = list.map(d => `<tr>
+      <td><strong>${escapeHtml(d.product.fields.nom || '—')}</strong></td>
+      <td>${escapeHtml(d.product.fields.ean || '')}</td><td>${escapeHtml(d.product.fields.sap || '')}</td>
+      <td>${escapeHtml(d.product.cat || '')}</td><td>${escapeHtml(d.at)}</td><td>${escapeHtml(d.by)}</td>
+      <td><button class="action-btn" onclick="restoreDeletedProduct(${d.product.id})">Restaurer</button></td></tr>`).join('')
+    || '<tr><td colspan="7" style="text-align:center;color:#a0b0c0;padding:24px">Aucun produit supprimé.</td></tr>';
+  const pi = document.getElementById('pagination-info');
+  if (pi) pi.textContent = list.length + ' produit' + (list.length > 1 ? 's' : '') + ' supprimé' + (list.length > 1 ? 's' : '');
+  ['pagination-container', 'pagination-container-bottom', 'compare-bar-container', 'group-filter-bar-container'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+}
+function restoreDeletedProduct(id) {
+  if (!isTechAdmin()) { showNotif('Action réservée à l’Administrateur', 'warn'); return; }
+  const i = deletedProducts.findIndex(d => d.product.id === id);
+  if (i < 0) return;
+  const p = deletedProducts[i].product, f = p.fields || {};
+  const clash = products.find(x => (f.ean && x.fields.ean === f.ean) || (f.sap && x.fields.sap === f.sap));
+  if (clash) { showNotif('Restauration impossible : le code EAN ou SAP est déjà utilisé par « ' + (clash.fields.nom || '') + ' »', 'error'); return; }
+  deletedProducts.splice(i, 1);
+  products.push(p);
+  products.sort((a, b) => a.id - b.id);
+  journalProduct(p, 'Administration', 'Produit', '(supprimé)', 'restauré');
+  renderAll();
+  renderProductsTable();
+  showNotif('Produit « ' + (f.nom || '') + ' » restauré');
+}
+
 function renderProductsTableNow() {
+  const delWrap = document.getElementById('deleted-filter-wrap');
+  if (delWrap) {
+    const adm = isTechAdmin();
+    delWrap.style.display = adm ? '' : 'none';
+    const cnt = document.getElementById('deleted-count');
+    if (cnt) cnt.textContent = deletedProducts.length || '';
+    if (!adm) _showDeleted = false;
+    const cb = document.getElementById('filter-deleted');
+    if (cb) cb.checked = _showDeleted;
+  }
+  if (_showDeleted) { renderDeletedProductsTable(); return; }
   const searchVal = (document.getElementById('products-search') || {}).value || '';
   const catFilter = (document.getElementById('filter-cat') || {}).value || '';
 
@@ -543,9 +596,8 @@ function renderProductsTableNow() {
     if (!productMatchesSearch(p, searchVal)) return false;
     if (!passesColFilters(p)) return false;
     if (_filterIncomplets && calcCompletion(p) >= seuilCompletion) return false;
-    if (_filterAlertId != null) {
-      const alert = (alerts || []).find(a => a.id === _filterAlertId);
-      if (!alert || !productMatchesAlert(p, alert)) return false;
+    if (_filterAlertIds && _filterAlertIds.size) {
+      if (![..._filterAlertIds].some(id => { const al = (alerts || []).find(a => a.id === id); return al && productMatchesAlert(p, al); })) return false;
     }
     return true;
   });
@@ -580,17 +632,11 @@ function renderProductsTableNow() {
   // Bouton effacer filtres
   const clearBtn = document.getElementById('btn-clear-filters');
   if (clearBtn) clearBtn.style.display = hasActiveFilters() ? '' : 'none';
-  const chip = document.getElementById('alert-filter-chip');
-  if (chip) {
-    const alert = _filterAlertId != null ? (alerts || []).find(a => a.id === _filterAlertId) : null;
-    chip.style.display = alert ? '' : 'none';
-    chip.textContent = alert ? alertRuleText(alert) : '';
-  }
 
   renderGroupFilterBar();
 
   // Pagination
-  const pageSize  = appPrefs.pageSize || 0;
+  const pageSize  = userPageSize();
   const totalRows = filtered.length;
   const totalPages = pageSize > 0 ? Math.ceil(totalRows / pageSize) : 1;
   if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
@@ -620,11 +666,8 @@ function renderProductsTableNow() {
 function renderPagination(totalRows, totalPages) {
   const container = document.getElementById('pagination-container');
   if (!container) return;
-  if (totalPages <= 1 && appPrefs.pageSize > 0) {
-    container.innerHTML = '';
-    return;
-  }
-  if (appPrefs.pageSize === 0) {
+  renderPageSizePicker();
+  if (totalPages <= 1) {
     container.innerHTML = '';
     return;
   }
@@ -643,6 +686,33 @@ function renderPagination(totalRows, totalPages) {
   html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>&rsaquo;</button>`;
   html += '</div>';
   container.innerHTML = html;
+}
+
+// Nombre de produits par page : choix de chaque utilisateur (25, 50 ou 100),
+// mémorisé par utilisateur ; valeur par défaut = appPrefs.pageSize.
+function userPageSize() {
+  let v = 0;
+  try { v = parseInt(localStorage.getItem('octopim_pagesize_' + currentUserId), 10); } catch (e) {}
+  return (v === 25 || v === 50 || v === 100) ? v : (appPrefs.pageSize || 50);
+}
+
+function setUserPageSize(n) {
+  n = parseInt(n, 10);
+  if (n !== 25 && n !== 50 && n !== 100) return;
+  try { localStorage.setItem('octopim_pagesize_' + currentUserId, String(n)); } catch (e) {}
+  currentPage = 1;
+  renderProductsTable();
+}
+
+function renderPageSizePicker() {
+  const c = document.getElementById('pagination-container-bottom');
+  if (!c) return;
+  const cur = userPageSize();
+  c.innerHTML = `<label id="page-size-picker" style="font-size:12px;color:#a0b0c0;display:flex;align-items:center;gap:6px">
+    Produits par page
+    <select class="form-select" style="width:auto;padding:2px 6px" onchange="setUserPageSize(this.value)">
+      ${[25, 50, 100].map(n => `<option value="${n}"${n === cur ? ' selected' : ''}>${n}</option>`).join('')}
+    </select></label>`;
 }
 
 function goToPage(n) {
@@ -678,13 +748,14 @@ function renderSynthHeader(thead) {
   // Checkbox select all — toujours en premier
   const thCb = document.createElement('th');
   thCb.style.width = '36px';
-  thCb.innerHTML = '<input type="checkbox" onchange="toggleSelectAll(this)">';
+  thCb.innerHTML = '<input type="checkbox" onchange="toggleSelectAll(this)">' + alertFilterThHtml();
   tr.appendChild(thCb);
 
   activeSynthItems().forEach(item => {
     if (item.kind === 'action') {
       // Colonne action : pas de tri ni filtre
       const th = document.createElement('th');
+      if (isDeleteItem(item)) th.className = 'col-delete';
       th.textContent = item.label;
       tr.appendChild(th);
     } else {
@@ -723,7 +794,7 @@ function renderSynthRows(tbody, filtered) {
 
     activeSynthItems().forEach(item => {
       if (item.kind === 'action' && item.code === 'delete') {
-        cells += `<td>
+        cells += `<td class="col-delete">
           ${canDeleteProduct(p)
             ? `<button class="action-btn-danger btn-trash" title="Supprimer le produit"
             onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g, "\\'")}')">${TRASH_ICON}</button>`
@@ -737,6 +808,38 @@ function renderSynthRows(tbody, filtered) {
     tr.innerHTML = cells;
     tbody.appendChild(tr);
   });
+}
+
+// Filtre d'alerte : icône dans l'en-tête de la colonne du picto, liste des alertes définies à cocher
+function alertFilterThHtml() {
+  if (!(alerts || []).length) return '';
+  const on = _filterAlertIds && _filterAlertIds.size > 0;
+  return `<span class="th-filter-icon${on ? ' filter-active' : ''}" title="Filtrer par alerte" onclick="openAlertFilter(this)">&#9663;</span>`;
+}
+function openAlertFilter(iconEl) {
+  closeColFilter();
+  const dd = placeColFilter(iconEl);
+  const on = _filterAlertIds || new Set();
+  dd.innerHTML = `
+    <div class="col-filter-dropdown-header"><span>Alertes</span><button onclick="clearAlertFilter()">Effacer</button></div>
+    <div class="col-filter-list">${(alerts || []).map(a => `<div class="col-filter-item">
+      <input type="checkbox" id="caf-${a.id}" ${on.has(a.id) ? 'checked' : ''} onchange="toggleAlertFilter(${a.id},this.checked)">
+      <label for="caf-${a.id}" title="${escapeHtml(alertRuleText(a))}">${escapeHtml(a.name || alertRuleText(a))}</label></div>`).join('')}</div>`;
+  document.body.appendChild(dd);
+  activeColFilterDropdown = dd;
+  setTimeout(() => document.addEventListener('click', colFilterOutsideClick), 0);
+}
+function toggleAlertFilter(id, checked) {
+  const s = new Set(_filterAlertIds || []);
+  if (checked) s.add(id); else s.delete(id);
+  _filterAlertIds = s.size ? s : null;
+  currentPage = 1;
+  renderProductsTable();
+}
+function clearAlertFilter() {
+  _filterAlertIds = null;
+  closeColFilter();
+  renderProductsTable();
 }
 
 function alertPictoHtml(p) {
@@ -822,11 +925,12 @@ function renderDetailHeader(thead) {
   const thCb = document.createElement('th');
   thCb.rowSpan = 2;
   thCb.style.width = '36px';
-  thCb.innerHTML = '<input type="checkbox" onchange="toggleSelectAll(this)">';
+  thCb.innerHTML = '<input type="checkbox" onchange="toggleSelectAll(this)">' + alertFilterThHtml();
   row1.appendChild(thCb);
 
   // Colonnes synthese dynamiques
   activeSynthItems().forEach(item => {
+    if (isDeleteItem(item)) return;   // placée après les groupes : toujours la dernière
     if (item.kind === 'action') {
       const th = document.createElement('th');
       th.rowSpan = 2;
@@ -873,6 +977,14 @@ function renderDetailHeader(thead) {
     });
   });
 
+  activeSynthItems().filter(isDeleteItem).forEach(item => {
+    const th = document.createElement('th');
+    th.rowSpan = 2;
+    th.className = 'col-delete';
+    th.textContent = item.label;
+    row1.appendChild(th);
+  });
+
   thead.appendChild(row1);
   thead.appendChild(row2);
 }
@@ -910,14 +1022,7 @@ function renderDetailRows(tbody, filtered) {
 
     // Colonnes synthese (meme logique que renderSynthRows)
     activeSynthItems().forEach(item => {
-      if (item.kind === 'action' && item.code === 'delete') {
-        cells += `<td>
-          ${canDeleteProduct(p)
-            ? `<button class="action-btn-danger btn-trash" title="Supprimer le produit"
-            onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g,"\\'")}')">${TRASH_ICON}</button>`
-            : ''}
-        </td>`;
-      } else if (item.kind === 'attr') {
+      if (item.kind === 'attr') {
         cells += renderSynthCell(p, item, comp);
       }
     });
@@ -934,6 +1039,15 @@ function renderDetailRows(tbody, filtered) {
           background:${isDiff ? '#fff9c4' : color.bg + '55'}">${val}</td>`;
       });
     });
+
+    if (activeSynthItems().some(isDeleteItem)) {
+      cells += `<td class="col-delete">
+          ${canDeleteProduct(p)
+            ? `<button class="action-btn-danger btn-trash" title="Supprimer le produit"
+            onclick="confirmDelete('product',${p.id},'${nom.replace(/'/g,"\\'")}')">${TRASH_ICON}</button>`
+            : ''}
+        </td>`;
+    }
 
     tr.innerHTML = cells;
     tbody.appendChild(tr);
@@ -956,6 +1070,7 @@ function toggleSelectAll(cb) {
     if (tr) { if (cb.checked) tr.classList.add('row-selected'); else tr.classList.remove('row-selected'); }
   });
   renderCompareBar();
+  if (compareMode) afterCompareSelectionChange();
 }
 
 function toggleSelectProduct(id, cb) {
@@ -963,10 +1078,20 @@ function toggleSelectProduct(id, cb) {
   else selectedProductIds = selectedProductIds.filter(x => x !== id);
   const tr = cb.closest('tr');
   if (tr) { if (cb.checked) tr.classList.add('row-selected'); else tr.classList.remove('row-selected'); }
+  if (compareMode) { afterCompareSelectionChange(); return; }
   renderCompareBar();
 }
 
+// En comparaison, retirer un produit le retire de l'écran ; la comparaison s'arrête sous 2 produits
+function afterCompareSelectionChange() {
+  if (selectedProductIds.length < 2) {
+    showNotif('Comparaison terminée : il faut au moins 2 produits', 'warn');
+    exitCompare();
+  } else renderProductsTable();
+}
+
 function renderCompareBar() {
+  updateCompareButton();
   const container = document.getElementById('compare-bar-container');
   if (!container) return;
   if (!selectedProductIds.length) {
@@ -980,6 +1105,8 @@ function renderCompareBar() {
       <span style="font-size:13px;font-weight:600">
         ${selectedProductIds.length} produit(s) sélectionné(s)
       </span>
+      ${compareMode ? `<span style="font-size:12px;display:flex;align-items:center;gap:6px;flex:1"><span style="display:inline-block;width:14px;height:14px;background:#fff9c4;border:1px solid #fff;border-radius:3px"></span>Valeur qui diffère entre les produits</span>
+        <button class="btn" style="background:#fff;color:#1565c0;font-weight:700;border:none;padding:7px 18px;border-radius:6px" onclick="exitCompare()">Quitter la comparaison</button>` : ''}
       <div style="position:relative">
         <button class="btn" id="bulk-actions-btn"
           style="background:#fff;color:#1565c0;font-weight:700;
@@ -1004,8 +1131,8 @@ function renderCompareBar() {
             onmouseout="this.style.background=''">
             &#9998; Modifier un attribut
           </div>` : ''}
-          <div onclick="startCompare();closeBulkActionsMenu()"
-            style="padding:9px 16px;font-size:13px;color:#1a2332;cursor:pointer;
+          <div onclick="startCompare();closeBulkActionsMenu()" title="${escapeHtml(compareBlockReason())}"
+            style="padding:9px 16px;font-size:13px;color:${compareBlockReason() ? '#a0b0c0' : '#1a2332'};cursor:pointer;
               display:flex;align-items:center;gap:8px"
             onmouseover="this.style.background='#f0f4f8'"
             onmouseout="this.style.background=''">
@@ -1059,41 +1186,43 @@ function closeBulkActionsMenu() {
   const menu = document.getElementById('bulk-actions-menu');
   if (menu) menu.style.display = 'none';
 }
-function toggleBulkActionsMenu(e) {
-  e.stopPropagation();
-  const menu = document.getElementById('bulk-actions-menu');
-  if (!menu) return;
-  const isOpen = menu.style.display !== 'none';
-  menu.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen) {
-    setTimeout(() => {
-      document.addEventListener('click', closeBulkActionsMenu, { once: true });
-    }, 0);
-  }
+
+// Comparaison : [Comparer] reste visible, grisé quand une condition manque (elle s'affiche au survol)
+const COMPARE_MAX = 10;
+let _compareFromView = 'synth';
+function compareBlockReason() {
+  const n = selectedProductIds.length;
+  if (n < 2) return 'Cochez au moins 2 produits pour les comparer';
+  if (n > COMPARE_MAX) return COMPARE_MAX + ' produits au plus (' + n + ' cochés)';
+  const catFilter = (document.getElementById('filter-cat') || {}).value || '';
+  if (!catFilter) return 'Choisissez une catégorie pour comparer';
+  return '';
 }
 
-function closeBulkActionsMenu() {
-  const menu = document.getElementById('bulk-actions-menu');
-  if (menu) menu.style.display = 'none';
+function updateCompareButton() {
+  const b = document.getElementById('btn-compare');
+  if (!b) return;
+  if (compareMode) {
+    b.textContent = 'Quitter la comparaison';
+    b.classList.remove('btn-dim');
+    b.title = '';
+    b.onclick = exitCompare;
+    return;
+  }
+  const why = compareBlockReason();
+  b.textContent = 'Comparer';
+  b.classList.toggle('btn-dim', !!why);
+  b.title = why;
+  b.onclick = startCompare;
 }
 
 function startCompare() {
-  if (selectedProductIds.length < 2) {
-    showNotif('Selectionnez au moins 2 produits pour comparer', 'warn');
-    return;
-  }
+  const why = compareBlockReason();
+  if (why) { showNotif(why, 'warn'); return; }
   compareMode = true;
-  if (currentView !== 'detail') {
-    const catFilter = (document.getElementById('filter-cat') || {}).value || '';
-    if (!catFilter) {
-      showNotif('Sélectionnez une catégorie pour activer la vue détaillée', 'warn');
-      return;
-    }
-    switchView('detail');
-  } else {
-    renderProductsTable();
-  }
-  showNotif('Mode comparaison actif — differences surlignees en jaune');
+  _compareFromView = currentView;
+  if (currentView !== 'detail') switchView('detail');
+  else renderProductsTable();
 }
 
 function openBulkEditModal() {
@@ -1183,7 +1312,10 @@ function applyBulkEdit(btn) {
     new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
   selectedProductIds.forEach(id => {
     const p = products.find(x => x.id === id);
-    if (p && canEditProduct(p)) { p.fields[attr.code] = value; p.maj = now; }
+    if (p && canEditProduct(p)) {
+      journalProduct(p, 'Modification en masse', attr.name, p.fields[attr.code], value);
+      p.fields[attr.code] = value; p.maj = now;
+    }
   });
   btn.closest('.modal-overlay').remove();
   renderProductsTable();
@@ -1219,6 +1351,8 @@ function bulkExport() {
 
 function executeMassDelete() {
   if (!pendingDelete || pendingDelete.type !== 'mass') return;
+  products.filter(p => pendingDelete.ids.includes(p.id)).forEach(p => journalProduct(p, 'Modification en masse', 'Produit', p.fields.nom || '', '(supprimé)'));
+  products.filter(p => pendingDelete.ids.includes(p.id)).forEach(archiveDeletedProduct);
   products = products.filter(p => !pendingDelete.ids.includes(p.id));
   selectedProductIds = [];
   compareMode = false;
@@ -1234,7 +1368,12 @@ function enterCompare() {
   else renderProductsTable();
 }
 
-function exitCompare()    { compareMode = false; renderProductsTable(); }
+// [Quitter la comparaison] : retour à la liste avec ses filtres
+function exitCompare() {
+  compareMode = false;
+  if (_compareFromView === 'synth' && currentView === 'detail') switchView('synth');
+  else renderProductsTable();
+}
 
 function clearSelection() {
   selectedProductIds = [];
@@ -1250,7 +1389,7 @@ function clearSelection() {
 function onCatFilterChange() {
   const v = (document.getElementById('filter-cat') || {}).value || '';
   _filterIncomplets = false;
-  _filterAlertId = null;
+  _filterAlertIds = null;
   colFilters = {};
   currentPage = 1;
   if (!v && currentView === 'detail') {
@@ -1258,7 +1397,7 @@ function onCatFilterChange() {
     switchView('synth');
   } else if (v && currentView === 'detail') {
     const cat = getCatByName(v);
-    activeGroupFilters = new Set(cat ? cat.groupIds : getVisibleGroupsForUser().map(g => g.id));
+    activeGroupFilters = groupFiltersFor(v);
     renderGroupFilterBar();
     renderProductsTable();
   } else {
@@ -1293,14 +1432,13 @@ function switchView(mode) {
   if (bd) bd.classList.toggle('active', mode === 'detail');
 
   if (mode === 'detail') {
-    const cat = getCatByName((document.getElementById('filter-cat') || {}).value || '');
-    activeGroupFilters = new Set(cat ? cat.groupIds : getVisibleGroupsForUser().map(g => g.id));
+    activeGroupFilters = groupFiltersFor((document.getElementById('filter-cat') || {}).value || '');
     renderGroupFilterBar();
   }
   renderProductsTable();
 }
 
-function filterTable() { _filterIncomplets = false; _filterAlertId = null; currentPage = 1; renderProductsTable(); }
+function filterTable() { currentPage = 1; renderProductsTable(); }
 
 // ============================================================
 // TRI
@@ -1333,14 +1471,25 @@ function renderGroupFilterBar() {
         : 'background:#fff;color:#a0b0c0;border-color:#dde3ea'}"
       onclick="toggleGroupFilter(${g.id})">${g.name}</span>`;
   });
+  if (groups.some(g => !activeGroupFilters.has(g.id))) html += '<button class="btn btn-secondary" style="padding:3px 10px;font-size:12px" onclick="showAllGroups()">Tout afficher</button>';
   html += '</div>';
   bar.innerHTML = html;
+}
+
+function showAllGroups() {
+  const catName = (document.getElementById('filter-cat') || {}).value || '';
+  saveHiddenGroups(catName, []);
+  activeGroupFilters = groupFiltersFor(catName);
+  renderGroupFilterBar();
+  renderProductsTable();
 }
 
 function toggleGroupFilter(groupId) {
   initGroupFilters();
   if (activeGroupFilters.has(groupId)) activeGroupFilters.delete(groupId);
   else activeGroupFilters.add(groupId);
+  const catName = (document.getElementById('filter-cat') || {}).value || '';
+  saveHiddenGroups(catName, groupIdsForCat(catName).filter(id => !activeGroupFilters.has(id)));
   renderGroupFilterBar();
   renderProductsTable();
 }
@@ -1387,11 +1536,17 @@ function createProduct() {
     maj: nowStr(),
     visualSrc: null,
     visuals: 0,
-    history: [],
     pendingChanges: [],
     fields: { sap, ean, nom: name, miseEnLigne: '', created_at: today },
   };
   products.push(newProduct);
+  {
+    const ts = nowStr(), an = c => (attributes.find(a => a.code === c) || {}).name || c;
+    journalProduct(newProduct, 'Fiche', 'Catégorie', '', cat, { ts });
+    journalProduct(newProduct, 'Fiche', an('sap'), '', sap, { ts });
+    journalProduct(newProduct, 'Fiche', an('ean'), '', ean, { ts });
+    journalProduct(newProduct, 'Fiche', an('nom'), '', name, { ts });
+  }
 
   closeModal('modal-create-product');
   ['np-sap', 'np-ean', 'np-name'].forEach(id => document.getElementById(id).value = '');

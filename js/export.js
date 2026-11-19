@@ -270,12 +270,19 @@ function iwiCell(p, col) {
   const attr = attributes.find(a => a.code === col.code);
   const val = attr ? getAttrFieldValue(p, attr) : (col.code ? (p.fields[col.code] || '') : '');
   if (attr && (attr.type === 'Nombre' || attr.type === 'Nombre decimal')) return formatAttrNumber(attr, val);
+  if (attr && attr.type === 'Multi select') return exportMultiValue(val);
   return val !== undefined && val !== null ? String(val) : '';
+}
+
+// Liste multiple : valeurs séparées par « | » dans le fichier (relu tel quel à l'import)
+function exportMultiValue(val) {
+  return String(val == null ? '' : val).split(',').map(x => x.trim()).filter(Boolean).join(' | ');
 }
 
 function exportAttrCell(p, a) {
   const val = getAttrFieldValue(p, a);
   if (a.type === 'Nombre' || a.type === 'Nombre decimal') return formatAttrNumber(a, val);
+  if (a.type === 'Multi select') return exportMultiValue(val);
   return val !== undefined && val !== null ? String(val) : '';
 }
 

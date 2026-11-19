@@ -342,6 +342,7 @@ function handleImportFile(file) {
         const ws   = wb.Sheets[wb.SheetNames[0]];
         importParsedRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
       }
+      importParsedRows = importDropGroupRow(importParsedRows);
       showImportFileInfo(file, importParsedRows.length);
     } catch(err) {
       showNotif('Erreur de lecture du fichier : ' + err.message, 'error');
@@ -372,7 +373,24 @@ function clearImportFile() {
   if (input) input.value         = '';
 }
 
+// Un fichier exporté par OctoPIM a une ligne de groupes (onglets) au-dessus des codes :
+// si la première ligne du tableau contient les codes d'attributs, elle sert d'en-têtes.
+function importDropGroupRow(rows) {
+  if (!rows.length) return rows;
+  const known = new Set(attributes.map(a => importNorm(a.code)));
+  const count = list => list.filter(v => known.has(importNorm(v))).length;
+  const keys = Object.keys(rows[0]);
+  const vals = keys.map(k => rows[0][k]);
+  if (count(vals) < 2 || count(vals) <= count(keys)) return rows;
+  return rows.slice(1).map(r => {
+    const o = {};
+    keys.forEach((k, i) => { const h = String(vals[i] == null ? '' : vals[i]).trim(); if (h) o[h] = r[k]; });
+    return o;
+  });
+}
+
 function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
   const lines  = text.split('\n').filter(l => l.trim());
   if (!lines.length) return [];
   const sep    = lines[0].includes(';') ? ';' : ',';
@@ -559,14 +577,16 @@ function findImportedProduct(fields) {
 // CONVERSION SOUPLE DES VALEURS
 // Casse, accents, apostrophes et espaces ignorés pour retrouver une valeur
 // de liste ; OUI / NON, O / N, 1 / 0 ; dates Excel, AAAA-MM-JJ ou JJ/MM/AAAA ;
-// nombres avec virgule, espaces, € ou %. « - », « N/A », « #N/A » = vide.
+// nombres avec virgule, espaces, € ou %. Liste multiple séparée par « | ».
+// Seule une cellule vide (ou #VIDE en modification) vaut vide : « - », « N/A »
+// sont lus comme du texte. Date JJ/MM/AA refusée (année sur 4 chiffres).
 // Une valeur qui ne correspond à rien n'est pas reprise et est signalée.
 // ============================================================
 function importNorm(v) {
   return String(v == null ? '' : v).normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[’'`]/g, ' ').replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
 }
-const IMPORT_EMPTY = new Set(['', '-', '—', 'n/a', 'na', '#n/a', '#value!', '#ref!', 'null']);
+const IMPORT_EMPTY = new Set(['']);
 const IMPORT_YES = new Set(['oui', 'o', 'yes', 'y', '1', 'vrai', 'true', 'x']);
 const IMPORT_NO = new Set(['non', 'n', 'no', '0', 'faux', 'false']);
 
@@ -580,8 +600,8 @@ function importDate(raw) {
   const t = String(raw).trim();
   let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (m) return pad(m[3]) + '/' + pad(m[2]) + '/' + m[1];
-  m = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
-  if (m) return pad(m[1]) + '/' + pad(m[2]) + '/' + (m[3].length === 2 ? '20' + m[3] : m[3]);
+  m = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/);
+  if (m) return pad(m[1]) + '/' + pad(m[2]) + '/' + m[3];
   return null;
 }
 
@@ -632,7 +652,7 @@ function importCoerce(attr, raw) {
       return hit ? { value: hit } : { value: '', warn: 'hors liste' };
     }
     case 'Multi select': {
-      const parts = txt.split(/[;,|]/).map(x => x.trim()).filter(Boolean);
+      const parts = txt.split('|').map(x => x.trim()).filter(Boolean);
       const hits = parts.map(x => importListMatch(attr.options, x));
       if (hits.some(h => !h)) return { value: '', warn: 'hors liste' };
       return { value: [...new Set(hits)].join(', ') };
@@ -664,6 +684,7 @@ function importApplyCalc(p, calcVals, report) {
     r.n++;
     if (r.ex.length < 3) r.ex.push((p.fields.sap || p.fields.ean || p.fields.nom || '') + ' : ' + (p.fields[code] || '(vide)') + ' → ' + v);
     if (!p.forcedFields) p.forcedFields = {};
+    journalProduct(p, 'Import', attr ? attr.name : code, p.fields[code], v);
     p.forcedFields[code] = v;
     p.fields[code] = v;
   });
@@ -714,6 +735,7 @@ async function handleImportZip(file) {
     for (const e of entries.filter(e => IMAGE_EXT.test(e.name))) {
       importZipImages[visualFileKey(e.name)] = 'data:' + imageMime(e.name) + ';base64,' + await e.async('base64');
     }
+    importParsedRows = importDropGroupRow(importParsedRows);
     showImportFileInfo(file, importParsedRows.length);
     const meta = document.getElementById('import-file-meta');
     if (meta) meta.textContent += ' — ' + Object.keys(importZipImages).length + ' image(s)';
@@ -786,7 +808,7 @@ function applyVisualImport() {
     p.images = p.images || {}; p.images[code] = x.file.dataUrl;
     p.fields[code] = x.file.name;
     makeThumb(x.file.dataUrl, t => { p.thumbs = p.thumbs || {}; p.thumbs[code] = t; });
-    if (old !== x.file.name) (p.history = p.history || []).push({ ts, user: 'Import de visuels', field: x.attr.name, old, new: x.file.name });
+    journalProduct(p, 'Import', x.attr.name, old, x.file.name, { ts });
     p.maj = ts;
   });
   const m = document.getElementById('visual-import-modal'); if (m) m.remove();
@@ -795,7 +817,7 @@ function applyVisualImport() {
   showNotif(ok.length + ' visuel' + (ok.length > 1 ? 's' : '') + ' importé' + (ok.length > 1 ? 's' : ''));
 }
 
-function runImport() {
+function runImport(confirmed) {
   if (importAction === 'delete' && !categories.some(c => canCat(c.id, 'd'))) {
     showNotif('Suppression par import non autorisée', 'warn');
     return;
@@ -831,6 +853,25 @@ function runImport() {
   if (importAction === 'delete' && !mappedCodes.includes('ean') && !mappedCodes.includes('sap')) {
     showNotif('Mappez ean ou sap pour identifier les produits à supprimer', 'error');
     return;
+  }
+
+  // Suppression par import : confirmation avant d'appliquer
+  if (importAction === 'delete' && confirmed !== true) {
+    const keyCols = Object.keys(importColMapping).filter(c => importColMapping[c] === 'ean' || importColMapping[c] === 'sap');
+    let nDel = 0;
+    importParsedRows.forEach(row => {
+      const f = {};
+      keyCols.forEach(c => { const t = row[c] == null ? '' : String(row[c]).trim(); if (t) f[importColMapping[c]] = t; });
+      const ex = findImportedProduct(f);
+      if (ex && canDeleteProduct(ex)) nDel++;
+    });
+    if (nDel > 0) {
+      document.getElementById('confirm-delete-text').textContent =
+        'Supprimer jusqu’à ' + nDel + ' produit' + (nDel > 1 ? 's' : '') + ' ?';
+      document.getElementById('confirm-delete-btn').onclick = () => { closeModal('modal-confirm-delete'); runImport(true); };
+      openModal('modal-confirm-delete');
+      return;
+    }
   }
 
   const IMPORT_EMPTY_TOKEN = '#VIDE';
@@ -882,6 +923,8 @@ function runImport() {
           errors.push(`Ligne ${idx + 2} : suppression non autorisée (${keyHint})`);
           return;
         }
+        journalProduct(existing, 'Import', 'Produit', existing.fields.nom || '', '(supprimé)');
+        archiveDeletedProduct(existing);
         products = products.filter(p => p.id !== existing.id);
         deleted++;
       } else {
@@ -917,10 +960,17 @@ function runImport() {
         maj: nowStr(),
         visualSrc: null,
         visuals: 0,
-        history: [],
         pendingChanges: [],
         fields: storeFields,
       });
+      {
+        const np = products[products.length - 1], ts = nowStr();
+        journalProduct(np, 'Import', 'Catégorie', '', catName, { ts });
+        Object.keys(storeFields).forEach(code => {
+          const at = attributes.find(a => a.code === code);
+          journalProduct(np, 'Import', at ? at.name : code, '', storeFields[code], { ts });
+        });
+      }
       importApplyCalc(products[products.length - 1], calcVals, report);
       importAttachImages(products[products.length - 1], report);
       added++;
@@ -937,10 +987,7 @@ function runImport() {
         const attr = attributes.find(a => a.code === code);
         if (code === 'cat') {
           if (existing.cat !== fields.cat) {
-            existing.history.push({
-              ts: nowStr(), user: 'Import', field: 'Catégorie',
-              old: existing.cat, new: fields.cat,
-            });
+            journalProduct(existing, 'Import', 'Catégorie', existing.cat, fields.cat);
             existing.cat = fields.cat;
           }
           return;
@@ -948,13 +995,7 @@ function runImport() {
         if (!attrStoresInFields(attr)) return;
         const old = existing.fields[code] || '';
         if (old !== fields[code]) {
-          existing.history.push({
-            ts:    nowStr(),
-            user:  'Import',
-            field: attr ? attr.name : code,
-            old,
-            new:   fields[code],
-          });
+          journalProduct(existing, 'Import', attr ? attr.name : code, old, fields[code]);
           existing.fields[code] = fields[code];
         }
       });
@@ -1088,6 +1129,34 @@ function saveImportTrame() {
   showNotif('Trame enregistrée : ' + name);
 }
 
+// Ligne du tableau « FORMAT ATTENDU » de la notice : code, libellé, type,
+// valeurs possibles, exemple fictif
+function importFormatRow(a, code) {
+  if (!a) return [code, code, 'Texte', '', ''];
+  const opts = attrSelectOptions(a).map(o => o.v);
+  switch (a.type) {
+    case 'Simple select':
+      return [code, a.name, 'Liste', opts.length ? opts.join(' | ') : 'Texte libre', opts[0] || ''];
+    case 'Multi select':
+      return [code, a.name, 'Liste multiple', (opts.join(' | ') || 'Texte libre') + '  (plusieurs valeurs séparées par « | »)', opts.slice(0, 2).join(' | ')];
+    case 'Oui / Non': {
+      const yn = (a.options && a.options.length) ? a.options : ['Oui', 'Non'];
+      return [code, a.name, 'Oui / Non', yn.join(' | '), yn[0]];
+    }
+    case 'Date':
+      return [code, a.name, 'Date', 'jj/mm/aaaa', '15/03/2026'];
+    case 'Nombre':
+    case 'Nombre decimal':
+      return [code, a.name, 'Nombre', isPercentAttr(a) ? 'Nombre (pourcentage)' : 'Nombre', isPercentAttr(a) ? '25' : (a.type === 'Nombre' ? '12' : '12,5')];
+    case 'Texte long':
+      return [code, a.name, 'Texte long', 'Texte libre', 'Texte d’exemple'];
+    case 'Image':
+      return [code, a.name, 'Image', 'Nom du fichier image', 'visuel.jpg'];
+    default:
+      return [code, a.name, 'Texte', 'Texte libre', 'Exemple'];
+  }
+}
+
 function downloadTrame() {
   if (typeof XLSX === 'undefined') {
     showNotif('Erreur : librairie SheetJS non chargee', 'error');
@@ -1113,18 +1182,10 @@ function downloadTrame() {
     .filter(c => !req.some(a => a.code === c));
   const headers = [...req.map(a => a.code), ...rest];
 
-  const exampleRow = headers.map(h => {
-    if (h === 'ean') return '02000000079688';
-    if (h === 'sap') return 'M908642300001';
-    if (h === 'nom') return 'Exemple produit';
-    if (h === 'cat') return catName || (categories[0] ? categories[0].name : '');
-    return '';
-  });
-
   const wb = XLSX.utils.book_new();
 
   // Onglet Donnees
-  const wsData = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
+  const wsData = XLSX.utils.aoa_to_sheet([headers]);
   wsData['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 16) }));
   // Style en-tete
   headers.forEach((_, c) => {
@@ -1147,17 +1208,22 @@ function downloadTrame() {
     ...req.map(a => [a.code, 'Obligatoire — ' + a.name]),
     ['', ''],
     ['ACTIONS DISPONIBLES', ''],
-    ['Ajout',       'Créer de nouveaux produits — matching sur ean puis sap'],
-    ['Modification','Mettre à jour des produits existants — matching sur ean puis sap'],
-    ['Suppression', 'Supprimer des produits — matching sur ean puis sap'],
+    ['Ajout',       'Créer de nouveaux produits — par l’EAN (obligatoire)'],
+    ['Modification','Mettre à jour des produits existants — par l’EAN ou le code SAP'],
+    ['Suppression', 'Supprimer des produits — par l’EAN ou le code SAP'],
     ['', ''],
     ['NOTES', ''],
     ['- Ne pas modifier les en-tetes de colonnes (codes techniques)', ''],
     ['- Laisser vide les colonnes non renseignees', ''],
+    ['- #VIDE dans une cellule vide le champ (modification)', ''],
     ['- Encodage UTF-8 pour les fichiers CSV', ''],
+    ['', ''],
+    ['FORMAT ATTENDU', ''],
+    ['Code', 'Libellé', 'Type', 'Valeurs possibles', 'Exemple'],
+    ...headers.map(h => importFormatRow(attributes.find(a => a.code === h), h)),
   ];
   const wsNotice = XLSX.utils.aoa_to_sheet(noticeRows);
-  wsNotice['!cols'] = [{ wch: 30 }, { wch: 60 }];
+  wsNotice['!cols'] = [{ wch: 30 }, { wch: 60 }, { wch: 16 }, { wch: 60 }, { wch: 24 }];
   XLSX.utils.book_append_sheet(wb, wsNotice, 'Notice');
 
   const catStr  = catName ? '_' + catName.replace(/\s+/g, '_') : '';

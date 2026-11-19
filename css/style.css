@@ -2270,3 +2270,18 @@ tr.vi-ko td { background: #fff8f8; }
 .tour-text { line-height:1.5; margin-bottom:12px; }
 .tour-actions { display:flex; gap:6px; align-items:center; }
 .tour-actions .btn { padding:5px 10px; font-size:12px; }
+
+/* Barre d'enregistrement des écrans d'administration */
+.draft-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 900; display: none; align-items: center; gap: 10px;
+  background: #fff; border: 1px solid #d6dee8; border-radius: 12px; padding: 10px 14px; box-shadow: 0 6px 24px rgba(20,40,70,.18); }
+.draft-bar-text { font-size: 13px; font-weight: 600; color: #b26a00; margin-right: 6px; }
+.draft-bar-key { font-size: 10px; opacity: .7; margin-left: 4px; }
+.ea-groups { display: flex; flex-wrap: wrap; gap: 6px 14px; max-height: 150px; overflow-y: auto; padding: 4px 0; }
+.ea-grp { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer; }
+.ea-grp-lock { color: #607080; cursor: default; }
+.modal-box { position: relative; }
+.modal-close { position: absolute; top: 10px; right: 12px; width: 30px; height: 30px; border: 0; background: transparent; font-size: 24px; line-height: 1; color: #8795a5; cursor: pointer; border-radius: 6px; }
+.modal-close:hover { background: #eef2f6; color: #1a2332; }
+.btn.btn-dim { opacity: .5; cursor: not-allowed; }
+.products-scroll td.col-delete, .products-scroll th.col-delete { position: sticky; right: 0; z-index: 3; background: #fff; box-shadow: -2px 0 4px rgba(20,40,70,.06); }
+.products-scroll thead th.col-delete { z-index: 6; background: #f3f6f9; }
