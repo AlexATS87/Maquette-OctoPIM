@@ -876,15 +876,21 @@ function levelCan(levelKey, right) {
 let affectGroups = [
   { id:1, name:'Achats montures', catIds:[1],
     menuKeys:['menu_dashboard','menu_products','menu_imports','menu_exports','menu_admin'],
-    modKeys:['mod_conditions','mod_calc','mod_alerts'] },
+    modKeys:['mod_conditions','mod_calc','mod_alerts','mod_trames'] },
   { id:3, name:'Contacto', catIds:[2,4],
     menuKeys:['menu_dashboard','menu_products','menu_imports','menu_exports'],
     modKeys:[] },
   { id:2, name:'Référencement', catIds:[1,2,3,4],
     menuKeys:['menu_dashboard','menu_products','menu_imports','menu_exports','menu_admin'],
     modKeys:['mod_categories','mod_groups','mod_attributes','mod_synthese','mod_workflow','mod_trames'] },
+  { id:4, name:'Appro', catIds:[1],
+    menuKeys:['menu_dashboard','menu_products','menu_exports'],
+    modKeys:[] },
+  { id:5, name:'Marketing / E-commerce', catIds:[1,2,3,4],
+    menuKeys:['menu_dashboard','menu_products','menu_imports','menu_exports'],
+    modKeys:[] },
 ];
-let nextAffectGroupId = 4;
+let nextAffectGroupId = 6;
 
 let users = [
   { id:1, name:'J. Doe',     initials:'JD', levelKey:'admin',   groupId:null, email:'j.doe@exemple.fr', lastLogin:'09/11/2026 08:42', color:'#1565c0' },
@@ -893,6 +899,8 @@ let users = [
   { id:4, name:'U. Bernard', initials:'UB', levelKey:'user',    groupId:1,    email:'u.bernard@exemple.fr', lastLogin:'09/11/2026 09:30', color:'#e65100' },
   { id:5, name:'L. Petit',   initials:'LP', levelKey:'contrib', groupId:2,    email:'l.petit@exemple.fr', lastLogin:'05/11/2026 14:48', color:'#00838f' },
   { id:7, name:'S. Moreau',  initials:'SM', levelKey:'user',    groupId:3,    email:'s.moreau@exemple.fr', lastLogin:'07/11/2026 11:20', color:'#5d4037' },
+  { id:8, name:'T. Blanc',   initials:'TB', levelKey:'user',    groupId:4,    email:'t.blanc@exemple.fr', lastLogin:'06/11/2026 16:02', color:'#455a64' },
+  { id:9, name:'N. Faure',   initials:'NF', levelKey:'user',    groupId:5,    email:'n.faure@exemple.fr', lastLogin:'08/11/2026 10:47', color:'#c62828' },
   { id:6, name:'M. Roux',    initials:'MR', levelKey:'user',    groupId:null, email:'m.roux@exemple.fr', lastLogin:'—', color:'#ad1457' },
 ];
 
